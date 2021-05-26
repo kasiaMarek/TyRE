@@ -1,0 +1,8 @@
+package tyre
+
+depends = contrib
+
+sourcedir = "src"
+
+modules = Sheets.FP
+          , Data.SnocList.Elem
