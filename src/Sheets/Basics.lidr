@@ -283,6 +283,7 @@ trick, so it's in fact a technique:
 [X] 2. Prove that we can always recall that a list is non-empty:
 > recallNonEmpty : (0 prf : NonEmpty xs) -> NonEmpty xs
 > recallNonEmpty IsNonEmpty = IsNonEmpty
+
 This is not as weird as it may first appear: because the data type
 only has one constructor, we don't need to have _any_ bits at runtime
 to represent this one constructor, so even if we were allowed to have
@@ -320,7 +321,7 @@ function!)
 
 Let's generate the definition, and add some of the implicit arguments:
 
-> invertMap {xs} {y} f pos = ?invertMap_rhs
+--> invertMap {xs} {y} f pos = ?invertMap_rhs
 
 We can't split on `xs` because they're runtime irrelevant, and
 splitting `pos` gives weird results and errors. The reason is that the
@@ -329,22 +330,28 @@ isn't clever enough to work out that `xs` is non-empty.
 
 So we start with a generalisation of exercise 2:
 
-[ ] 6. Prove that, if we had the list, it would be non-empty:
+[X] 6. Prove that, if we had the list, it would be non-empty:
 
 > elementMapNonEmpty : (xs : List a) -> x `Elem` (map f xs) -> NonEmpty xs
-> elementMapNonEmpty xs y = ?elementMapNonEmpty_rhs
+> elementMapNonEmpty [] Here impossible
+> elementMapNonEmpty [] (There y) impossible
+> elementMapNonEmpty (z :: xs) y = IsNonEmpty
+
+elemMap : (0 f : a -> b) -> Elem x sx -> Elem (f x) (map f sx)
 
 We'll now use this function to implement `invertMap`, by adding
 another column with a NonEmpty view:
 
- > invertMap  {xs} {y} f pos with (recallNonEmpty $ elementMapNonEmpty xs pos)
- >  invertMap {xs} {y} f pos | view = ?he
+> invertMap  {xs} {y} f pos with (recallNonEmpty $ elementMapNonEmpty xs pos)
+>  invertMap {xs = (x::xs)} {y = _} f Here | IsNonEmpty = Evidence x (Here, Refl)
+>  invertMap {xs = (_::xs)} {y = y} f (There z) | IsNonEmpty with (invertMap f z)
+>   invertMap {xs = (_::xs)} {y = y} f (There z) | IsNonEmpty | (Evidence fst (pf, ps)) = Evidence fst (There pf, ps)
 
-[ ] 7. Match on the view, and then on the position. There's a bug in
+[X] 7. Match on the view, and then on the position. There's a bug in
 idris curently, and you'll need to rewrite the arguments like so:
  >   invertMap {xs = x :: xs} {y = _} f Here
 
-[ ] 8. Try to complete the implementation of `invertMap`. Ask Ohad if
+[X] 8. Try to complete the implementation of `invertMap`. Ask Ohad if
 it takes you more than 1 hour.
 
 [ ] 9. _Compile_ and run the following constantSpaceInversion,
