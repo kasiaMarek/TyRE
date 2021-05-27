@@ -29,7 +29,7 @@ Once you do, put a X in the tick-box 4 lines above this line, like so:
 [X] 1. Create a new repository ...
 
 
-[ ] 2. Populate the repository with the basic stuff: 
+[X] 2. Populate the repository with the basic stuff:
 
 a. A README.md file
 b. a src/Sheets/ directory containing this file
@@ -37,22 +37,22 @@ c. a TODO.md file to help you organise your tasks
 
 # Packages
 
-[ ] 1. Try to type-check this file. 
+[X] 1. Try to type-check this file.
 
 
 Type-checking should fail with an error message like so:
 
 
      Module Data.Void not found
-     
+
 This is because `Data.Void` is a module in the Idris2's standard library
 `contrib` package, which you will need for your project.
 
-[ ] 2. Learn about packages here:
+[X] 2. Learn about packages here:
 
   https://idris2.readthedocs.io/en/latest/reference/packages.html
 
-[ ] 3. Set a package file for your project. 
+[X] 3. Set a package file for your project.
 
 If you've done it correctly, this file should now type-check.
 
@@ -61,9 +61,9 @@ If you've done it correctly, this file should now type-check.
 
 This file uses a few modules from the standard library. I assume your
 editor lets you have a REPL - if not, I encourage you to switch to an
-editor that supports a REPL. 
+editor that supports a REPL.
 
-[ ] 1. a. Go to the REPL and hit `:browse Data.List.Elem`, you will see a
+[X] 1. a. Go to the REPL and hit `:browse Data.List.Elem`, you will see a
 summary of the `export`ed functions.
 
 b. hit `:doc Elem`, and you'll see a summary of the `Elem` datatype
@@ -81,22 +81,30 @@ following modules:
 > import Data.SnocList
 > import Data.String
 
-[ ] 2. Use the `:s` command to find functions of the type 
+[X] 2. Use the `:s` command to find functions of the type
 
- < Char -> Int 
+ < Char -> Int
  < Int -> Char
  < String -> List Char
  < List Char -> String
 
-[ ] 3. Implement a rot13 function:
+[X] 3. Implement a rot13 function:
 > ||| Does all the heavy lifting.
 > rotChar13 : Char -> Char
 
-> rot13 : String -> String
+> rotChar13 x =
+>  if (x >= 'a' && x <= 'z') then
+>     chr ((ord x - ord 'a' + 13) `mod` 26 + ord 'a')
+>  else
+>     if (x >= 'A' && x <= 'Z') then
+>         chr ((ord x - ord 'A' + 13) `mod` 26 + ord 'A')
+>     else x
 
+> rot13 : String -> String
+> rot13 s = pack $map rotChar13 (unpack s)
 You know you got it right vs lbh pna ernq guvf Fgevat.
 
-[ ] 3. If you used `fastPack`, your REPL won't be able to evaluate
+[X] 3. If you used `fastPack`, your REPL won't be able to evaluate
 Strings. Try it.  (But if you compile your code and run it, it should
 work as expected, and a little bit faster on larger strings.)
 
@@ -107,9 +115,9 @@ compiled code. The REPL can deal with incomplete code, for example:
 > Incomplete = 1 + (2 + ?hole + 4)
 
 > main : IO ()
-> main = putStrLn $ show Incomplete 
+> main = putStrLn $ show Incomplete
 
-[ ] 4. a. Evaluate `Incomplete` in the REPL.
+[X] 4. a. Evaluate `Incomplete` in the REPL.
 b. Execute `main` in two ways:
   (i) using the `:exec main` command
   (ii) by building a binary file whose main function is `main`.
@@ -121,21 +129,21 @@ Idris. A very recent addition to the language are snoc-lists: lists
 that go the other way. (Use `:doc SnocList`.) We write snoc-lists like so:
 
 > Count : SnocList Nat
-> Count = Lin :< 1 :< 2 :< 3 :< 4 
+> Count = Lin :< 1 :< 2 :< 3 :< 4
 
-[ ] 1. Use `show Count` at the REPL to see a more compact way to write
+[X] 1. Use `show Count` at the REPL to see a more compact way to write
 this.
 
 
-[ ] 2. Find the module `Data.List.Elem`.
+[X] 2. Find the module `Data.List.Elem`.
 
 In the rest of this sheet, we'll implement a corresponding module for
 snoc-lists, and prepare it for a PR to the standard library.
 
-[ ] 3. Create the module `Data.SnocList.Elem` (in this code-base). It
+[X] 3. Create the module `Data.SnocList.Elem` (in this code-base). It
 should be empty.
 
-[ ] 4. Implement the following snoc-list analogues:
+[X] 4. Implement the following snoc-list analogues:
 
  < Elem
  < dropElem
@@ -170,12 +178,15 @@ moving parts, even if it seems a bit messy.
 Let's try and define this function:
 
 > ||| The reverse list has all the elements
+> total
 > elemInReverse : (xs : List a) -> (pos : x `Elem` xs) -> x `Elem` (reverse xs)
 
-[ ] 1. Case split on the position argument (you might need to rename
+[X] 1. Case split on the position argument (you might need to rename
 some of the variables due to name clashes), and look at the two holes:
 
 > elemInReverseKasia : (xs : List a) -> (pos : x `Elem` xs) -> x `Elem` (reverse xs)
+> elemInReverseKasia (x :: xs) Here = ?elemInReverseKasia_rhs_1
+> elemInReverseKasia (x :: xs) (There p) = ?elemInReverseKasia_rhs_2
 
 ## Base case
 
@@ -185,7 +196,7 @@ some of the variables due to name clashes), and look at the two holes:
  < ------------------------------
  < elemInReverse_rhs_1 : Elem x (reverseOnto [x] xs)
 
-`reverseOnto` is a helper function for `reverse`, and `reverseOnto sx ys` 
+`reverseOnto` is a helper function for `reverse`, and `reverseOnto sx ys`
 evaluates to `reverse ys ++ sx`:
 
  < reverseOnto [3, 2, 1] [4, 5, 6]
@@ -193,7 +204,7 @@ evaluates to `reverse ys ++ sx`:
 
 We will use this strategy:
 
-1. convince the typechecker that `reverse xs ++ [x] = reverse (x :: xs)`. 
+1. convince the typechecker that `reverse xs ++ [x] = reverse (x :: xs)`.
 2. convince the typechecker that x `Elem` [x].
 3. convince the typechecker that x `Elem` (xs ++ [x])
 
@@ -201,14 +212,22 @@ and then conclude.
 
 This is one way to do it:
 
-> elemInReverse (x :: xs) Here = 
+> elemInReverse (x :: xs) Here =
 >    -- v-- this means step1 is runtime irrelevant: this proof will erase at runtime
->   let 0 step1 : (reverse xs ++ [x] = reverse (x :: xs)) 
->               = revAppend [x] xs 
->       step2 : x `Elem` [x] = ?Exercise2
->       step3 : x `Elem` reverse xs ++ [x] 
+>   let 0 step1 : (reverse xs ++ [x] = reverse (x :: xs))
+>               = revAppend [x] xs
+>       step2 : x `Elem` [x] = Here
+>       step3 : x `Elem` reverse xs ++ [x]
 >             = elemAppRight (reverse xs) [x] step2
 >      -- v-- look at `:t replace`
+>   in replace {p = (x `Elem`)} step1 step3
+
+> elemInReverse (y :: xs) (There p) =
+>   let 0 step1 : (reverse xs ++ [y] = reverse (y :: xs))
+>             = revAppend [y] xs
+>       step2 : x `Elem` (reverse xs) = elemInReverse xs p
+>       step3 : x `Elem` reverse xs ++ [y]
+>             = elemAppLeft (reverse xs) [y] step2
 >   in replace {p = (x `Elem`)} step1 step3
 
 For steps 1,3, we used library functions that 'do the right
@@ -217,7 +236,7 @@ might need to prove our own results. If they're general enough, we can
 submit a PR to the standard library, as we plan to do here.
 
 Step 2 is left as an exercise:
-[ ] 2. You fill in the hole `Exercise2`.
+[X] 2. You fill in the hole `Exercise2`.
 
 Finally, we put steps 1,3 together using the `replace` function.
 
@@ -226,12 +245,12 @@ Let's spend some time looking at the equality type and the replace function.
   λΠ> :set showimplicits
   λΠ> :doc Equal
   Prelude.Equal : Prec
-  
-  
+
+
   Builtin.Equal : {0 a : Type} -> {0 b : Type} -> a -> b -> Type
     Totality: total
     Constructor: Refl : {0 a : Type} -> {0 x : a} -> Equal {a} {b = a} x x
-    
+
   λΠ> :unset showimplicits
 
 So `Equal` is indexed by 2 types, and two elements of each type. It
@@ -257,16 +276,18 @@ It looks like `replace` doesn't do much - and that's the point! We're
 convincing the type-checker that two terms it thinks are different are
 going to be the same at runtime.
 
-[ ] 3. Implement your own version of `replace` interactively:
+[X] 3. Implement your own version of `replace` interactively:
 
 a. Declare `replace' : {0 p : a -> Type} -> (0 prf : x = y) -> p x -> p y
 b. Generate a definition for `replace'`. What does the hole say?
 c. Case split on the `prf` argument. What does the hole say now? What changed?
 d. Fill the hole.
 
+> replace' : {0 p : a -> Type} -> (0 prf : x = y) -> p x -> p y
+> replace' Refl z = z
 ## Inductive step
 
-[ ] 4. Now you try! You can use the same structure as before.
+[X] 4. Now you try! You can use the same structure as before.
 
  0 a : Type
  0 x : a
@@ -276,7 +297,7 @@ d. Fill the hole.
 ------------------------------
 elemInReverse_rhs_2 : Elem x (reverseOnto [y] xs)
 
-[ ] 5. Can we make `xs` runtime irrelevant?
+[X] 5. Can we make `xs` runtime irrelevant?
 
 Hint: V qba'g guvax fb. Jul?
 
@@ -286,14 +307,22 @@ that splits on `xs` first:
 
 > total
 > elemInReverse' : (xs : List a) -> (pos : x `Elem` xs) -> x `Elem` (reverse xs)
-> elemInReverse' (y :: xs) pos = ?elemInReverse'_rhs_
+
+> elemInReverse' (y :: xs) pos =
+>   let 0 eqPrf : (reverse xs ++ [y] = reverse (y :: xs))
+>             = revAppend [y] xs
+>       rev : x `Elem` reverse xs ++ [y]
+>           = case pos of
+>                 Here => elemAppRight (reverse xs) [x] Here
+>                 (There p) => elemAppLeft (reverse xs) [y] $ elemInReverse' xs p
+>   in replace {p = (x `Elem`)} eqPrf rev
 
 Notice that the case `xs = Nil` is impossible: we didn't need to
 consider it at all so far! If we just delete it, Idris can still work
 out that no possible cases are missing. The part of Idris that checks
 that is called the _coverage checker_.
 
-[ ] 6. Refactor your definition above into `elemInReverse'`
+[X] 6. Refactor your definition above into `elemInReverse'`
 
 
 ## Inspecting case trees
@@ -303,37 +332,37 @@ command `:di`, which stands for *d*ebug *i*nformation:
 
 :di elemInReverse
 ... lots of stuff ...
-Compiled: 
- 0   [{arg:2}, {arg:3}]: 
- 1     (%case !{arg:2} 
- 2       [(%concase [cons] Prelude.Basics.:: Just 1 [{e:1}, {e:2}] 
- 3         (%case !{arg:3} 
- 4           [(%concase [nothing] Data.List.Elem.Here Just 0 [] 
- 5              (%let step2 (((((Sheets.FP.Exercise2 []) [___]) [___]) [___]) [___]) 
- 6              (%let step3 (Data.List.Elem.Extra.elemAppRight 
+Compiled:
+ 0   [{arg:2}, {arg:3}]:
+ 1     (%case !{arg:2}
+ 2       [(%concase [cons] Prelude.Basics.:: Just 1 [{e:1}, {e:2}]
+ 3         (%case !{arg:3}
+ 4           [(%concase [nothing] Data.List.Elem.Here Just 0 []
+ 5              (%let step2 (((((Sheets.FP.Exercise2 []) [___]) [___]) [___]) [___])
+ 6              (%let step3 (Data.List.Elem.Extra.elemAppRight
  7                            [ (Data.List.reverse [!{e:2}])
- 8                            , (%con [cons] Prelude.Basics.:: Just 1 
+ 8                            , (%con [cons] Prelude.Basics.:: Just 1
  9                               [!{e:1}, (%con [nil] Prelude.Basics.Nil Just 0 [])])
-10                            , !step2]) 
+10                            , !step2])
 11                            !step3)))
-12           , (%concase [just] Data.List.Elem.There Just 1 [{e:10}] 
-13                (%let step2 (Sheets.FP.elemInReverse [!{e:2}, !{e:10}]) 
-14                (%let step3 (Data.List.Elem.Extra.elemAppLeft 
+12           , (%concase [just] Data.List.Elem.There Just 1 [{e:10}]
+13                (%let step2 (Sheets.FP.elemInReverse [!{e:2}, !{e:10}])
+14                (%let step3 (Data.List.Elem.Extra.elemAppLeft
 15                              [ (Data.List.reverseOnto [(%con [nil] Prelude.Basics.Nil Just 0 [])
 16                                                       , !{e:2}])
-17                              , (%con [cons] Prelude.Basics.:: 
-18                                               Just 1 
+17                              , (%con [cons] Prelude.Basics.::
+18                                               Just 1
 19                                               [ !{e:1}
 20                                               , (%con [nil] Prelude.Basics.Nil Just 0 [])
 21                                               ])
 22                              , !step2
 23                              ])
 24                            !step3)))
-25           ] 
+25           ]
 26           Nothing))
 27       ] Nothing)
 ... more stuff ...
- 
+
 I re-indended it, since the output is unreadable without
 reformatting. Despite the reformatting, this is quite horrible, but
 it's still interesting to try and see what's happening despite all the
@@ -363,7 +392,7 @@ the first case (with `Here`) and `e:1` is `y` in the second case (with
 
 + Line 3 splits on the second argument `{arg:3}`, the position.
 
-+ Line 4 is the case where the position is `Here`. 
++ Line 4 is the case where the position is `Here`.
 
 + As you can see, line 5 jumps directly to `step2`: `step1` does not
 appear in the compiled code at all!
@@ -372,13 +401,13 @@ appear in the compiled code at all!
 line 11 simply returns `step3`.
 
 
-[ ] 7. a. In which lines do we see the compiled code for `[x]` and `[y]`? 
+[X] 7. a. In which lines do we see the compiled code for `[x]` and `[y]`?
        b. Repeat this analysis for the refactored version from exercise 6.
 
 
 Now let's apply all you've learned in our new `Data.SnocList.Elem` library:
 
-[ ] 8. Implement a `SnocList` analogue to `thereInjectiv`.
+[X] 8. Implement a `SnocList` analogue to `thereInjectiv`.
 
 
 # Impossible cases
@@ -396,7 +425,7 @@ spend a lot of time on it. We will just cover the ones we need for our
   λΠ> :doc Void
   Builtin.Void : Type
     The empty type, also known as the trivially false proposition.
-    
+
     Use `void` or `absurd` to prove anything if you have a variable of type
     `Void` in scope.
     Totality: total
@@ -504,7 +533,7 @@ A special case of it is the decidable equality interface:
   this)`. This is the `with` keyword, and it does two things:
 
   a. It adds another column to a block of function-definition patterns.
-  
+
   b. For each case in that block, it will find occurrences of the
      argument to `with` in the current context, and replace them with
      current pattern.
