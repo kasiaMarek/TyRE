@@ -290,14 +290,15 @@ a value at runtime, we don't need it.
 
 
 [X] 3. "Prove" that a list with an element is non-empty:
-> elementNonEmpty : x `Elem` xs -> NonEmpty (x :: xs)
-> elementNonEmpty _ = IsNonEmpty
+> elementNonEmpty : x `Elem` xs -> NonEmpty xs
+> elementNonEmpty Here = IsNonEmpty
+> elementNonEmpty (There y) = IsNonEmpty
 
 This style of programming where we think of functions as implication
 is well established, and you'll sometimes hear people say that 'proofs
 are programs'.
 
-[ ] 4. Read about the datatype `Exists`.
+[X] 4. Read about the datatype `Exists`.
 
 To conclude this section, we'll implement a function that 'inverts' a
 map:
@@ -306,7 +307,7 @@ map:
 >   Exists {type = a} \x => (x `Elem` xs, f x === y)
 
 
-[ ] 5. Spend a minute or two understanding this type. If you're still
+[X] 5. Spend a minute or two understanding this type. If you're still
 confused, ask Ohad.
 
 Note that neither `f, y, xs` are going to be present at runtime (and
@@ -319,7 +320,7 @@ function!)
 
 Let's generate the definition, and add some of the implicit arguments:
 
- > invertMap {xs} {y} f pos = ?invertMap_rhs
+> invertMap {xs} {y} f pos = ?invertMap_rhs
 
 We can't split on `xs` because they're runtime irrelevant, and
 splitting `pos` gives weird results and errors. The reason is that the
@@ -331,6 +332,7 @@ So we start with a generalisation of exercise 2:
 [ ] 6. Prove that, if we had the list, it would be non-empty:
 
 > elementMapNonEmpty : (xs : List a) -> x `Elem` (map f xs) -> NonEmpty xs
+> elementMapNonEmpty xs y = ?elementMapNonEmpty_rhs
 
 We'll now use this function to implement `invertMap`, by adding
 another column with a NonEmpty view:
