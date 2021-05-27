@@ -8,7 +8,7 @@ previous sheet, you're invited to propose a PR to contrib).
 
 > import Data.Nat
 > import Data.List
-> import Data.List.Elem 
+> import Data.List.Elem
 > import Data.List.Elem.Extra
 > import Data.DPair
 > import Syntax.PreorderReasoning
@@ -20,22 +20,29 @@ sheet.
 
 ## Data.Void.Extra
 
-[ ] 1. Implement:
+[X] 1. Implement:
 
 > contrapositive : (a -> b) -> Not b -> Not a
+> contrapositive f nb a = nb (f a)
 
 ## Data.List.Elem.Extra
 
-[ ] 1. Extracts an element from a list if we know it's in that
+[X] 1. Extracts an element from a list if we know it's in that
 list. The twist is that we may not actually have the element at
 runtime.
 
-> recallElem : (xs : List a) -> x `Elem` xs -> a
+What does it mean it may not be there at runtime?
 
-[ ] 2. ... and prove that `recallElem` recovers the implicit argument:
+> recallElem : (xs : List a) -> x `Elem` xs -> a
+> recallElem (x :: ys) Here = x
+> recallElem (y :: ys) (There p) = recallElem ys p
+
+
+[X] 2. ... and prove that `recallElem` recovers the implicit argument:
 
 > recallCorrect : (xs : List a) -> (pos : x `Elem` xs) -> recallElem xs pos = x
-
+> recallCorrect _ Here = Refl
+> recallCorrect (_ :: ys) (There p) = recallCorrect ys p
 
 # Stuck terms and equational reasoning
 
@@ -49,9 +56,10 @@ interpreter will evaluate our terms partially until it gets stuck:
 We can use dependent types and pattern-matching to help evaluation get
 unstuck. For example:
 
-[ ] 1. In the following example:
+[X] 1. In the following example:
 
 > example : (x : Nat) -> (prf : x = 2) -> x + x = 4
+> example 2 Refl = Refl
 
 a. generate a definition for `example`.
 b. inspect the hole.
@@ -66,8 +74,12 @@ To see why understanding stuck terms is important, let's prove the
 following useful 'swiss-army knife':
 
 > sak : (x,y,z : Nat) -> x + (y + z) = y + (x + z)
+> sak x 0 z = Refl
+> sak x (S 0) z = ?sak_rhs_3
+> sak x (S (S 0)) z = ?sak_rhs_5
+> sak x (S (S (S k))) z = ?sak_rhs_6
 
-[ ] 2. Generate a definition and:
+[X] 2. Generate a definition and:
 a. split on the middle argument `y`
 b. fill one of the holes, split on the middle argument again
 c. keep splitting on the middle argument. Are you getting anywhere?
@@ -83,18 +95,21 @@ addition is biased, and splits its first argument:
 So if we want the type-checker to help us, we should help it get
 unstuck, by splitting on the first argument:
 
-> sak' : (x,y,z : Nat) -> x + (y + z) = y + (x + z) 
+> sak' : (x,y,z : Nat) -> x + (y + z) = y + (x + z)
 > sak' 0 y z = Refl
 
 For the inductive case, we'll use a little library for algebraic
 reasoning `:doc Syntax.PreorderReasoning`. It exports 4 functions you
 need to know about: `Calc, (|~), (~~), (...)`. Here's how you use it:
 
-> sak' (S k) y z 
->   = Calc $ 
+> sak' (S k) y z
+>   = Calc $
 >   |~ 1 + (k + (y + z))
 >   ~~ 1 + (y + (k + z)) ...(cong (1+) $ sak' k y z)
->   ~~ y + (1 + (k + z)) ...(sym $ sak' y 1 (k + z))
+>   ~~ y + (1 + (k + z)) ...(sak' 1 y (k + z))
+
+sak' k y z ~> k + (y + z) = y + (k + z)
+y 1 (k+z) ~>
 
 This can look cryptic at first, so let's go through each part.
 
@@ -103,7 +118,7 @@ rest of the expression. The rest of the expression constructs a value
 in a datatype that represents equational proofs. You can inspect it
 using a hole:
 
- > sak' (S k) y z 
+ > sak' (S k) y z
  >   = Calc $ ?hole {- ... -}
 
    k : Nat
@@ -115,26 +130,26 @@ hole : FastDerivation (1 + (k + (y + z)))
 
 (I reformatted it to be more readable.)
 
-`Calc` takes this representation, and turns it into a proof that 
+`Calc` takes this representation, and turns it into a proof that
  (1 + (k + (y + z))) = y + (1 + (k + z)), or more generally:
 
 λΠ> :t Calc
 Calc : FastDerivation x y -> x = y
 
-Next, we have a sequence of equalities: 
+Next, we have a sequence of equalities:
 
                           -- VVVVVVVVVVVVVVV ignore what's in this column for now
  >  |~ 1 + (k + (y + z))
- >  ~~ 1 + (y + (k + z)) 
+ >  ~~ 1 + (y + (k + z))
  >  ~~ y + (1 + (k + z))
 
 On paper, you might write this like so:
 
     |- 1 + (k + (y + z))
-    = 1 + (y + (k + z)) 
+    = 1 + (y + (k + z))
     = y + (1 + (k + z))
 
-and read it out loud: 'proof: 1 + (k + (y + z)) equals 1 + (y + (k + z)) 
+and read it out loud: 'proof: 1 + (k + (y + z)) equals 1 + (y + (k + z))
 equals y + (1 + (k + z)).
 
 The final component is the column with the `...`.  `(...)` is an infix operator, and
@@ -145,7 +160,7 @@ Syntax.PreorderReasoning.... : (0 y : a) -> (0 _ : x = y) -> Step x y
 This is ASCII art for a thought-bubble `...( reason )`.
 
 The first step is to apply the equation sak' k y z : k + (y + z) = y + (k + z)
-1 + (y + (k + z)) ...(cong (1+) $ sak' k y z) 
+1 + (y + (k + z)) ...(cong (1+) $ sak' k y z)
   : Step ((1 + (k + (y + z)))) (1 + (y + (k + z)))
 here:          ^^^^^^^^^^^^^        ^^^^^^^^^^^^
 
@@ -157,7 +172,6 @@ That's what `cong` does:
 
 λΠ> :t cong
 Prelude.cong : (0 f : (t -> u)) -> a = b -> f a = f b
-
 so:
 
 λΠ> :t cong S
@@ -169,15 +183,20 @@ The second step uses symmetry:
 Builtin.sym : (0 _ : x = y) -> y = x
 
 [ ] 3. Implement your own versions `cong'` and `sym'`.
+> cong' : (0 f : (t -> u)) -> a = b -> f a = f b
+> cong' _ Refl = Refl
+
+> sym' : (0 _ : x = y) -> y = x
+> sym' Refl = Refl
 
 Let's prove that addition is associative, but I'll show you how I do
 it in steps:
 
 > plusAssociative' : (a,b,c : Nat) -> a + (b + c) = (a + b) + c
-> plusAssociative' 0 b c = ?youTry
+> plusAssociative' 0 b c = Refl
 
 
-Here's a tip for how I do it. I include only the interesting case. 
+Here's a tip for how I do it. I include only the interesting case.
 
 a. It's quick to turn the hole into the following:
 
@@ -189,7 +208,7 @@ b. I then inspect the hole, it tells me what I need to prove, and I
 replace the 'don't care' symbols `_` with the lhs/rhs of the equation:
 
  > plusAssociative' (S k) b c = Calc $
- >   |~ 1 + (k + (b + c)) 
+ >   |~ 1 + (k + (b + c))
  >   ~~ 1 + ((k + b) + c) ...(?plusAssociative_rhs_2)
 
 c. Then, I write the proof down on paper, and type it in, inserting
@@ -202,11 +221,23 @@ care', since idris can usually work out the missing parts:
 >   |~ 1 + (k + (b + c))
 >   ~~ 1 + ((k + b) + c) ...(cong (1+) $ plusAssociative' _ _ _)
 
-[ ] 4. Prove that:
+[X] 4. Prove that:
 a. zero is a right-neutral element w.r.t. addition (see `plusZeroRightNeutral`)
+> plusZeroRightNeutral' : (left : Nat) -> left + 0 = left
+> plusZeroRightNeutral' 0 = Refl
+
+> plusZeroRightNeutral' (S k) = Calc $
+>   |~ 1 + (k + 0)
+>   ~~ 1 + k ...(cong (1+) $ plusZeroRightNeutral' k)
+
 b. addition is commutative (see `:t plusAssociative`).
 
 > plusCommutative' : (a, b : Nat) -> a + b = b + a
+> plusCommutative' 0 b = sym $ plusZeroRightNeutral' b
+> plusCommutative' (S k) b = Calc $
+>   |~ 1 + (k + b)
+>   ~~ 1 + (b + k) ...(cong (1+) $ plusCommutative' k b)
+>   ~~ b + (1 + k) ...(sak' 1 b k)
 
 [ ] 5. Find the module `Syntax.PreorderReasoning` and try to work out
 what's going on. It's only 12 lines of code!
@@ -233,10 +264,11 @@ Foe example, let's look at this data type from `Data.List`:
 and use this type to define the `head` function for lists:
 
 > head' : (xs : List a) -> (0 nonEmpty : NonEmpty' xs) -> a
-  
+> head' (x :: ys) (IsNonEmpty' x ys) = x
+
 Instead of matching on `xs`, let's match on `nonEmpty`.
 
-[ ] 1. Do this, and fill the hole.
+[X] 1. Do this, and fill the hole.
 
 The data-type `NonEmpty` is called a _view_ of its argument list,
 because matching on its values tells us something about the list. It's
@@ -248,17 +280,18 @@ Note: we are allowed to split on the runtime irrelevant `nonEmpty`
 because its datatype has at most one constructor. This is a useful
 trick, so it's in fact a technique:
 
-[ ] 2. Prove that we can always recall that a list is non-empty:
+[X] 2. Prove that we can always recall that a list is non-empty:
 > recallNonEmpty : (0 prf : NonEmpty xs) -> NonEmpty xs
-
+> recallNonEmpty IsNonEmpty = IsNonEmpty
 This is not as weird as it may first appear: because the data type
 only has one constructor, we don't need to have _any_ bits at runtime
 to represent this one constructor, so even if we were allowed to have
 a value at runtime, we don't need it.
 
 
-[ ] 3. "Prove" that a list with an element is non-empty:
-> elementNonEmpty : x `Elem` xs -> NonEmpty xs
+[X] 3. "Prove" that a list with an element is non-empty:
+> elementNonEmpty : x `Elem` xs -> NonEmpty (x :: xs)
+> elementNonEmpty _ = IsNonEmpty
 
 This style of programming where we think of functions as implication
 is well established, and you'll sometimes hear people say that 'proofs
@@ -269,13 +302,13 @@ are programs'.
 To conclude this section, we'll implement a function that 'inverts' a
 map:
 
-> invertMap : (0 f : a -> b) -> y `Elem` (map f xs) -> 
+> invertMap : (0 f : a -> b) -> y `Elem` (map f xs) ->
 >   Exists {type = a} \x => (x `Elem` xs, f x === y)
 
 
 [ ] 5. Spend a minute or two understanding this type. If you're still
 confused, ask Ohad.
- 
+
 Note that neither `f, y, xs` are going to be present at runtime (and
 since we have only one proof of equality, `f x = y` may as well be
 runtime irrelevant.
@@ -307,7 +340,7 @@ another column with a NonEmpty view:
 
 [ ] 7. Match on the view, and then on the position. There's a bug in
 idris curently, and you'll need to rewrite the arguments like so:
- >   invertMap {xs = x :: xs} {y = _} f Here 
+ >   invertMap {xs = x :: xs} {y = _} f Here
 
 [ ] 8. Try to complete the implementation of `invertMap`. Ask Ohad if
 it takes you more than 1 hour.
@@ -321,10 +354,10 @@ the memory footprint should be constant. It might not be though.
 > sandwich n = (replicate n 0) ++ [1] ++ (replicate n 0)
 
 > sandwichHasOne : (n : Nat) -> 1 `Elem` sandwich n
-> sandwichHasOne n = elemAppRight _ _ Here 
+> sandwichHasOne n = elemAppRight _ _ Here
 
 > constantSpaceInversion : (n : Nat) -> 1 `Elem` (sandwich n)
-> constantSpaceInversion n = 
+> constantSpaceInversion n =
 >   let pos0 = sandwichHasOne n           -- Count until n + 1
 >       pos1 = elemMap (1+) pos0          -- Count until n + 1 again
 >   in case invertMap (1+) pos1 of        -- Count until n + 1 again
