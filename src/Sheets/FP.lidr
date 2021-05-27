@@ -471,9 +471,9 @@ stdlib has an interface that helps us write higher-level programs:
       Uninhabited (Elem x [])
       ... and so on ...
 
-So an uninhabited type is one from which we can produve a `Void`.
+So an uninhabited type is one from which we can produce a `Void`.
 
-[ ] 1. Implement `SnocList` analogues to:
+[X] 1. Implement `SnocList` analogues to:
 
  < Uninhabited (Here = There e)
  < Uninhabited (There e = Here)
@@ -489,7 +489,7 @@ package these types in a type:
   Not x = x -> Void
 
 
-[ ] 2. Implement the `SnocList` analogue to `neitherHereNorThere`.
+[X] 2. Implement the `SnocList` analogue to `neitherHereNorThere`.
 
 # Decidable types
 
@@ -527,7 +527,7 @@ A special case of it is the decidable equality interface:
       ... and many others ...
 
 
-[ ] 3. Implement a `DecEq (x `Elem` xs)` for SnocLists.
+[X] 3. Implement a `DecEq (x `Elem` xs)` for SnocLists.
 
   You'll need a _view_ for the case `decEq (There this) (There
   this)`. This is the `with` keyword, and it does two things:
