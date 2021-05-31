@@ -96,21 +96,24 @@ ConvertSimplification CharC m = m
 ConvertSimplification StringC m = m
 ConvertSimplification UnitC _ = ()
 
-ConvertSimplification (MaybeC x) m with (SimplifyCode x)
-  ConvertSimplification (MaybeC x) _ | UnitC = ()
+ConvertSimplification (MaybeC x) Nothing with (SimplifyCode x)
   ConvertSimplification (MaybeC x) Nothing | CharC = Nothing
-  
-  --It does not recognise that (SimplifyCode x = CharC)
-  ConvertSimplification (MaybeC x) (Just y) | CharC = ?holee
-    -- let p1: (SimplifyCode x = CharC) = Refl
-    --     p2: (Sem CharC = Char) = Refl
-    -- in replace {p = Maybe} ?hole123 (Just (ConvertSimplification x y))
+  ConvertSimplification (MaybeC x) Nothing | (PairC y z) = Nothing
+  ConvertSimplification (MaybeC x) Nothing | StringC = Nothing
+  ConvertSimplification (MaybeC x) Nothing | UnitC = ()
+  ConvertSimplification (MaybeC x) Nothing | (EitherC y z) = Nothing
+  ConvertSimplification (MaybeC x) Nothing | (ListC y) = Nothing
+  ConvertSimplification (MaybeC x) Nothing | (MaybeC y) = Nothing
 
-  ConvertSimplification (MaybeC x) m | (PairC y z) = ?h_2
-  ConvertSimplification (MaybeC x) m | StringC = ?h_3
-  ConvertSimplification (MaybeC x) m | (EitherC y z) = ?h_5
-  ConvertSimplification (MaybeC x) m | (ListC y) = ?h_6
-  ConvertSimplification (MaybeC x) m | (MaybeC y) = ?h_7
+ConvertSimplification (MaybeC x) (Just y) with (ConvertSimplification x y)
+  ConvertSimplification (MaybeC x) (Just y) | cs with (SimplifyCode x)
+    ConvertSimplification (MaybeC x) (Just y) | cs | CharC = Just cs
+    ConvertSimplification (MaybeC x) (Just y) | cs | (PairC z w) = Just cs
+    ConvertSimplification (MaybeC x) (Just y) | cs | StringC = Just cs
+    ConvertSimplification (MaybeC x) (Just y) | cs | UnitC = ()
+    ConvertSimplification (MaybeC x) (Just y) | cs | (EitherC z w) = Just cs
+    ConvertSimplification (MaybeC x) (Just y) | cs | (ListC z) = Just cs
+    ConvertSimplification (MaybeC x) (Just y) | cs | (MaybeC z) = cs
 
 ConvertSimplification (ListC x) m with (SimplifyCode x)
   ConvertSimplification (ListC x) m | UnitC = ()
