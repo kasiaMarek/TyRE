@@ -84,18 +84,10 @@ We can then think of dependent function types as universal quantification:
 
 a. Other propositional connectivies: (/\), (\/), TT
 
-> infix 3 /\
->
-> record (/\) {a: Type} (p, q : a -> Type) where
->   constructor Con
->   P : (x: a) -> p x
->   Q : (x: a) -> q x
-
-> infix 3 \/
->
-> record (\/) {a: Type} (p, q : a -> Type) where
->   constructor Dis
->   either : (x: a) -> Either (p x) (q x)
+> (/\): {a: Type} -> (p : a -> Type) -> (q : a -> Type) -> ((x : a) -> (p x, q x))
+> (\/): {a: Type} -> (p : a -> Type) -> (q : a -> Type) -> ((x : a) -> Either (p x) (q x))
+> true: x -> Unit
+> false: x -> Void
 
 b. (<->) is an equivalence relation between predicates
 > reflexive : (p : a -> Type) -> p <-> p
@@ -118,8 +110,13 @@ Records (which are syntactic sugar for 1-constructor data types), can
 have runtime irrelevant fields.
 
 > infixl 4 //
+>
+> record RIPair (a, b : Type) where
+>   constructor (//)
+>   fst   : a
+>   0 snd : b
 
-[ ] 1. Define a record RIPair : (a, b : Type) -> Type, with (//) as
+[X] 1. Define a record RIPair : (a, b : Type) -> Type, with (//) as
 constructor, and whose second argument is runtime irrelevant.
 
 Hint: Vs lbh pna'g jbex vg bhg, ybbx ng gur arkg frpgvba.
@@ -162,7 +159,10 @@ like using `Dec`:
 > Yes : {0 p : Type} -> p -> RBool p
 > Yes reason = True `Because` RTrue reason
 
-[ ] 1. Implement `No`. (Part of the exercise is to work out its type.)
+> No : {0 p : Type} -> Not p -> RBool p
+> No reason = False `Because` RFalse reason
+
+[X] 1. Implement `No`. (Part of the exercise is to work out its type.)
 
 We will now implement a similar reflection mechanism for the `Maybe`
 type, naturally fitting in a module named `Data.Maybe.Decidable`:
@@ -171,8 +171,12 @@ type, naturally fitting in a module named `Data.Maybe.Decidable`:
 >   Indeed    : {0 p : a -> Type} -> (prf : p x) -> Reflects p (Just x)
 >   Otherwise : {0 p : a -> Type} -> (prf : (x : a) -> Not (p x)) -> Reflects p Nothing
 
-[ ] 2. Implement the `RMaybe : {a : Type} -> (p : a -> Type) -> Type` as a record.
-> RMaybe : {a : Type} -> (p : a -> Type) -> Type
+[X] 2. Implement the `RMaybe : {a : Type} -> (p : a -> Type) -> Type` as a record.
+--> RMaybe : {a : Type} -> (p : a -> Type) -> Type
+> record RMaybe {a : Type} p where
+>   constructor MBecause
+>   Holds   : Maybe a
+>   0 Proof : Reflects p Holds
 
 Functions returning a reflecting optional value guarantee a certain
 post-condition. We sometimes need to massage this post-condition into
@@ -180,8 +184,9 @@ a different shape in order to use it later. The following function is
 useful for that purpose:
 
 > map : {0 p,q : a -> Type} -> p <-> q -> RMaybe p -> RMaybe q
-
-[ ] 3. Implement map.
+> map (And pimpq _) (Nothing `MBecause` (Otherwise nprf)) = Nothing `MBecause` ( Otherwise (\x => \qx => nprf x (pimpq x qx)))
+> map (And _ qimpp) ((Just x) `MBecause` (Indeed prf)) = (Just x) `MBecause` (Indeed (qimpp x prf))
+[X] 3. Implement map.
 
 [ ] 4. Implement:
 
@@ -189,6 +194,24 @@ useful for that purpose:
 > ||| is from the list satisfies the predicate, iff such an element exists.
 > findR : {0 a : Type} -> (pred : a -> Bool) -> (xs : List a) ->
 >   RMaybe (\x => (x `Elem` xs, pred x = True))
+
+> findR pred [] =
+>   let pprf  : Elem x [] -> Void
+>       pprf Here impossible
+>       pprf (There y) impossible
+>   in Nothing `MBecause` (Otherwise (\x => \(elem, p) => (pprf elem)))
+
+> findR pred (x :: xs) with (pred x) proof p
+>   findR pred (x :: xs) | True = (Just x) `MBecause` (Indeed (Here, p))
+>   findR pred (x :: xs) | False =
+>     let iff: (\x => (x `Elem` (xs), pred x = True)) <-> (\x => (x `Elem` y :: xs,  pred x = True))
+>         iff = (\y => (\case
+>                      (Here, i) => ?h
+>                      (There e, c) => (e,c)
+>                   ))
+>               `And`
+>               (\_ => (\(e,v) => (There e, v)))
+>     in map iff (findR pred xs)
 
 Hint 0: V hfrq n 'cnggrea zngpuvat ynzoqn' pnfr cnggrea vzcbffvoyr va zl fbyhgvba.
 Hint 1: V nyfb hfrq n ivrj jvgu n cebbs: `jvgu (cerq l) cebbs c`
