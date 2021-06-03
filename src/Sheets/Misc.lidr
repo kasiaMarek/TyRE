@@ -174,7 +174,7 @@ type, naturally fitting in a module named `Data.Maybe.Decidable`:
 [X] 2. Implement the `RMaybe : {a : Type} -> (p : a -> Type) -> Type` as a record.
 --> RMaybe : {a : Type} -> (p : a -> Type) -> Type
 > record RMaybe {a : Type} p where
->   constructor MBecause
+>   constructor Because
 >   Holds   : Maybe a
 >   0 Proof : Reflects p Holds
 
@@ -184,29 +184,26 @@ a different shape in order to use it later. The following function is
 useful for that purpose:
 
 > map : {0 p,q : a -> Type} -> p <-> q -> RMaybe p -> RMaybe q
-> map (And pimpq _) (Nothing `MBecause` (Otherwise nprf)) = Nothing `MBecause` ( Otherwise (\x => \qx => nprf x (pimpq x qx)))
-> map (And _ qimpp) ((Just x) `MBecause` (Indeed prf)) = (Just x) `MBecause` (Indeed (qimpp x prf))
+> map iff (Nothing `Because` (Otherwise nprf)) = Nothing `Because` ( Otherwise (\x => \qx => nprf x (iff.If x qx)))
+> map iff ((Just x) `Because` (Indeed prf)) = (Just x) `Because` (Indeed (iff.onlyIf x prf))
+
 [X] 3. Implement map.
 
-[ ] 4. Implement:
+[X] 4. Implement:
 
 > ||| A version of `Data.List.find` that guarantees the result
 > ||| is from the list satisfies the predicate, iff such an element exists.
 > findR : {0 a : Type} -> (pred : a -> Bool) -> (xs : List a) ->
 >   RMaybe (\x => (x `Elem` xs, pred x = True))
 
-> findR pred [] =
->   let pprf  : Elem x [] -> Void
->       pprf Here impossible
->       pprf (There y) impossible
->   in Nothing `MBecause` (Otherwise (\x => \(elem, p) => (pprf elem)))
+> findR pred [] = Nothing `Because` Otherwise \x => \case (_, _) impossible
 
 > findR pred (x :: xs) with (pred x) proof p
->   findR pred (x :: xs) | True = (Just x) `MBecause` (Indeed (Here, p))
+>   findR pred (x :: xs) | True = (Just x) `Because` (Indeed (Here, p))
 >   findR pred (x :: xs) | False =
->     let iff: (\x => (x `Elem` (xs), pred x = True)) <-> (\x => (x `Elem` y :: xs,  pred x = True))
+>     let iff: (\y => (y `Elem` (xs), pred y = True)) <-> (\y => (y `Elem` x :: xs,  pred y = True))
 >         iff = (\y => (\case
->                      (Here, i) => ?h
+>                      (Here, i) => absurd (trans (sym p) i)
 >                      (There e, c) => (e,c)
 >                   ))
 >               `And`
