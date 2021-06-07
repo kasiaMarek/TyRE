@@ -6,6 +6,7 @@ import Data.SnocList.Elem
 
 %default total
 
+public export
 data EvidenceMarker =
    -- StringMark String
    PairMark
@@ -15,6 +16,7 @@ data EvidenceMarker =
  -- | RightBranchMark
  -- | StarMark
 
+public export
 Evidence : Type
 Evidence = SnocList EvidenceMarker
 

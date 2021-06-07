@@ -19,7 +19,7 @@ instructions.
 >   ||| Initial states
 >   ||| A list since the same state might have different initialisation routines (more later).
 >   start : List State
->   ||| A list since the same state might have different routines as a result of 
+>   ||| A list since the same state might have different routines as a result of
 >   ||| combining NAs (more later).
 >   next : State -> Char -> List State
 
@@ -29,7 +29,7 @@ instructions.
 After we implement the NA operations, we'll look at virtual machine
 instructions.
 
-[ ] 1. Export the appropriate definitions from `Evidence` and add it
+[X] 1. Export the appropriate definitions from `Evidence` and add it
 (and other project modules) to the .ipkg file. Then import `Evidence`
 and erase the next line.
 
@@ -37,7 +37,7 @@ and erase the next line.
 > Evidence : Type
 > Evidence = SnocList EvidenceMarker
 
-> ||| The VM we associate with an NFA can record a sub-sequence of characters 
+> ||| The VM we associate with an NFA can record a sub-sequence of characters
 > ||| and act on an evidence
 > record VMState where
 >   constructor MkVMState
@@ -48,7 +48,7 @@ and erase the next line.
 > data Instruction =
 >     ||| Start recording word
 >     Record
->   | ||| Emit the recorded string  
+>   | ||| Emit the recorded string
 >     EmitString
 >   | ||| Emit the last character
 >     EmitLast
@@ -65,17 +65,17 @@ and erase the next line.
 >   constructor MkProgram
 >   ||| Which routine to execute when we initialise a thread at each starting state
 >   init : Vect (length $ N .start) Routine
->   ||| Which routine to execute 
+>   ||| Which routine to execute
 >   next : (st : N .State) -> (c : Char) -> Vect (length $ N .next st c) Routine
 
 
 > 0 Thread : NA -> Type
 > Thread na = (na.State, VMState)
 
-[ ] 3. Since we're indexing a vector by a list, we'll need the following map:
+[X] 3. Since we're indexing a vector by a list, we'll need the following map:
 
 > map : (f : (a,b) -> (c,d)) -> (xs : List a) ->
->   (ys : Vect (length xs) b) -> 
+>   (ys : Vect (length xs) b) ->
 >   (xs' : List c ** Vect (length xs') d)
 
 
@@ -86,7 +86,7 @@ and erase the next line.
 Fix an NA:
 > parameters {auto N : NA}
 
-[ ] 2. Implement the other projection:
+[X] 2. Implement the other projection:
 
 >   (.naState) : Thread N -> N .State
 >   (.naState) = fst
@@ -94,7 +94,7 @@ Fix an NA:
 
 
 
-To avoid boilerplate: 
+To avoid boilerplate:
 
 >   0 Step : Type
 >   Step = (td : Thread N) -> Thread N
@@ -103,9 +103,9 @@ To avoid boilerplate:
 
 
 
-[ ] 4. Implement the following functions and their specs:
+[X] 4. Implement the following functions and their specs:
 
->   step : Char -> Step 
+>   step : Char -> Step
 >   stepMaintainsState : (c : Char) -> ThreadPredicate $
 >        (\td => (step c td).naState = td.naState)
 >     /\ (\td => (step c td).vmState.Recording = td.vmState.Recording)
@@ -117,7 +117,7 @@ We can now interpret the instructions. For example:
 >   emitChar : (c : Char) -> Step
 >   emitChar c td = (td.naState, record {evidence $= (:< CharMark c)} td.vmState)
 
-[ ] 5. Implement the other instructions:
+[X] 5. Implement the other instructions:
 >   emitString     : Step
 >   startRecording : Step
 >   emitPair       : Step
@@ -129,29 +129,28 @@ NB: use `case` when you match on `c`, this will make sure the
 case-tree is the right one.
 
 
-[ ] 6. Prove that execution maintains the automaton's state:
+[X] 6. Prove that execution maintains the automaton's state:
 >   executeMaintainsNAState : (mc : Maybe Char) -> (routine : Routine) -> ThreadPredicate $
 >     \td => (execute mc routine td).naState = td.naState
 
-[ ] 7. Implement routines for running the automaton:
+[?] 7. Implement routines for running the automaton:
 
 >    run : Word -> Step
 
-[ ] 8. Manually construct some automata and run them on some
+[X~?] 8. Manually construct some automata and run them on some
 inputs. Here are some examples:
 
 a. Automaton for language accepting words with even numbers.
 b. Automaton for the empty language
 c. Automaton recognising the string "foo".
 
-[ ] 9. Implement running a VM
+[X~?] 9. Implement running a VM
 
 Fix a program for our NA:
 >  parameters (P : Program N)
 >    initialise : List (Thread N)
->  
->  
+>
+>
 >    runFrom : Word -> (tds : List $ Thread N) -> Maybe Evidence
 
 [ ] 10. Implement Thompson's construction
-
