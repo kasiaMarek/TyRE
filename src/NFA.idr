@@ -5,8 +5,6 @@ import Data.SnocList
 import Data.List
 import Evidence
 
-
-
 ||| A non-deterministic automaton
 public export
 record NA where

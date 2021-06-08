@@ -133,18 +133,18 @@ case-tree is the right one.
 >   executeMaintainsNAState : (mc : Maybe Char) -> (routine : Routine) -> ThreadPredicate $
 >     \td => (execute mc routine td).naState = td.naState
 
-[?] 7. Implement routines for running the automaton:
+[X] 7. Implement routines for running the automaton:
 
 >    run : Word -> Step
 
-[X~?] 8. Manually construct some automata and run them on some
+[X] 8. Manually construct some automata and run them on some
 inputs. Here are some examples:
 
 a. Automaton for language accepting words with even numbers.
 b. Automaton for the empty language
 c. Automaton recognising the string "foo".
 
-[X~?] 9. Implement running a VM
+[X] 9. Implement running a VM
 
 Fix a program for our NA:
 >  parameters (P : Program N)
