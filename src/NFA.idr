@@ -146,64 +146,24 @@ executeMaintainsNAState mc (x::xs) td =
       sfim  = (stepForInstructionMaintainsNAState mc x td)
   in trans recur sfim
 
-parameters (P : Program N)
-
-
--- initialise : List (Thread N)
--- initialise =
---   let initVmState : VMState
---       initVmState = MkVMState False [<] [<]
---       f: (N .State, Routine) -> Thread N
---       f (s, r) = execute Nothing r (s, initVmState)
---   in mapF f (N .start) (P .init)
---
--- --TODO:sets
--- runFrom : Word -> (tds : List $ Thread N) -> Maybe Evidence
--- runFrom [] tds =  map (\td => (snd td) .evidence) (find (\td => N .accepting (fst td)) tds)
--- runFrom (c::cs) tds =
---   let m: Thread N -> (.State N, Routine) -> (.State N, VMState)
---       m t (s, r) = (s, snd (execute (Just c) r t))
---       f: Thread N -> List $ Thread N
---       f td = mapF (m td) ((N .next) (fst td) c) (P .next (fst td) c)
---   in runFrom cs (tds >>= f . (step c))
-
-initialise : List (Thread N)
-initialise = map (\s => (s, MkVMState False [<] [<])) (N .start)
-
 mapF : (f : (a,b) -> c) -> (xs : List a) -> (ys : Vect (length xs) b) -> List c
 mapF f xs ys = fst (map (\x => (f x, ())) xs ys)
 
-add     : (xs: List $ Thread N ** Vect (length xs) Routine)
-        -> (ys: List $ Thread N ** Vect (length ys) Routine)
-        -> (zs: List $ Thread N ** Vect (length zs) Routine)
+parameters (P : Program N)
 
-add ([] ** []) (t2 ** r2) = (t2 ** r2)
-add ((t::t1) ** (r::r1)) (t2 ** r2) =
-  let sh : Thread N -> Thread N -> Bool
-      sh td1 td2   = ?i--(fst td1) == (fst td2) -- N .isEq
-      exsistsState : Maybe $ Thread N
-      exsistsState = find (sh t) t2
-      added  : (zs: List $ Thread N ** Vect (length zs) Routine)
-      added  = add (t1 ** r1) (t2 ** r2)
-      added' : (zs: List $ Thread N ** Vect (length zs) Routine)
-      added' = add (t1 ** r1) (t::t2 ** r::r2)
-  in case exsistsState of
-      Nothing => added'
-      (Just _) => added -- add (t1 ** r1) (t2 ** r2)
-    --  DPair (List (Thread N)) (\ys => Vect (length ys) Routine) -> DPair (List (Thread N)) (\zs => Vect (length zs) Routine)
-    --DPair (List (Thread N)) (\zs => Vect (length zs) Routine)
+initialise : List (Thread N)
+initialise =
+  let initVmState : VMState
+      initVmState = MkVMState False [<] [<]
+      f: (N .State, Routine) -> Thread N
+      f (s, r) = execute Nothing r (s, initVmState)
+  in mapF f (N .start) (P .init)
 
-allNext : List $ Thread N -> Char -> (xs: List $ Thread N ** Vect (length xs) Routine)
-allNext []        c = ([] ** [])
-
-allNext (td::tds) c =
-  let ntAnr         =  map ( \(s, r) => ((s, snd td), r) ) (N .next (fst td) c) (P .next (fst td) c)
-      allNext'      =  allNext tds c
-  in  add ntAnr allNext'
-
-run_rec : Word -> (tds : List $ Thread N ** Vect (length tds) Routine) -> List $ Thread N
-run_rec [] (tds ** rs) = mapF (\(t,r) => execute Nothing r t) tds rs
-run_rec (c::cs) (tds ** rs) =
-  let newThreads  : List $ Thread N
-      newThreads  = mapF (\(t,r) => ((execute (Just c) r) . (step c)) t) tds rs
-  in run_rec cs (allNext newThreads c)
+runFrom : Word -> (tds : List $ Thread N) -> Maybe Evidence
+runFrom [] tds =  map (\td => (snd td) .evidence) (find (\td => N .accepting (fst td)) tds)
+runFrom (c::cs) tds =
+  let m: Thread N -> (.State N, Routine) -> (.State N, VMState)
+      m t (s, r) = (s, snd (execute (Just c) r t))
+      f: Thread N -> List $ Thread N
+      f td = mapF (m td) ((N .next) (fst td) c) (P .next (fst td) c)
+  in runFrom cs (tds >>= f . (step c))
