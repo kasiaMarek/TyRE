@@ -3,6 +3,7 @@ module Evidence
 import Codes
 import Data.SnocList
 import Data.SnocList.Elem
+import Data.SnocList.Extra
 
 %default total
 
@@ -45,12 +46,6 @@ record Result (ev : Evidence) (c : Code) (cs : SnocList Code) where
   rest   : Evidence
   0 restValid : rest `Encodes` cs
 
-
-assoc : {a : Type} -> {x,y,z : SnocList a} -> x ++ (y ++ z) = (x ++ y) ++ z
-assoc {x, y, z=[<]} = Refl
-assoc {x, y, z=(sz :< z')} = cong (:< z') (assoc {x, y, z=sz})
-
-
 recontextualise : (prf1 : evs1 `Encodes` cs1)
               -> (prf2 : evs2 `Encodes` cs2)
               -> (evs1 ++ evs2) `Encodes` (cs1 ++ cs2)
@@ -61,7 +56,7 @@ recontextualise prf1 (AGroup prf str) = AGroup (recontextualise prf1 prf) str
 
 recontextualise prf1 (APair {ford = eqprf} prf prf2' prf1') =
   let 0 p: ((evs1 ++ (evs ++ (ev1 ++ ev2))) :< PairMark = ((evs1 ++ evs) ++ (ev1 ++ ev2)) :< PairMark)
-      p = cong (:< PairMark) (assoc)
+      p = cong (:< PairMark) (appendAssociative)
   in APair (recontextualise prf1 prf) prf2' prf1'
       {ford = trans (cong (evs1 ++) eqprf) p}
 
@@ -76,7 +71,7 @@ extractResult [<] (APair _ _ _) impossible
 
 extractResult (e@(evs ++ (ev1 ++ ev2)) :< PairMark) (APair {cs, c1, c2, ford=Refl} prf prf1 prf2) =
   let   0 prf1' = recontextualise (recontextualise prf prf1) prf2
-        0 eqprf = sym (trans Refl assoc)
+        0 eqprf = sym (trans Refl appendAssociative)
         0 prf'  = replace {p=(\x => x `Encodes` (cs :< c1 :< c2))} eqprf prf1'
         result2 = extractResult e prf'
         result1 = extractResult result2.rest (result2.restValid)
