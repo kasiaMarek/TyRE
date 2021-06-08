@@ -2,16 +2,8 @@ module NFA.Examples
 
 import NFA
 
--- parameters {auto N : NA}
-
---TODO: probably should be on Set of States not list
 runNFA : NA -> Word -> Bool
-runNFA na word =
-  let runNFArec: Word -> List (na .State) -> Bool
-      runNFArec [] [] = False
-      runNFArec [] (s :: ss) = if (na.accepting s) then True else runNFArec [] ss
-      runNFArec (c :: cs) ys = runNFArec cs (ys >>= (\s => na.next s c))
-  in runNFArec word na.start
+runNFA na word = run {N = na} word na.start
 
 --a. Automaton for language accepting words with even numbers.
 -- I assume words that cointain at least one even number

@@ -146,6 +146,12 @@ executeMaintainsNAState mc (x::xs) td =
       sfim  = (stepForInstructionMaintainsNAState mc x td)
   in trans recur sfim
 
+run: Word -> List (N .State) -> Bool
+run [] ys = case (find (N .accepting) ys) of
+              (Just _)  => True
+              Nothing   => False
+run (c :: cs) ys = run cs (ys >>= (\s => N .next s c))
+
 mapF : (f : (a,b) -> c) -> (xs : List a) -> (ys : Vect (length xs) b) -> List c
 mapF f xs ys = fst (map (\x => (f x, ())) xs ys)
 
