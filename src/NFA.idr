@@ -114,7 +114,7 @@ startRecording td = (td.naState, record {recording = True} td.vmState)
 emitPair          : Step
 emitPair td       = (td.naState, record {evidence $= (:< PairMark)} td.vmState)
 
-stepForInstruction: (mc : Maybe Char) -> Instruction -> Step
+stepForInstruction : (mc : Maybe Char) -> Instruction -> Step
 
 stepForInstruction mc       Record      = startRecording
 stepForInstruction mc       EmitString  = emitString
@@ -124,7 +124,7 @@ stepForInstruction Nothing  EmitLast    = (\t => t)
 
 execute : (mc : Maybe Char) -> Routine -> Step
 execute mc [] td = td
-execute mc (x::xs) td = execute mc xs (stepForInstruction mc x td)
+execute mc (x::xs) td = execute mc xs $ stepForInstruction mc x td
 
 stepForInstructionMaintainsNAState : (mc : Maybe Char) -> (ins: Instruction) -> ThreadPredicate $
   \td => (stepForInstruction mc ins td).naState = td.naState
@@ -140,8 +140,8 @@ executeMaintainsNAState : (mc : Maybe Char) -> (routine : Routine) -> ThreadPred
 
 executeMaintainsNAState mc [] td      = Refl
 executeMaintainsNAState mc (x::xs) td =
-  let recur = (executeMaintainsNAState mc xs (stepForInstruction mc x td))
-      sfim  = (stepForInstructionMaintainsNAState mc x td)
+  let recur = executeMaintainsNAState mc xs (stepForInstruction mc x td)
+      sfim  = stepForInstructionMaintainsNAState mc x td
   in trans recur sfim
 
 run: Word -> List (N .State) -> Bool
@@ -151,7 +151,7 @@ run [] ys = case (find (N .accepting) ys) of
 run (c :: cs) ys = run cs (ys >>= (\s => N .next s c))
 
 mapF : (f : (a,b) -> c) -> (xs : List a) -> (ys : Vect (length xs) b) -> List c
-mapF f xs ys = fst (map (\x => (f x, ())) xs ys)
+mapF f xs ys = fst $ map (\x => (f x, ())) xs ys
 
 parameters (P : Program N)
 
@@ -159,15 +159,15 @@ initialise : List (Thread N)
 initialise =
   let initVmState : VMState
       initVmState = MkVMState False [<] [<]
-      f: (N .State, Routine) -> Thread N
+      f : (N .State, Routine) -> Thread N
       f (s, r) = execute Nothing r (s, initVmState)
   in mapF f (N .start) (P .init)
 
 runFrom : Word -> (tds : List $ Thread N) -> Maybe Evidence
 runFrom [] tds =  map (\td => (snd td) .evidence) (find (\td => N .accepting (fst td)) tds)
 runFrom (c::cs) tds =
-  let m: Thread N -> (.State N, Routine) -> (.State N, VMState)
-      m t (s, r) = (s, snd (execute (Just c) r t))
-      f: Thread N -> List $ Thread N
-      f td = mapF (m td) ((N .next) (fst td) c) (P .next (fst td) c)
+  let m : Thread N -> (N .State, Routine) -> (N .State, VMState)
+      m t (s, r) = (s, snd $ execute (Just c) r t)
+      f : Thread N -> List $ Thread N
+      f td = mapF (m td) (N .next (fst td) c) (P .next (fst td) c)
   in runFrom cs (tds >>= f . (step c))

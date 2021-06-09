@@ -49,8 +49,8 @@ thompson (Concat x y) =
               (Just _) => (map (\s => Left s) (filter t1.accepting t1Next)) ++ (map (\s => Right s) t2.start)
       next (Right s) c = (map (\s => Right s) (t2.next s c))
 
-      --TODO:
-      Eq (Either t1.State t2.State)
+      _ := t1.isEq
+      _ := t2.isEq
 
   in MkNFA (Either t1.State t2.State) accepting start next
 
