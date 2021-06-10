@@ -49,6 +49,7 @@ Routine : Type
 Routine = List Instruction
 
 ||| A program, relative to a NFA, instructs what to do as we run the automaton:
+public export
 record Program (N : NA) where
   constructor MkProgram
   ||| Which routine to execute when we initialise a thread at each starting state
