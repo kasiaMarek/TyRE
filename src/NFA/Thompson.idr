@@ -5,11 +5,19 @@ import NFA
 import Data.List
 import Data.Vect
 import Data.Fin
+import Syntax.PreorderReasoning
+import Data.Nat
 
 --Useful proofs
 mapMaintainsLength: {a,b : Type} -> (xs: List a) -> (f: a -> b) -> (length xs = length (map f xs))
 mapMaintainsLength [] f = Refl
 mapMaintainsLength (x :: xs) f = cong (1+) (mapMaintainsLength xs f)
+
+lengthOfConcat : {xs, ys: List a} -> {xs', ys': List b} -> (length xs = length xs') -> (length ys = length ys') -> (length (xs ++ ys) = length (xs' ++ ys'))
+lengthOfConcat {xs=[], ys} {xs'=[], ys'} prf prf1 = prf1
+lengthOfConcat {xs=[], ys} {xs'=(x'::xss'), ys'} prf prf1 = absurd prf
+lengthOfConcat {xs=(x::xss), ys} {xs'=[], ys'} prf prf1 = absurd prf
+lengthOfConcat {xs=(x::xss), ys} {xs'=(x'::xss'), ys'} prf prf1 = cong S (lengthOfConcat (succInjective (length xss) (length xss') prf) prf1)
 
 --State for Predicate
 data PState = StartState | AcceptState
@@ -35,18 +43,20 @@ acceptingPred AcceptState = True
 acceptingPred StartState  = False
 
 --Functions for Group
-acceptGroup : {0 state' : Type} -> (Either state' GState) -> Bool
-acceptGroup (Left x)             = False
-acceptGroup (Right GAcceptState) = True
+acceptGroup : {0 state' : Type} -> (Either state' state') -> Bool
+acceptGroup (Left _)             = False
+acceptGroup (Right _)            = True
+
+nextGroupMap : (state' -> Bool) -> state' -> List (Either state' state')
+nextGroupMap f x = if (f x) then [Left x, Right x] else [Left x]
+
+nextGroupList : (state' -> Bool) -> List state' -> List (Either state' state')
+nextGroupList f [] = []
+nextGroupList f (x :: xs) = (nextGroupMap f x) ++ (nextGroupList f xs)
 
 nextGroup : {0 state' : Type} -> (state' -> Char -> List state') -> (state' -> Bool)
-          -> (Either state' GState) -> Char -> List (Either state' GState)
-nextGroup next' accept' (Left x)             c =
-  let n : List state'
-      n = next' x c
-  in case (find accept' n) of
-      (Just _) => (Right GAcceptState)::(map Left n)
-      Nothing  => map Left n
+          -> (Either state' state') -> Char -> List (Either state' state')
+nextGroup next' accept' (Left x) c = nextGroupList accept' (next' x c) -->>= (nextGroupMap accept')
 nextGroup next' accept' (Right _) _ = []
 
 
@@ -81,7 +91,7 @@ thompsonNFA (Group x) =
   let prev: NA
       prev = thompsonNFA x
       _ := prev.isEq
-  in MkNFA (Either prev.State GState) acceptGroup (map Left prev.start) (nextGroup prev.next prev.accepting)
+  in MkNFA (Either prev.State prev.State) acceptGroup (map Left prev.start) (nextGroup prev.next prev.accepting)
 
 
 record VMrec (re: CoreRE) where
@@ -103,13 +113,13 @@ thompsonVM_rec (Pred f) recording =
 
       prog: Program (thompsonNFA (Pred f))
       prog = MkProgram [[]] next
-      --(\st => \c => Refl)
   in MkVMrec prog (nextPred f) Refl acceptingPred Refl
 
 thompsonVM_rec (Concat y z) recording = ?thompsonVM_rec_rhs_2
 
 thompsonVM_rec (Group y) recording =
-  let prev = thompsonVM_rec y True
+  let prev: VMrec y
+      prev = thompsonVM_rec y True
 
       init: Vect (length (map Left (thompsonNFA y).start)) Routine
       init = map (Record::) (replace
@@ -118,41 +128,43 @@ thompsonVM_rec (Group y) recording =
                                 prev.prog.init)
 
       0 p := (cong2 nextGroup prev.nextPrf prev.acceptPrf)
-      nextNFA: (Either (thompsonNFA y).State GState) -> Char -> List (Either (thompsonNFA y).State GState)
+
+      nextNFA: (Either (thompsonNFA y).State (thompsonNFA y).State) -> Char -> List (Either (thompsonNFA y).State (thompsonNFA y).State)
       nextNFA = nextGroup prev.next prev.accepting
 
-      n: (st:(Either (thompsonNFA y).State GState)) -> (c: Char) -> Vect (length ((thompsonNFA (Group y)).next st c)) (Either (thompsonNFA y).State GState)
-      n st c = replace {p = \l => Vect l (Either (thompsonNFA y).State GState)} (cong (\e => length (e st c)) p) (fromList (nextNFA st c))
-      --0 prf: Vect (length (case find (.accepting (thompsonNFA y)) (.next (thompsonNFA y) x c) of {Just _ => Right GAcceptState :: map Left (n state' x c accept' next'); Nothing => map Left (n state' x c accept' next')})) (List Instruction)
-      ---ppr: (st: )
-      next: (st : (thompsonNFA (Group y)).State) -> (c : Char) -> Vect (length ((thompsonNFA (Group y)).next st c)) Routine
-      -- nextGroup : {0 state' : Type} -> (state' -> Char -> List state') -> (state' -> Bool)
-      --           -> (Either state' GState) -> Char -> List (Either state' GState)
-      -- nextGroup next' accept' (Left x)             c =
-      --   let n : List state'
-      --       n = next' x c
-      --   in case (find accept' n) of
-      --       (Just _) => (Right GAcceptState)::(map Left n)
-      --       Nothing  => map Left n
-      -- nextGroup next' accept' (Right _) _ = []
-      next (Left  x) c =
-        let m := case (find (prev.accepting) (prev.next x c)) of
-                    Nothing => ?l
-                    (Just x) => ::(prev.prog x c)
-        in ?hole
-      --   let pp = prev.prog.next x c
-      --       t = (n (Left  x) c)
-      --   in ?hole
-      -- next (Right _) _  = []
-      -- next (Left  x) c with (find prev.accepting (prev.next x c))
-      --   next (Left  x) c | Nothing = ?jjjk
-      --   next (Left  x) c | (Just _) = ?jjj
+      f : ((thompsonNFA y).State, Routine) -> List Routine
+      f (s,r) = if (prev.accepting s) then [r,r] else [r]
 
-      --next (Right _) _  = []
+      0 prf1 : (r: Routine) -> (s: (thompsonNFA y).State) -> (length (f (s,r)) = length (nextGroupMap ((thompsonNFA y).accepting) s))
+      prf1 r s with (prev.accepting s) proof p1
+        prf1 r s | True  with (((thompsonNFA y).accepting) s) proof p2
+          prf1 r s | True | True = Refl
+          prf1 r s | True | False = absurd (trans (trans (sym p1) (cong (\f => f s) prev.acceptPrf)) p2)
+        prf1 r s | False  with (((thompsonNFA y).accepting) s) proof p2
+          prf1 r s | False | False = Refl
+          prf1 r s | False | True = absurd (trans (trans (sym p1) (cong (\f => f s) prev.acceptPrf)) p2)
+
+      fff : (xs: List ((thompsonNFA y).State)) -> (Vect (length xs) Routine) -> List Routine
+      fff [] [] = []
+      fff (x :: xs) (z :: ys) = (f (x,z)) ++ (fff xs ys)
+
+      0 prf2  : (xs: List ((thompsonNFA y).State))
+              -> (ys: Vect (length xs) Routine)
+              -> length (nextGroupList ((thompsonNFA y).accepting) xs) = length (fff xs ys)
+      prf2 [] [] = Refl
+      prf2 (x :: xs) (z :: ys) = lengthOfConcat (sym (prf1 z x)) (prf2 xs ys)
+
+      next: (st : (thompsonNFA (Group y)).State) -> (c : Char) -> Vect (length ((thompsonNFA (Group y)).next st c)) Routine
+      next (Left  st) c =
+        let v = (replace {p = \m => Vect (length (m st c)) Routine} (sym prev.nextPrf) (prev.prog.next st c))
+            0 l = prf2 (prev.next st c) v
+            0 w = cong (\f => length (nextGroupList (.accepting (thompsonNFA y)) (f st c))) prev.nextPrf
+        in replace {p= \l => Vect l Routine} (trans (sym l) w) (fromList (fff (prev.next st c) v))
+      next (Right _) _  = []
 
       prog: Program (thompsonNFA (Group y))
       prog = MkProgram init next
 
-  in MkVMrec prog nextNFA (cong2 nextGroup prev.nextPrf prev.acceptPrf) acceptGroup Refl
+  in MkVMrec prog nextNFA p acceptGroup Refl
 
 thompsonVM: (re: CoreRE) -> Program (thompsonNFA re)
