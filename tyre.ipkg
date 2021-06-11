@@ -6,3 +6,5 @@ sourcedir = "src"
 
 modules = Sheets.FP
           , Data.SnocList.Elem
+          , Core
+          , Codes
