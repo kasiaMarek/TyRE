@@ -13,6 +13,14 @@ mapMaintainsLength: {a,b : Type} -> (xs: List a) -> (f: a -> b) -> (length xs = 
 mapMaintainsLength [] f = Refl
 mapMaintainsLength (x :: xs) f = cong (1+) (mapMaintainsLength xs f)
 
+vectToList: Vect n a -> List a
+vectToList [] = []
+vectToList (x :: xs) = x :: (vectToList xs)
+
+vectToListMaintainstLength: (v: Vect n a) -> (length (vectToList v) = n)
+vectToListMaintainstLength [] = Refl
+vectToListMaintainstLength (_ :: xs) = cong (S) (vectToListMaintainstLength xs)
+
 lengthOfConcat : {xs, ys: List a} -> {xs', ys': List b} -> (length xs = length xs') -> (length ys = length ys') -> (length (xs ++ ys) = length (xs' ++ ys'))
 lengthOfConcat {xs=[], ys} {xs'=[], ys'} prf prf1 = prf1
 lengthOfConcat {xs=[], ys} {xs'=(x'::xss'), ys'} prf prf1 = absurd prf
@@ -27,144 +35,192 @@ Eq PState where
   AcceptState == AcceptState  = True
   _           == _            = False
 
---State for Group
-data GState = GAcceptState
+--When additional end accepting state needed
+data AState = EndState
 
-Eq GState where
-  GAcceptState == GAcceptState = True
+Eq AState where
+  EndState == EndState = True
 
---Functions for Predicate
-nextPred: (Char -> Bool) -> PState -> Char -> List PState
-nextPred f StartState    c   = if (f c) then [AcceptState] else []
-nextPred f AcceptState   _   = []
+--Useful functions
+nextList : (state -> List state') -> List state -> List state'
+nextList nextMap [] = []
+nextList nextMap (x :: xs) = (nextMap x) ++ (nextList nextMap xs)
 
-acceptingPred: PState -> Bool
-acceptingPred AcceptState = True
-acceptingPred StartState  = False
+nextListVM : ((state, Routine) -> List Routine) -> (xs: List state) -> (Vect (length xs) Routine) -> List Routine
+nextListVM nextMapVM [] [] = []
+nextListVM nextMapVM (x :: xs) (z :: ys) = (nextMapVM (x,z)) ++ (nextListVM nextMapVM xs ys)
 
---Functions for Group
-acceptGroup : {0 state' : Type} -> (Either state' state') -> Bool
-acceptGroup (Left _)             = False
-acceptGroup (Right _)            = True
+--Proof of length equality of nextList and nextListVM given the same list of states
+0 nextListPrf  : {nextMap : (state -> List state')}
+        -> {nextMapVM : ((state, Routine) -> List Routine)}
+        -> (xs: List state)
+        -> (ys: Vect (length xs) Routine)
+        -> (0 prf1 : (r: Routine) -> (s: state) -> (length (nextMapVM (s,r)) = length (nextMap s)))
+        -> length (nextListVM nextMapVM xs ys) = length (nextList nextMap xs)
+nextListPrf [] [] prf1 = Refl
+nextListPrf (x :: xs) (z :: ys) prf1 = lengthOfConcat (prf1 z x) (nextListPrf xs ys prf1)
 
-nextGroupMap : (state' -> Bool) -> state' -> List (Either state' state')
-nextGroupMap f x = if (f x) then [Left x, Right x] else [Left x]
+record SM where
+  constructor MkSM
+  nfa: NA
+  prog: Program nfa
 
-nextGroupList : (state' -> Bool) -> List state' -> List (Either state' state')
-nextGroupList f [] = []
-nextGroupList f (x :: xs) = (nextGroupMap f x) ++ (nextGroupList f xs)
+thompson : CoreRE -> Bool -> SM
+thompson (Pred f) recording =
+  let nextNFA: PState -> Char -> List PState
+      nextNFA StartState    c   = if (f c) then [AcceptState] else []
+      nextNFA AcceptState   _   = []
 
-nextGroup : {0 state' : Type} -> (state' -> Char -> List state') -> (state' -> Bool)
-          -> (Either state' state') -> Char -> List (Either state' state')
-nextGroup next' accept' (Left x) c = nextGroupList accept' (next' x c) -->>= (nextGroupMap accept')
-nextGroup next' accept' (Right _) _ = []
+      accepting: PState -> Bool
+      accepting AcceptState = True
+      accepting StartState  = False
 
-
-|||Thompson construction for NFA
-thompsonNFA: CoreRE -> NA
-thompsonNFA (Pred f) = MkNFA PState acceptingPred [StartState] (nextPred f)
-thompsonNFA (Concat x y) =
-  let t1 = thompsonNFA x
-      t2 = thompsonNFA y
-
-      accepting: (Either t1.State t2.State) -> Bool
-      accepting (Left  _) = False
-      accepting (Right x) = t2.accepting x
-
-      start: List (Either t1.State t2.State)
-      start = map Left t1.start
-
-      next : (Either t1.State t2.State) -> Char -> List (Either t1.State t2.State)
-      next (Left  s) c =
-        let t1Next = t1.next s c
-        in case (find t1.accepting t1Next) of
-              Nothing => (map Left t1Next)
-              (Just _) => (map Left (filter t1.accepting t1Next)) ++ (map Right t2.start)
-      next (Right s) c = (map Right (t2.next s c))
-
-      _ := t1.isEq
-      _ := t2.isEq
-
-  in MkNFA (Either t1.State t2.State) accepting start next
-
-thompsonNFA (Group x) =
-  let prev: NA
-      prev = thompsonNFA x
-      _ := prev.isEq
-  in MkNFA (Either prev.State prev.State) acceptGroup (map Left prev.start) (nextGroup prev.next prev.accepting)
-
-
-record VMrec (re: CoreRE) where
-  constructor MkVMrec
-  prog: Program (thompsonNFA re)
-  next: (st: (thompsonNFA re) .State) -> (c: Char) -> List (thompsonNFA re) .State
-  0 nextPrf: next = (thompsonNFA re).next
-  accepting: (thompsonNFA re) .State -> Bool
-  0 acceptPrf: accepting = (thompsonNFA re).accepting
-
-|||Thompson construction for Program
-thompsonVM_rec  : (re: CoreRE) -> Bool -> VMrec re
-thompsonVM_rec (Pred f) recording =
-  let next : (st: PState) -> (c: Char) -> Vect (length (nextPred f st c)) Routine
+      next : (st: PState) -> (c: Char) -> Vect (length (nextNFA st c)) Routine
       next StartState c with (f c)
         next StartState c | True = if (recording) then [[]] else [[EmitLast]]
         next StartState c | False = []
       next AcceptState c = []
 
-      prog: Program (thompsonNFA (Pred f))
+      nfa : NA
+      nfa = MkNFA PState accepting [StartState] nextNFA
+
+      prog: Program nfa
       prog = MkProgram [[]] next
-  in MkVMrec prog (nextPred f) Refl acceptingPred Refl
+  in MkSM nfa prog
 
-thompsonVM_rec (Concat y z) recording = ?thompsonVM_rec_rhs_2
+thompson (Concat re1 re2) recording =
+  let sm1 : SM
+      sm1 = thompson re1 recording
+      sm2 : SM
+      sm2 = thompson re2 recording
 
-thompsonVM_rec (Group y) recording =
-  let prev: VMrec y
-      prev = thompsonVM_rec y True
+      0 state : Type
+      state = Either (Either sm1.nfa.State sm2.nfa.State) AState
 
-      init: Vect (length (map Left (thompsonNFA y).start)) Routine
-      init = map (Record::) (replace
-                                {p = \r => (Vect r Routine)}
-                                (mapMaintainsLength ((thompsonNFA y).start) Left)
-                                prev.prog.init)
+      accepting : state -> Bool
+      accepting (Left  _) = False
+      accepting (Right _) = True
 
-      0 p := (cong2 nextGroup prev.nextPrf prev.acceptPrf)
+      start : List state
+      start = map (\s => Left (Left s)) sm1.nfa.start
 
-      nextNFA: (Either (thompsonNFA y).State (thompsonNFA y).State) -> Char -> List (Either (thompsonNFA y).State (thompsonNFA y).State)
-      nextNFA = nextGroup prev.next prev.accepting
+      nextMapLL : sm1.nfa.State -> List state
+      nextMapLL st =
+        let ns : state
+            ns = (Left $ Left st)
+            mappedStart : List state
+            mappedStart = map (\s => Left $ Right s) sm2.nfa.start
+        in if (sm1.nfa.accepting st) then ns::mappedStart else [ns]
 
-      f : ((thompsonNFA y).State, Routine) -> List Routine
-      f (s,r) = if (prev.accepting s) then [r,r] else [r]
+      nextMapLR : sm2.nfa.State -> List state
+      nextMapLR st = if (sm2.nfa.accepting st) then [Left $ Right st, Right EndState] else [Left $ Right st]
 
-      0 prf1 : (r: Routine) -> (s: (thompsonNFA y).State) -> (length (f (s,r)) = length (nextGroupMap ((thompsonNFA y).accepting) s))
-      prf1 r s with (prev.accepting s) proof p1
-        prf1 r s | True  with (((thompsonNFA y).accepting) s) proof p2
-          prf1 r s | True | True = Refl
-          prf1 r s | True | False = absurd (trans (trans (sym p1) (cong (\f => f s) prev.acceptPrf)) p2)
-        prf1 r s | False  with (((thompsonNFA y).accepting) s) proof p2
-          prf1 r s | False | False = Refl
-          prf1 r s | False | True = absurd (trans (trans (sym p1) (cong (\f => f s) prev.acceptPrf)) p2)
+      next : state -> Char -> List state
+      next (Left $ Left st) c = nextList nextMapLL (sm1.nfa.next st c)
+      next (Left $ Right st) c = nextList nextMapLR (sm2.nfa.next st c)
+      next (Right _) _ = []
 
-      fff : (xs: List ((thompsonNFA y).State)) -> (Vect (length xs) Routine) -> List Routine
-      fff [] [] = []
-      fff (x :: xs) (z :: ys) = (f (x,z)) ++ (fff xs ys)
+      _ := sm1.nfa.isEq
+      _ := sm2.nfa.isEq
 
-      0 prf2  : (xs: List ((thompsonNFA y).State))
-              -> (ys: Vect (length xs) Routine)
-              -> length (nextGroupList ((thompsonNFA y).accepting) xs) = length (fff xs ys)
-      prf2 [] [] = Refl
-      prf2 (x :: xs) (z :: ys) = lengthOfConcat (sym (prf1 z x)) (prf2 xs ys)
+      nfa : NA
+      nfa = MkNFA state accepting start next
 
-      next: (st : (thompsonNFA (Group y)).State) -> (c : Char) -> Vect (length ((thompsonNFA (Group y)).next st c)) Routine
-      next (Left  st) c =
-        let v = (replace {p = \m => Vect (length (m st c)) Routine} (sym prev.nextPrf) (prev.prog.next st c))
-            0 l = prf2 (prev.next st c) v
-            0 w = cong (\f => length (nextGroupList (.accepting (thompsonNFA y)) (f st c))) prev.nextPrf
-        in replace {p= \l => Vect l Routine} (trans (sym l) w) (fromList (fff (prev.next st c) v))
-      next (Right _) _  = []
+      init : Vect (length start) Routine
+      init = replace {p=(\l => Vect l Routine)} (mapMaintainsLength _ _) sm1.prog.init
 
-      prog: Program (thompsonNFA (Group y))
-      prog = MkProgram init next
+      nextMapVMLL : (sm1.nfa.State, Routine) -> List Routine
+      nextMapVMLL (st, r) =
+        let initRoutine : List Routine
+            initRoutine = map (r++ ) $ vectToList sm2.prog.init
+        in if (sm1.nfa.accepting st) then r::initRoutine else [r]
 
-  in MkVMrec prog nextNFA p acceptGroup Refl
+      nextMapVMLR : (sm2.nfa.State, Routine) -> List Routine
+      nextMapVMLR (st,r) =
+        if (sm2.nfa.accepting st)
+        then
+          if (recording)
+          then [r,r]
+          else [r, r ++ [EmitPair]]
+        else [r]
 
-thompsonVM: (re: CoreRE) -> Program (thompsonNFA re)
+      0 prf1 : (r : Routine) -> (st : sm1.nfa.State) -> (length (nextMapVMLL (st,r)) = length (nextMapLL st))
+      prf1 r st with (sm1.nfa.accepting st)
+        prf1 _ _ | False = Refl
+        prf1 r st | True = cong (1+) $ Calc $
+          |~ length (map (r ++) (vectToList sm2.prog.init))
+          ~~ length (vectToList sm2.prog.init)                    ...(sym $ mapMaintainsLength _ _)
+          ~~ length sm2.nfa.start                                 ...(vectToListMaintainstLength _)
+          ~~ length (map (\s => Left (Right s)) sm2.nfa.start)    ...(mapMaintainsLength _ _)
+
+      0 prf2 : (r : Routine) -> (st : sm2.nfa.State) -> (length (nextMapVMLR (st,r)) = length (nextMapLR st))
+      prf2 _ st with (sm2.nfa.accepting st)
+        prf2 _ _ | False = Refl
+        prf2 _ _ | True with (recording)
+          prf2 _ _ | True | False = Refl
+          prf2 _ _ | True | True = Refl
+
+      nextVM : (st : state) -> (c : Char) -> Vect (length $ next st c) Routine
+      nextVM (Left $ Left st) c =
+        let list : List Routine
+            list = nextListVM nextMapVMLL (sm1.nfa.next st c) (sm1.prog.next st c)
+        in replace {p= \l => Vect l Routine} (nextListPrf _ _ prf1) (fromList list)
+      nextVM (Left $ Right st) c =
+        let list : List Routine
+            list = nextListVM nextMapVMLR (sm2.nfa.next st c) (sm2.prog.next st c)
+        in replace {p= \l => Vect l Routine} (nextListPrf _ _ prf2) (fromList list)
+      nextVM (Right _) _ = []
+
+      prog : Program nfa
+      prog = MkProgram init nextVM
+
+  in MkSM nfa prog
+
+thompson (Group re) recording =
+  let prev : SM
+      prev = thompson re True
+      _ := prev.nfa.isEq
+
+      0 state : Type
+      state = Either prev.nfa.State AState
+
+      accepting : state -> Bool
+      accepting (Left _)             = False
+      accepting (Right _)            = True
+
+      start : List state
+      start = map Left prev.nfa.start
+
+      nextMap : prev.nfa.State -> List state
+      nextMap st = if (prev.nfa.accepting st) then [Left st, Right EndState] else [Left st]
+
+      nextMapVM : (prev.nfa.State, Routine) -> List Routine
+      nextMapVM (st,r) = if (prev.nfa.accepting st) then [r,r ++ [EmitString]] else [r]
+
+      --Proof of length equality of nextMap and nextMapVM given the same state
+      0 prf1 : (r: Routine) -> (s: prev.nfa.State) -> (length (nextMapVM (s,r)) = length (nextMap s))
+      prf1 _ s with (prev.nfa.accepting s)
+        prf1 _ _ | True = Refl
+        prf1 _ _ | False = Refl
+
+      next : state -> Char -> List state
+      next (Left x) c = nextList nextMap (prev.nfa.next x c)
+      next (Right _) _ = []
+
+      nextVM: (st : state) -> (c : Char) -> Vect (length (next st c)) Routine
+      nextVM (Left  st) c =
+        let list : List Routine
+            list = nextListVM nextMapVM (prev.nfa.next st c) (prev.prog.next st c)
+        in replace {p= \l => Vect l Routine} (nextListPrf _ _ prf1) (fromList list)
+      nextVM (Right _) _  = []
+
+      init: Vect (length start) Routine
+      init = map (Record::) (replace {p = \l => (Vect l Routine)} (mapMaintainsLength prev.nfa.start Left) prev.prog.init)
+
+      nfa : NA
+      nfa = MkNFA state accepting start next
+
+      prog : Program nfa
+      prog = MkProgram init nextVM
+
+  in if (recording) then prev else MkSM nfa prog
