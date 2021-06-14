@@ -22,11 +22,13 @@ record NA where
   ||| combining NAs (more later).
   next : State -> Char -> List State
 
+public export
 Word : Type
 Word = List Char
 
 ||| The VM we associate with an NFA can record a sub-sequence of characters
 ||| and act on an evidence
+public export
 record VMState where
   constructor MkVMState
   recording : Bool
@@ -45,6 +47,7 @@ data Instruction =
   | ||| Emit that the tape currently stores a pair
     EmitPair
 
+public export
 Routine : Type
 Routine = List Instruction
 
@@ -57,7 +60,7 @@ record Program (N : NA) where
   ||| Which routine to execute
   next : (st : N .State) -> (c : Char) -> Vect (length $ N .next st c) Routine
 
-
+public export
 0 Thread : NA -> Type
 Thread na = (na.State, VMState)
 
@@ -82,6 +85,7 @@ parameters {auto N : NA}
 (.vmState) : Thread N -> VMState
 (.vmState) = snd
 
+public export
 0 Step : Type
 Step = (td : Thread N) -> Thread N
 0 ThreadPredicate : ((td : Thread N) -> Type) -> Type
@@ -123,6 +127,7 @@ stepForInstruction mc       EmitPair    = emitPair
 stepForInstruction (Just c) EmitLast    = emitChar c
 stepForInstruction Nothing  EmitLast    = (\t => t)
 
+public export
 execute : (mc : Maybe Char) -> Routine -> Step
 execute mc [] td = td
 execute mc (x::xs) td = execute mc xs $ stepForInstruction mc x td
@@ -151,6 +156,7 @@ run [] ys = case (find (N .accepting) ys) of
               Nothing   => False
 run (c :: cs) ys = run cs (ys >>= (\s => N .next s c))
 
+public export
 mapF : (f : (a,b) -> c) -> (xs : List a) -> (ys : Vect (length xs) b) -> List c
 mapF f xs ys = fst $ map (\x => (f x, ())) xs ys
 
@@ -164,6 +170,7 @@ initialise =
       f (s, r) = execute Nothing r (s, initVmState)
   in mapF f (N .start) (P .init)
 
+public export
 runFrom : Word -> (tds : List $ Thread N) -> Maybe Evidence
 runFrom [] tds =  map (\td => (snd td) .evidence) (find (\td => N .accepting (fst td)) tds)
 runFrom (c::cs) tds =
