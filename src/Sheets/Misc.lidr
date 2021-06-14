@@ -80,14 +80,22 @@ We can then think of dependent function types as universal quantification:
 >   onlyIf : (x : a) -> (p x -> q x)
 
 
-[ ] 1. Implament the following
+
+[X] 1. Implament the following
 
 a. Other propositional connectivies: (/\), (\/), TT
 
-> (/\): {a: Type} -> (p : a -> Type) -> (q : a -> Type) -> ((x : a) -> (p x, q x))
-> (\/): {a: Type} -> (p : a -> Type) -> (q : a -> Type) -> ((x : a) -> Either (p x) (q x))
-> true: x -> Unit
-> false: x -> Void
+> (/\): {a: Type} -> (p : a -> Type) -> (q : a -> Type) -> a -> Type
+> (/\) p q x = (p x, q x)
+
+> (\/): {a: Type} -> (p : a -> Type) -> (q : a -> Type) -> a -> Type
+> (\/) p q x = Either (p x) (q x)
+
+> true: {a: Type} -> a -> Type
+> true _ = Unit
+
+> false: {a: Type} -> a -> Type
+> false _ = Void
 
 b. (<->) is an equivalence relation between predicates
 > reflexive : (p : a -> Type) -> p <-> p
