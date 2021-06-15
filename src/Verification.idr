@@ -6,12 +6,25 @@ import Data.List.Elem
 import Data.List
 import Extra
 import Syntax.PreorderReasoning
+import Data.List.Quantifiers
 
 fromJust: (m: Maybe a) -> (prf: m = Just x) -> a
 fromJust (Just x) Refl = x
 
+foldLeftPrfAux: (xs: List a) -> (ys: List b) -> (zs: List b) -> (f: a -> List b) -> (foldl (\acc, elem => acc ++ f elem) (ys ++ zs) xs = ys ++ foldl (\acc, elem => acc ++ f elem) (zs) xs)
+foldLeftPrfAux [] ys zs f = Refl
+foldLeftPrfAux (x :: xs) ys zs f =
+  replace
+    {p = \m => foldl (\acc, elem => acc ++ f elem) m xs = ys ++ foldl (\acc, elem => acc ++ f elem) (zs ++ f x) xs}
+    (appendAssociative _ _ _)
+    (foldLeftPrfAux xs ys (zs ++ f x) f)
+
 foldLeftPrf: (xs: List a) -> (x: a) -> (f: a -> List b) -> ((x::xs >>= f) = (f x) ++ (xs >>= f))
-foldLeftPrf xs x f = ?what
+foldLeftPrf xs x f =
+  replace
+    {p = \m => foldl (\acc, elem => acc ++ f elem) m xs = f x ++ foldl (\acc, elem => acc ++ f elem) [] xs}
+    (appendNilRightNeutral _)
+    (foldLeftPrfAux xs (f x) [] f)
 
 hereOrThereConcat: (xs: List a) -> (ys: List a) -> (elem `Elem` (xs ++ ys)) -> Either (elem `Elem` xs) (elem `Elem` ys)
 hereOrThereConcat [] ys x = Right x
@@ -22,18 +35,23 @@ hereOrThereConcat (y :: xs) ys (There x) =
     (Left e) => Left $ There e
     (Right e) => Right e
 
-foldElem: {a,b: Type} -> (elem : b) -> (xs: List a) -> (f: a -> List b) -> (elem `Elem` (xs >>= f))
-        -> (elem' ** (elem' `Elem` xs, elem `Elem` (f elem')))
-foldElem elem [] f prf = absurd prf
-foldElem elem (x :: xs) f prf =
-  let hereOrThere = hereOrThereConcat (f x) (xs >>= f) (replace {p=(elem `Elem`)} (foldLeftPrf _ _ _) prf)
-  in case hereOrThere of
-    (Left prf1) => ?k
-    (Right prf1) => ?l--foldElem elem xs f prf
+Pred : Type -> Type
+Pred a = (x : a) -> Type
 
--- foldElem elem (x :: xs) f prf =
---   let shed = foldLeftPrf xs y f
---   in (?elem' ** (?p1, ?p2))
+bindSpec : (f : a -> List b) -> (p : Pred b) -> (q : Pred a) ->
+  (spec : (x : a) -> (y: b ** (y `Elem` f x, p y)) -> q x) ->
+  (cs : List a) ->
+  (prf : (y: b ** (y `Elem` (cs >>= f), p y))) ->
+  (x: a ** (x `Elem` cs, q x,(y: b ** (y `Elem` (f x),  p y))))
+
+bindSpec f p q spec [] prf = absurd $ fst $ snd prf
+bindSpec f p q spec (x :: xs) (y ** (isElemF, satP)) =
+  let hereOrThere = hereOrThereConcat (f x) (xs >>= f) (replace {p=(y `Elem`)} (foldLeftPrf _ _ _) isElemF)
+  in case hereOrThere of
+    (Left prf1) => (x ** (Here, spec x (y ** (prf1, satP)), (y ** (prf1, satP))))
+    (Right prf1) =>
+      let (x ** (isElem, satQ, yInf)) = bindSpec f p q spec xs (y ** (prf1, satP))
+      in (x ** (There isElem, satQ, yInf))
 
 data AcceptingFrom : (nfa : NA) -> (s : nfa.State) -> (word : Word) -> Type where
   Accept : {auto nfa : NA} -> (s : nfa.State) -> (prf : nfa.accepting s = True) -> AcceptingFrom nfa s []
@@ -46,9 +64,18 @@ data Accepting : (nfa : NA) -> (word : Word) -> Type where
   Start : {auto nfa : NA} -> (s : nfa.State) -> (prf : s `Elem` nfa.start) -> AcceptingFrom nfa s w
        -> Accepting nfa w
 
-recordPath : (nfa : NA) -> (prog : Program nfa)-> (tds : List (Thread nfa)) -> (str : Word)
-         -> (prf : runFrom prog str tds = Just ev)
-         -> (td : Thread nfa ** (td `Elem` tds, AcceptingFrom nfa (fst td) str))
+runMappingSpec : {auto nfa : NA} -> {prog: Program nfa} -> (c: Char) -> (td : Thread nfa)
+              -> (td': Thread nfa ** (td' `Elem` (runMapping prog c . step c) td, AcceptingFrom nfa (fst td') cs))
+              -> AcceptingFrom nfa td.naState (c::cs)
+
+runMappingSpec c td (td' ** (isElemOfF, accepts)) =
+  let acc : AcceptingFrom nfa ((step c td) .naState) (c :: cs)
+      acc = Step (fst (step c td)) c (td'.naState) (runFromStepState prog c (step c td) td' isElemOfF) accepts
+  in replace {p=(\st => AcceptingFrom nfa st (c :: cs))} (fst $ (stepMaintainsState c td)) acc
+
+recordPath : (nfa : NA) -> (prog : Program nfa) -> (tds : List (Thread nfa)) -> (str : Word)
+          -> (prf : runFrom prog str tds = Just ev)
+          -> (td : Thread nfa ** (td `Elem` tds, AcceptingFrom nfa (fst td) str))
 
 recordPath nfa prog tds [] prf =
   let (x ** (_, woMap)) = mapMaybe _ _ prf
@@ -56,22 +83,18 @@ recordPath nfa prog tds [] prf =
   in (td ** (tdInTds, Accept (fst td) accept))
 
 recordPath nfa prog tds (c :: cs) prf =
-  let (td' ** (tail', accept')) = recordPath nfa prog _ cs prf
-      prf1 : (td ** (td `Elem` tds, td' `Elem` (mapF (\(s,r) => (s, snd (execute (Just c) r td))) (nfa.next (fst td) c) (prog.next (fst td) c))))
-  in (fst prf1 ** (fst (snd prf1), Step (fst (fst prf1)) c (fst td') ?p accept'))
+  let (x ** (isElem, satQ , _)) =
+        bindSpec
+          (runMapping prog c . step c)
+          (\e => AcceptingFrom nfa (fst e) cs)
+          (\e => AcceptingFrom nfa (fst e) (c :: cs))
+          (runMappingSpec c)
+          tds
+          (recordPath nfa prog _ cs prf)
+  in (x ** (isElem, satQ))
 
 extractEvidenceFrom : {auto nfa : NA} -> {prog : Program nfa} -> (td : Thread nfa) -> AcceptingFrom nfa (fst td) word -> Evidence
-extractEvidenceFrom {prog} td (Accept (fst td) prf) =
-  let m : Maybe Evidence
-      m = runFrom prog [] [td]
-      isJust : (m = Just (snd td).evidence)
-      isJust = Calc $
-        |~ map (\td => (snd td).evidence) (find (\td => nfa.accepting (fst td)) [td])
-        ~~ map (\td => (snd td).evidence) (if (nfa.accepting (fst td)) then (Just td) else Nothing)...(cong (map (\td => .evidence (snd td))) ?w)
-        ~~ (map (\td => (snd td).evidence) (Just td)) ...(?hole prf)
-        ~~ (Just (snd td).evidence) ...(Refl)
-  in fromJust (runFrom prog [] [td]) isJust
-
+extractEvidenceFrom {prog = prog} td (Accept (fst td) prf) = (snd td).evidence
 extractEvidenceFrom td (Step (fst td) c t prf acc) = ?extractEvidenceFrom_rhs_1
 
 

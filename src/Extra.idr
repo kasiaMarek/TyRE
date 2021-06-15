@@ -17,9 +17,3 @@ public export
 mapMaybe : (f : a -> b) -> (m : Maybe a) -> (prf : map f m = Just e) -> (elem: a ** (f elem = e, m = Just elem))
 mapMaybe _ Nothing Refl impossible
 mapMaybe f (Just x) Refl = (x ** (Refl, Refl))
-
-public export
-findWithFirstAccept : (xs: List a) -> (x : a) -> (pred : a -> Bool) -> (prf : pred x = True) -> (find pred (x::xs) = Just x)
-findWithFirstAccept [] x pred prf = ?hole_1
-
-findWithFirstAccept (y :: xs) x pred prf = ?hole_2

@@ -26,6 +26,7 @@ Eq Code where
     -- (MaybeC x) == (MaybeC y)        = x == y
     _ == _                          = False
 
+public export
 ShapeCode: CoreRE -> Code
 ShapeCode (Pred f)      = CharC
 ShapeCode (Concat x y)  = PairC (ShapeCode x) (ShapeCode y)
@@ -46,6 +47,7 @@ Sem StringC       = String
 -- Sem BoolC         = Bool
 -- Sem NatC          = Nat
 
+public export
 Shape: CoreRE -> Type
 Shape = Sem . ShapeCode
 

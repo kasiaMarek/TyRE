@@ -3,6 +3,8 @@ module NFA
 import Data.Vect
 import Data.SnocList
 import Data.List
+import Data.List.Elem
+import Data.Vect.Elem
 import Evidence
 
 ||| A non-deterministic automaton
@@ -74,23 +76,47 @@ map f (x :: xs) (y :: ys) =
       rest = map f xs ys
   in (fst mp :: (fst rest) ** snd mp :: (snd rest))
 
+public export
+mapF : (f : (a,b) -> c) -> (xs : List a) -> (ys : Vect (length xs) b) -> List c
+mapF f [] [] = []
+mapF f (x :: xs) (y :: ys) = (f (x,y)) :: (mapF f xs ys)
+
+mapFSpec : (f : (a, b) -> c) -> (q : a -> Type) -> (p : c -> Type) -> (xs: List a) -> (ys: Vect (length xs) b)
+        -> ((x' : b) -> (x : a) -> p (f (x, x')) -> q x)
+        -> (y: c ** (y `Elem` mapF f xs ys, p y))
+        -> (x : a ** (x `Elem` xs, q x))
+
+mapFSpec _ _ _ [] [] _ (_ ** (isElem, _)) = absurd isElem
+mapFSpec f q p (x :: xs) (z :: ys) spec (y ** (isElem, satP)) =
+  case isElem of
+    Here => (x ** (Here, spec z x satP))
+    There pos =>
+      let (x' ** (isElem', satQ')) = mapFSpec f q p xs ys spec (y ** (pos, satP))
+      in (x' ** (There isElem', satQ'))
+
 infixr 4 /\
+public export
 (/\): {a: Type} -> (p : a -> Type) -> (q : a -> Type) -> a -> Type
 (/\) {a} p q x = (p x, q x)
 
 parameters {auto N : NA}
 
+public export
 (.naState) : Thread N -> N .State
 (.naState) = fst
+public export
 (.vmState) : Thread N -> VMState
 (.vmState) = snd
 
 public export
 0 Step : Type
 Step = (td : Thread N) -> Thread N
+
+public export
 0 ThreadPredicate : ((td : Thread N) -> Type) -> Type
 ThreadPredicate pred = (td : Thread N) -> pred td
 
+public export
 step : Char -> Step
 step x td =
   let updatedMemory =
@@ -98,6 +124,7 @@ step x td =
       vmState = MkVMState (td.vmState.recording) updatedMemory (td.vmState.evidence)
   in (td.naState, vmState)
 
+public export
 stepMaintainsState : (c : Char) -> ThreadPredicate $
      (\td => (step c td).naState = td.naState)
   /\ (\td => (step c td).vmState.recording = td.vmState.recording)
@@ -156,11 +183,7 @@ run [] ys = case (find (N .accepting) ys) of
               Nothing   => False
 run (c :: cs) ys = run cs (ys >>= (\s => N .next s c))
 
-public export
-mapF : (f : (a,b) -> c) -> (xs : List a) -> (ys : Vect (length xs) b) -> List c
-mapF f xs ys = fst $ map (\x => (f x, ())) xs ys
-
-parameters (P : Program N)
+parameters  (P : Program N)
 
 initialise : List (Thread N)
 initialise =
@@ -171,11 +194,32 @@ initialise =
   in mapF f (N .start) (P .init)
 
 public export
+runFunction : Char -> Thread N -> (N .State, Routine) -> (N .State, VMState)
+runFunction c td (st, r) = (st, snd $ execute (Just c) r td)
+
+public export
+runMapping: Char -> Thread N -> List (Thread N)
+runMapping c td = mapF (runFunction c td) (N .next (fst td) c) (P .next (fst td) c)
+
+public export
+runMain: Char -> List (Thread N) -> List (Thread N)
+runMain c tds = tds >>= runMapping c . (step c)
+
+public export
 runFrom : Word -> (tds : List $ Thread N) -> Maybe Evidence
 runFrom [] tds =  map (\td => (snd td) .evidence) (find (\td => N .accepting (fst td)) tds)
-runFrom (c::cs) tds =
-  let m : Thread N -> (N .State, Routine) -> (N .State, VMState)
-      m t (s, r) = (s, snd $ execute (Just c) r t)
-      f : Thread N -> List $ Thread N
-      f td = mapF (m td) (N .next (fst td) c) (P .next (fst td) c)
-  in runFrom cs (tds >>= f . (step c))
+runFrom (c::cs) tds = runFrom cs $ runMain c tds
+
+public export
+runFromStepState : (c: Char) -> (td: Thread N) -> (td' : Thread N) -> (td' `Elem` runMapping c td) -> td'.naState `Elem` (N .next td.naState c)
+runFromStepState c td td' isElem =
+  let (x ** (isElem', eq)) = mapFSpec
+            (runFunction c td)
+            (\e => (td'.naState = e))
+            (\t => (td'.naState = t.naState))
+            (N .next (fst td) c)
+            (P .next (fst td) c)
+            (\_ => \_ => \p => p)
+            (td' ** (isElem, Refl))
+
+  in replace {p=(\e => e `Elem` (N .next (fst td) c))} (sym eq) isElem'
