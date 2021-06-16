@@ -81,17 +81,18 @@ mapF : (f : (a,b) -> c) -> (xs : List a) -> (ys : Vect (length xs) b) -> List c
 mapF f [] [] = []
 mapF f (x :: xs) (y :: ys) = (f (x,y)) :: (mapF f xs ys)
 
-mapFSpec : (f : (a, b) -> c) -> (q : a -> Type) -> (p : c -> Type) -> (xs: List a) -> (ys: Vect (length xs) b)
+--proof for mapF
+mapFYImpFstX : (f : (a, b) -> c) -> (q : a -> Type) -> (p : c -> Type) -> (xs: List a) -> (ys: Vect (length xs) b)
         -> ((x' : b) -> (x : a) -> p (f (x, x')) -> q x)
         -> (y: c ** (y `Elem` mapF f xs ys, p y))
         -> (x : a ** (x `Elem` xs, q x))
 
-mapFSpec _ _ _ [] [] _ (_ ** (isElem, _)) = absurd isElem
-mapFSpec f q p (x :: xs) (z :: ys) spec (y ** (isElem, satP)) =
+mapFYImpFstX _ _ _ [] [] _ (_ ** (isElem, _)) = absurd isElem
+mapFYImpFstX f q p (x :: xs) (z :: ys) spec (y ** (isElem, satP)) =
   case isElem of
     Here => (x ** (Here, spec z x satP))
     There pos =>
-      let (x' ** (isElem', satQ')) = mapFSpec f q p xs ys spec (y ** (pos, satP))
+      let (x' ** (isElem', satQ')) = mapFYImpFstX f q p xs ys spec (y ** (pos, satP))
       in (x' ** (There isElem', satQ'))
 
 infixr 4 /\
@@ -168,6 +169,7 @@ stepForInstructionMaintainsNAState mc       EmitPair    td = Refl
 stepForInstructionMaintainsNAState (Just c) EmitLast    td = Refl
 stepForInstructionMaintainsNAState Nothing  EmitLast    td = Refl
 
+public export
 executeMaintainsNAState : (mc : Maybe Char) -> (routine : Routine) -> ThreadPredicate $
   \td => (execute mc routine td).naState = td.naState
 
@@ -185,14 +187,19 @@ run (c :: cs) ys = run cs (ys >>= (\s => N .next s c))
 
 parameters  (P : Program N)
 
-initialise : List (Thread N)
-initialise =
-  let initVmState : VMState
-      initVmState = MkVMState False [<] [<]
-      f : (N .State, Routine) -> Thread N
-      f (s, r) = execute Nothing r (s, initVmState)
-  in mapF f (N .start) (P .init)
+public export
+initVM : VMState
+initVM = MkVMState False [<] [<]
 
+public export
+initFuction : (N .State, Routine) -> Thread N
+initFuction (s,r) = execute Nothing r (s, initVM)
+
+public export
+initialise : List (Thread N)
+initialise = mapF initFuction (N .start) (P .init)
+
+--implementation of runFrom
 public export
 runFunction : Char -> Thread N -> (N .State, Routine) -> (N .State, VMState)
 runFunction c td (st, r) = (st, snd $ execute (Just c) r td)
@@ -210,16 +217,16 @@ runFrom : Word -> (tds : List $ Thread N) -> Maybe Evidence
 runFrom [] tds =  map (\td => (snd td) .evidence) (find (\td => N .accepting (fst td)) tds)
 runFrom (c::cs) tds = runFrom cs $ runMain c tds
 
+|||Proof that in a single step executed by runFrom we change the state to one from N .next.
 public export
 runFromStepState : (c: Char) -> (td: Thread N) -> (td' : Thread N) -> (td' `Elem` runMapping c td) -> td'.naState `Elem` (N .next td.naState c)
 runFromStepState c td td' isElem =
-  let (x ** (isElem', eq)) = mapFSpec
-            (runFunction c td)
-            (\e => (td'.naState = e))
-            (\t => (td'.naState = t.naState))
-            (N .next (fst td) c)
-            (P .next (fst td) c)
-            (\_ => \_ => \p => p)
-            (td' ** (isElem, Refl))
-
+  let (x ** (isElem', eq)) =  mapFYImpFstX
+                                  (runFunction c td)
+                                  (\e => (td'.naState = e))
+                                  (\t => (td'.naState = t.naState))
+                                  (N .next (fst td) c)
+                                  (P .next (fst td) c)
+                                  (\_ => \_ => \p => p)
+                                  (td' ** (isElem, Refl))
   in replace {p=(\e => e `Elem` (N .next (fst td) c))} (sym eq) isElem'
