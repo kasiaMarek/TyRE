@@ -14,10 +14,10 @@ data CoreTyRE: Type -> Type where
 
 compile : (CoreTyRE a) -> CoreRE
 compile (Untyped r)   = r
-compile (x <*> y)     = Concat (compileRE x) (compileRE y)
-compile (Conv _ x)    = compileRE x
+compile (x <*> y)     = Concat (compile x) (compile y)
+compile (Conv _ x)    = compile x
 
-extract : (tyre: CoreTyRE a) -> (Shape $ compileRE tyre -> a)
+extract : (tyre: CoreTyRE a) -> (Shape $ compile tyre -> a)
 extract (Untyped r) x         = x
 extract (y <*> z) (re1, re2)  = (extract y re1, extract z re2)
 extract (Conv f y) re         = f $ extract y re
