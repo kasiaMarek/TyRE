@@ -42,8 +42,8 @@ record SM where
   nfa: NA
   prog: Program nfa
 
-thompson : CoreRE -> Bool -> SM
-thompson (Pred f) recording =
+thompson : CoreRE -> SM
+thompson (Pred f) =
   let nextNFA: PState -> Char -> List PState
       nextNFA StartState    c   = if (f c) then [AcceptState] else []
       nextNFA AcceptState   _   = []
@@ -54,7 +54,7 @@ thompson (Pred f) recording =
 
       next : (st: PState) -> (c: Char) -> Vect (length (nextNFA st c)) Routine
       next StartState c with (f c)
-        next StartState c | True = if (recording) then [[]] else [[EmitLast]]
+        next StartState c | True = [[EmitLast]]
         next StartState c | False = []
       next AcceptState c = []
 
@@ -65,11 +65,11 @@ thompson (Pred f) recording =
       prog = MkProgram [[]] next
   in MkSM nfa prog
 
-thompson (Concat re1 re2) recording =
+thompson (Concat re1 re2) =
   let sm1 : SM
-      sm1 = thompson re1 recording
+      sm1 = thompson re1
       sm2 : SM
-      sm2 = thompson re2 recording
+      sm2 = thompson re2
 
       0 state : Type
       state = Either (Either sm1.nfa.State sm2.nfa.State) AState
@@ -94,10 +94,7 @@ thompson (Concat re1 re2) recording =
       nextMapLR : (sm2.nfa.State, Routine)-> (xs: List state ** Vect (length xs) Routine)
       nextMapLR (st,r) =
         if (sm2.nfa.accepting st)
-        then
-          if (recording)
-          then ([Left $ Right st, Right EndState] ** [r,r])
-          else ([Left $ Right st, Right EndState] ** [r,r ++ [EmitPair]])
+        then ([Left $ Right st, Right EndState] ** [r,r ++ [EmitPair]])
         else ([Left $ Right st] ** [r])
 
       next : state -> Char -> (xs: List state ** Vect (length xs) Routine)
@@ -119,9 +116,9 @@ thompson (Concat re1 re2) recording =
 
   in MkSM nfa prog
 
-thompson (Group re) recording =
+thompson (Group re) =
   let prev : SM
-      prev = thompson re True
+      prev = thompson re
       _ := prev.nfa.isEq
 
       0 state : Type
@@ -135,10 +132,10 @@ thompson (Group re) recording =
       start = map Left prev.nfa.start
 
       nextMap : (prev.nfa.State, Routine) -> (xs: List state ** Vect (length xs) Routine)
-      nextMap (st,r) =
+      nextMap (st,_) =
         if (prev.nfa.accepting st)
-        then ([Left st, Right EndState] ** [r,r ++ [EmitString]])
-        else ([Left st] ** [r])
+        then ([Left st, Right EndState] ** [[],[EmitString]])
+        else ([Left st] ** [[]])
 
       next : state -> Char -> (xs: List state ** Vect (length xs) Routine)
       next (Left st) c = flatMap nextMap (prev.nfa.next st c) (prev.prog.next st c)
@@ -153,4 +150,4 @@ thompson (Group re) recording =
       prog : Program nfa
       prog = MkProgram init (\st => \c => snd $ next st c)
 
-  in if (recording) then prev else MkSM nfa prog
+  in MkSM nfa prog

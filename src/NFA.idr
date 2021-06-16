@@ -6,6 +6,7 @@ import Data.List
 import Data.List.Elem
 import Data.Vect.Elem
 import Evidence
+import Pred
 
 ||| A non-deterministic automaton
 public export
@@ -81,7 +82,7 @@ mapF : (f : (a,b) -> c) -> (xs : List a) -> (ys : Vect (length xs) b) -> List c
 mapF f [] [] = []
 mapF f (x :: xs) (y :: ys) = (f (x,y)) :: (mapF f xs ys)
 
---proof for mapF
+||| Spec for mapF
 mapFYImpFstX : (f : (a, b) -> c) -> (q : a -> Type) -> (p : c -> Type) -> (xs: List a) -> (ys: Vect (length xs) b)
         -> ((x' : b) -> (x : a) -> p (f (x, x')) -> q x)
         -> (y: c ** (y `Elem` mapF f xs ys, p y))
@@ -94,11 +95,6 @@ mapFYImpFstX f q p (x :: xs) (z :: ys) spec (y ** (isElem, satP)) =
     There pos =>
       let (x' ** (isElem', satQ')) = mapFYImpFstX f q p xs ys spec (y ** (pos, satP))
       in (x' ** (There isElem', satQ'))
-
-infixr 4 /\
-public export
-(/\): {a: Type} -> (p : a -> Type) -> (q : a -> Type) -> a -> Type
-(/\) {a} p q x = (p x, q x)
 
 parameters {auto N : NA}
 
@@ -185,8 +181,9 @@ run [] ys = case (find (N .accepting) ys) of
               Nothing   => False
 run (c :: cs) ys = run cs (ys >>= (\s => N .next s c))
 
-parameters  (P : Program N)
+parameters  {auto P : Program N}
 
+--implementation of initialise
 public export
 initVM : VMState
 initVM = MkVMState False [<] [<]
