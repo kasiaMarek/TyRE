@@ -182,7 +182,7 @@ The second step uses symmetry:
 λΠ> :t sym
 Builtin.sym : (0 _ : x = y) -> y = x
 
-[ ] 3. Implement your own versions `cong'` and `sym'`.
+[X] 3. Implement your own versions `cong'` and `sym'`.
 > cong' : (0 f : (t -> u)) -> a = b -> f a = f b
 > cong' _ Refl = Refl
 
@@ -239,7 +239,7 @@ b. addition is commutative (see `:t plusAssociative`).
 >   ~~ 1 + (b + k) ...(cong (1+) $ plusCommutative' k b)
 >   ~~ b + (1 + k) ...(sak' 1 b k)
 
-[ ] 5. Find the module `Syntax.PreorderReasoning` and try to work out
+[X] 5. Find the module `Syntax.PreorderReasoning` and try to work out
 what's going on. It's only 12 lines of code!
 
 
@@ -343,9 +343,10 @@ We'll now use this function to implement `invertMap`, by adding
 another column with a NonEmpty view:
 
 > invertMap  {xs} {y} f pos with (recallNonEmpty $ elementMapNonEmpty xs pos)
->  invertMap {xs = (x::xs)} {y = _} f Here | IsNonEmpty = Evidence x (Here, Refl)
->  invertMap {xs = (_::xs)} {y = y} f (There z) | IsNonEmpty with (invertMap f z)
->   invertMap {xs = (_::xs)} {y = y} f (There z) | IsNonEmpty | (Evidence fst (pf, ps)) = Evidence fst (There pf, ps)
+>  invertMap {xs = (x::_)} {y = _} _ Here | IsNonEmpty = Evidence x (Here, Refl)
+>  invertMap {xs = _} {y = _} f (There z) | IsNonEmpty =
+>     case (invertMap f z) of
+>       Evidence x (elem, eq) => Evidence x (There elem, eq)
 
 [X] 7. Match on the view, and then on the position. There's a bug in
 idris curently, and you'll need to rewrite the arguments like so:
@@ -354,7 +355,7 @@ idris curently, and you'll need to rewrite the arguments like so:
 [X] 8. Try to complete the implementation of `invertMap`. Ask Ohad if
 it takes you more than 1 hour.
 
-[ ] 9. _Compile_ and run the following constantSpaceInversion,
+[X] 9. _Compile_ and run the following constantSpaceInversion,
 successively doubling the input size until it takes about 30 seconds
 to run. Then look at the process's memory footprint. If we're lucky,
 the memory footprint should be constant. It might not be though.
@@ -372,6 +373,12 @@ the memory footprint should be constant. It might not be though.
 >   in case invertMap (1+) pos1 of        -- Count until n + 1 again
 >     Evidence fst (x, prf) => case prf of
 >       Refl => x
+
+> main : IO ()
+> main =
+>  let  n: Nat = 50000000
+>       x: (1 `Elem` (sandwich n)) = constantSpaceInversion n
+>  in putStrLn $ show $ elemToNat x
 
 
 This is a good time to pause and maybe go for a walk to think about
