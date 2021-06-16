@@ -8,3 +8,5 @@ modules = Sheets.FP
           , Data.SnocList.Elem
           , Core
           , Codes
+          , Evidence
+          , NFA

@@ -16,6 +16,7 @@ data EvidenceMarker =
  -- | RightBranchMark
  -- | StarMark
 
+public export
 Evidence : Type
 Evidence = SnocList EvidenceMarker
 

@@ -80,6 +80,7 @@ We can then think of dependent function types as universal quantification:
 >   onlyIf : (x : a) -> (p x -> q x)
 
 
+
 [X] 1. Implament the following
 
 a. Other propositional connectivies: (/\), (\/), TT
