@@ -7,6 +7,8 @@ import Data.List.Elem
 import Data.Vect.Elem
 import Evidence
 import Pred
+import Extra.Reflects
+import Extra
 
 ||| A non-deterministic automaton
 public export
@@ -64,8 +66,10 @@ record Program (N : NA) where
   next : (st : N .State) -> (c : Char) -> Vect (length $ N .next st c) Routine
 
 public export
-0 Thread : NA -> Type
-Thread na = (na.State, VMState)
+record Thread (N : NA) where
+  constructor MkThread
+  naState : N .State
+  vmState : VMState
 
 map : (f : (a,b) -> (c,d)) -> (xs : List a) ->
   (ys : Vect (length xs) b) ->
@@ -82,28 +86,22 @@ mapF : (f : (a,b) -> c) -> (xs : List a) -> (ys : Vect (length xs) b) -> List c
 mapF f [] [] = []
 mapF f (x :: xs) (y :: ys) = (f (x,y)) :: (mapF f xs ys)
 
-||| Spec for mapF
-mapFYImpFstX : (f : (a, b) -> c) -> (q : a -> Type) -> (p : c -> Type) -> (xs: List a) -> (ys: Vect (length xs) b)
-        -> ((x' : b) -> (x : a) -> p (f (x, x')) -> q x)
-        -> (y: c ** (y `Elem` mapF f xs ys, p y))
-        -> (x : a ** (x `Elem` xs, q x))
+public export
+mapFSpec : (f : (a, b) -> c) -> (q : Pred (a,b)) -> (p : Pred c) -> (xs: List a) -> (ys: Vect (length xs) b)
+        -> ((x1 : a) -> (x2 : b) -> p(f(x1, x2)) -> q (x1, x2))
+        -> (y: c)
+        -> (y `Elem` mapF f xs ys, p y)
+        -> (x1: a ** (x2:b ** (prf: x1 `Elem` xs ** (extractBasedOnFst xs ys x1 prf = x2, f(x1, x2) = y, q (x1, x2)))))
 
-mapFYImpFstX _ _ _ [] [] _ (_ ** (isElem, _)) = absurd isElem
-mapFYImpFstX f q p (x :: xs) (z :: ys) spec (y ** (isElem, satP)) =
-  case isElem of
-    Here => (x ** (Here, spec z x satP))
+mapFSpec f q p [] [] spec y (isElem, satP) = absurd isElem
+mapFSpec f q p (x1 :: xs) (x2 :: ys) spec y (pos, satP) =
+  case pos of
+    Here => (x1 ** (x2 ** (Here ** (Refl, Refl, spec x1 x2 satP))))
     There pos =>
-      let (x' ** (isElem', satQ')) = mapFYImpFstX f q p xs ys spec (y ** (pos, satP))
-      in (x' ** (There isElem', satQ'))
+      let (x1' ** (x2' ** (pos' ** (ex', eq', satQ')))) = mapFSpec f q p xs ys spec y (pos, satP)
+      in (x1' ** (x2' ** (There pos' ** (ex', eq', satQ'))))
 
 parameters {auto N : NA}
-
-public export
-(.naState) : Thread N -> N .State
-(.naState) = fst
-public export
-(.vmState) : Thread N -> VMState
-(.vmState) = snd
 
 public export
 0 Step : Type
@@ -119,7 +117,7 @@ step x td =
   let updatedMemory =
     if (td.vmState.recording) then (td.vmState.memory :< x) else (td.vmState.memory)
       vmState = MkVMState (td.vmState.recording) updatedMemory (td.vmState.evidence)
-  in (td.naState, vmState)
+  in MkThread td.naState vmState
 
 public export
 stepMaintainsState : (c : Char) -> ThreadPredicate $
@@ -130,18 +128,18 @@ stepMaintainsState : (c : Char) -> ThreadPredicate $
 stepMaintainsState c td = (Refl,Refl,Refl)
 
 emitChar          : (c : Char) -> Step
-emitChar c td     = (td.naState, record {evidence $= (:< CharMark c)} td.vmState)
+emitChar c td     = MkThread td.naState (record {evidence $= (:< CharMark c)} td.vmState)
 
 emitString        : Step
 emitString td     =
   let vmState = MkVMState False [<] (td.vmState.evidence :< GroupMark (td.vmState.memory))
-  in (td.naState, vmState)
+  in MkThread td.naState vmState
 
 startRecording    : Step
-startRecording td = (td.naState, record {recording = True} td.vmState)
+startRecording td = MkThread td.naState (record {recording = True} td.vmState)
 
 emitPair          : Step
-emitPair td       = (td.naState, record {evidence $= (:< PairMark)} td.vmState)
+emitPair td       = MkThread td.naState (record {evidence $= (:< PairMark)} td.vmState)
 
 stepForInstruction : (mc : Maybe Char) -> Instruction -> Step
 
@@ -190,7 +188,7 @@ initVM = MkVMState False [<] [<]
 
 public export
 initFuction : (N .State, Routine) -> Thread N
-initFuction (s,r) = execute Nothing r (s, initVM)
+initFuction (s,r) = execute Nothing r (MkThread s initVM)
 
 public export
 initialise : List (Thread N)
@@ -198,32 +196,18 @@ initialise = mapF initFuction (N .start) (P .init)
 
 --implementation of runFrom
 public export
-runFunction : Char -> Thread N -> (N .State, Routine) -> (N .State, VMState)
-runFunction c td (st, r) = (st, snd $ execute (Just c) r td)
+runFunction : Char -> Thread N -> (N .State, Routine) -> Thread N
+runFunction c td (st, r) = MkThread st (execute (Just c) r (step c td)).vmState
 
 public export
 runMapping: Char -> Thread N -> List (Thread N)
-runMapping c td = mapF (runFunction c td) (N .next (fst td) c) (P .next (fst td) c)
+runMapping c td = mapF (runFunction c td) (N .next td.naState c) (P .next td.naState c)
 
 public export
 runMain: Char -> List (Thread N) -> List (Thread N)
-runMain c tds = tds >>= runMapping c . (step c)
+runMain c tds = tds >>= runMapping c
 
 public export
 runFrom : Word -> (tds : List $ Thread N) -> Maybe Evidence
-runFrom [] tds =  map (\td => (snd td) .evidence) (find (\td => N .accepting (fst td)) tds)
+runFrom [] tds =  map (\td => td.vmState.evidence) (findR (\td => N .accepting td.naState) tds).Holds
 runFrom (c::cs) tds = runFrom cs $ runMain c tds
-
-|||Proof that in a single step executed by runFrom we change the state to one from N .next.
-public export
-runFromStepState : (c: Char) -> (td: Thread N) -> (td' : Thread N) -> (td' `Elem` runMapping c td) -> td'.naState `Elem` (N .next td.naState c)
-runFromStepState c td td' isElem =
-  let (x ** (isElem', eq)) =  mapFYImpFstX
-                                  (runFunction c td)
-                                  (\e => (td'.naState = e))
-                                  (\t => (td'.naState = t.naState))
-                                  (N .next (fst td) c)
-                                  (P .next (fst td) c)
-                                  (\_ => \_ => \p => p)
-                                  (td' ** (isElem, Refl))
-  in replace {p=(\e => e `Elem` (N .next (fst td) c))} (sym eq) isElem'

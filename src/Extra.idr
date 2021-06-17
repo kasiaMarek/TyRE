@@ -5,10 +5,7 @@ import Data.List.Elem
 import Data.Vect
 import Data.Vect.Elem
 import Data.Maybe
-
-public export
-Pred : Type -> Type
-Pred a = (x : a) -> Type
+import Pred
 
 ||| Proof that if an element is found on the list it belongs to that list.
 public export
