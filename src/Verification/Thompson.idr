@@ -4,6 +4,7 @@ import Data.SnocList
 import Data.Vect
 import Data.List
 import Data.List.Elem
+import Data.SnocList.Extra
 
 import Codes
 import Core
@@ -14,13 +15,9 @@ import Verification.AcceptingPath
 import Extra
 import Extra.Reflects
 import Data.Vect
+import Verification.Thompson.Concat
 
 %default total
-
-rightCantBeElemOfLeft : (x : a) -> (xs : List b) -> (Not ((Right x) `Elem` (map Left xs)))
-rightCantBeElemOfLeft _ [] Here impossible
-rightCantBeElemOfLeft _ [] (There y) impossible
-rightCantBeElemOfLeft x (z :: xs) (There y) = rightCantBeElemOfLeft x xs y
 
 extractBasedOnFstFromRep : (xs: List a) -> (rep : b) -> (elem: a) -> (pos: elem `Elem` xs) -> (extractBasedOnFst xs (replicate (length xs) rep) elem pos = rep)
 extractBasedOnFstFromRep (_ :: xs) rep elem Here = Refl
@@ -76,8 +73,13 @@ thompsonEvidencePrf {word = c::_} (Pred f) (Start StartState Here (Step StartSta
   thompsonEvidencePrf {word = c::c'::_} (Pred f) (Start StartState Here (Step StartState c AcceptState Here (Step AcceptState c' t prf acc))) | True = absurd prf
   thompsonEvidencePrf {word = [c]} (Pred f) (Start StartState Here (Step StartState c AcceptState Here (Accept AcceptState Refl))) | True = AChar [<] c
 
-thompsonEvidencePrf (Concat x y) (Start s prf z) = ?concat
-
+thompsonEvidencePrf (Concat re1 re2) acc =
+  let (w1 ** (acc1 ** (w2 ** (acc2 ** prf)))) = concatEvidencePrf re1 re2 acc
+      ford : (extractEvidence {nfa = (thompson (Concat re1 re2)).nfa, prog = (thompson (Concat re1 re2)).prog} acc
+                        = ([<] ++ (extractEvidence {nfa = (thompson re1).nfa, prog = (thompson re1).prog} acc1 ++ extractEvidence {nfa = (thompson re2).nfa, prog = (thompson re2).prog} acc2)) :< PairMark)
+      ford = trans prf (cong (:<PairMark) (sym appendNilLeftNeutral))
+  in APair Lin (thompsonEvidencePrf re1 acc1) (thompsonEvidencePrf re2 acc2) {ford}
+  
 thompsonEvidencePrf (Group re) (Start (Right z) initprf y) = absurd (rightCantBeElemOfLeft _ _ initprf)
 thompsonEvidencePrf (Group re) (Start (Left z) initprf (Accept (Left z) pos)) = absurd pos
 thompsonEvidencePrf (Group re) (Start (Left z) initprf (Step (Left z) c t prf acc)) =

@@ -87,3 +87,9 @@ extractBasedOnFst : (xs: List a) -> (ys: Vect (length xs) b) -> (x : a) -> (xInX
 extractBasedOnFst [] [] x xInXs = absurd xInXs
 extractBasedOnFst (x :: xs) (z :: ys) x Here = z
 extractBasedOnFst (x' :: xs) (z :: ys) x (There pos) = extractBasedOnFst xs ys x pos
+
+public export
+rightCantBeElemOfLeft : (x : a) -> (xs : List b) -> (Not ((Right x) `Elem` (map (Left . f) xs)))
+rightCantBeElemOfLeft _ [] Here impossible
+rightCantBeElemOfLeft _ [] (There y) impossible
+rightCantBeElemOfLeft x (z :: xs) (There y) = rightCantBeElemOfLeft x xs y

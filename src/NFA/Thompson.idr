@@ -24,6 +24,16 @@ Eq AState where
   EndState == EndState = True
 
 public export
+data CState a b = CTh1 a | CTh2 b | CEnd
+
+public export
+Eq a => Eq b => Eq (CState a b) where
+  CTh1 x == CTh1 y = x == y
+  CTh2 x == CTh2 y = x == y
+  CEnd   == CEnd   = True
+  x      == y      = False
+
+public export
 flatMap : (f: (a,b) -> (xs' : List c ** Vect (length xs') d)) -> (xs : List a) -> (Vect (length xs) b) -> (ys: List c ** Vect (length ys) d)
 flatMap f [] [] = ([] ** [])
 flatMap {c,d} f (x :: xs) (y :: ys) =
@@ -81,21 +91,22 @@ thompson (Concat re1 re2) =
       sm2 = thompson re2
 
       0 state : Type
-      state = Either (Either sm1.nfa.State sm2.nfa.State) AState
+      state = CState sm1.nfa.State sm2.nfa.State
 
       accepting : state -> Bool
-      accepting (Left  _) = False
-      accepting (Right _) = True
+      accepting (CTh1 x) = False
+      accepting (CTh2 x) = False
+      accepting CEnd = True
 
       start : List state
-      start = map (\s => Left (Left s)) sm1.nfa.start
+      start = map CTh1 sm1.nfa.start
 
       nextMapLL : (sm1.nfa.State, Routine) -> (xs: List state ** Vect (length xs) Routine)
       nextMapLL (st,r) =
         let ns : state
-            ns = (Left $ Left st)
+            ns = CTh1 st
             mappedStart : List state
-            mappedStart = map (\s => Left $ Right s) sm2.nfa.start
+            mappedStart = map CTh2 sm2.nfa.start
             initRoutine : Vect (length mappedStart) Routine
             initRoutine = replace {p=(\l => Vect l Routine)} (mapMaintainsLength _ _) $ map (r++ ) sm2.prog.init
         in if (sm1.nfa.accepting st) then (ns::mappedStart ** r::initRoutine) else ([ns] ** [r])
@@ -103,13 +114,13 @@ thompson (Concat re1 re2) =
       nextMapLR : (sm2.nfa.State, Routine)-> (xs: List state ** Vect (length xs) Routine)
       nextMapLR (st,r) =
         if (sm2.nfa.accepting st)
-        then ([Left $ Right st, Right EndState] ** [r,r ++ [EmitPair]])
-        else ([Left $ Right st] ** [r])
+        then ([CTh2 st, CEnd] ** [r,r ++ [EmitPair]])
+        else ([CTh2 st] ** [r])
 
       next : state -> Char -> (xs: List state ** Vect (length xs) Routine)
-      next (Left $ Left st) c = flatMap nextMapLL (sm1.nfa.next st c) (sm1.prog.next st c)
-      next (Left $ Right st) c = flatMap nextMapLR (sm2.nfa.next st c) (sm2.prog.next st c)
-      next (Right _) _ = ([] ** [])
+      next (CTh1 st) c = flatMap nextMapLL (sm1.nfa.next st c) (sm1.prog.next st c)
+      next (CTh2 st) c = flatMap nextMapLR (sm2.nfa.next st c) (sm2.prog.next st c)
+      next CEnd _ = ([] ** [])
 
       _ := sm1.nfa.isEq
       _ := sm2.nfa.isEq
