@@ -10,3 +10,4 @@ modules = Sheets.FP
           , Codes
           , Evidence
           , NFA
+          , Verification

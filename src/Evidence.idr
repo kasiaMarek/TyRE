@@ -21,6 +21,7 @@ public export
 Evidence : Type
 Evidence = SnocList EvidenceMarker
 
+public export
 data Encodes : Evidence -> SnocList Code -> Type where
   Lin : [<] `Encodes` [<]
   -- OnlyString

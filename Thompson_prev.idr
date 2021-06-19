@@ -5,7 +5,6 @@ import NFA
 import Data.List
 import Data.Vect
 import Extra
-import Extra.Reflects
 
 --State for Predicate
 public export
@@ -58,16 +57,16 @@ nextPred f StartState c with (f c)
 nextPred _ AcceptState _ = []
 
 --functions for Group
-public export
-nextGroup : (a -> Bool) -> (nextNFA: a -> Char -> List a)
+nextMap : (a -> Bool) -> (a, Routine) -> (xs: List (Either a AState) ** Vect (length xs) Routine)
+nextMap accepting (st,_) =
+  if (accepting st)
+  then ([Left st, Right EndState] ** [[],[EmitString]])
+  else ([Left st] ** [[]])
+
+nextGroup : (a -> Bool) -> (nextNFA: a -> Char -> List a) -> ((s: a) -> (c : Char) -> Vect (length $ nextNFA s c) Routine)
     -> (Either a AState) -> Char -> (xs: List (Either a AState) ** Vect (length xs) Routine)
-nextGroup accepting nextNFA (Left st) c =
-  let mappedNext : List a
-      mappedNext = nextNFA st c
-  in case (findR accepting mappedNext).Holds of
-        Nothing => (map Left mappedNext ** replicate (length $ map Left mappedNext) [])
-        (Just _) => ((Right EndState)::(map Left mappedNext) ** [EmitString]::(replicate (length $ map Left mappedNext) []))
-nextGroup accepting nextNFA (Right EndState) _ = ([] ** [])
+nextGroup accepting nextNFA nextVM (Left st) c = flatMap (nextMap accepting) (nextNFA st c) (nextVM st c)
+nextGroup accepting nextNFA nextVM (Right _) _ = ([] ** [])
 
 --Thompson's construction
 public export
@@ -141,12 +140,12 @@ thompson (Group re) =
       start = map Left prev.nfa.start
 
       init: Vect (length start) Routine
-      init = replicate (length start) [Record]
+      init = map (Record::) (replace {p = \l => (Vect l Routine)} (mapMaintainsLength prev.nfa.start Left) prev.prog.init)
 
       nfa : NA
-      nfa = MkNFA state accepting start (\st => \c => fst $ nextGroup prev.nfa.accepting prev.nfa.next st c)
+      nfa = MkNFA state accepting start (\st => \c => fst $ nextGroup prev.nfa.accepting prev.nfa.next prev.prog.next st c)
 
       prog : Program nfa
-      prog = MkProgram init (\st => \c => snd $ nextGroup prev.nfa.accepting prev.nfa.next st c)
+      prog = MkProgram init (\st => \c => snd $ nextGroup prev.nfa.accepting prev.nfa.next prev.prog.next st c)
 
   in MkSM nfa prog

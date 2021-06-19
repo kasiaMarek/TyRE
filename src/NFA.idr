@@ -40,6 +40,7 @@ record VMState where
   memory : SnocList Char
   evidence : Evidence
 
+public export
 data Instruction =
     ||| Start recording word
     Record
@@ -127,20 +128,25 @@ stepMaintainsState : (c : Char) -> ThreadPredicate $
 
 stepMaintainsState c td = (Refl,Refl,Refl)
 
+public export
 emitChar          : (c : Char) -> Step
 emitChar c td     = MkThread td.naState (record {evidence $= (:< CharMark c)} td.vmState)
 
+public export
 emitString        : Step
 emitString td     =
   let vmState = MkVMState False [<] (td.vmState.evidence :< GroupMark (td.vmState.memory))
   in MkThread td.naState vmState
 
+public export
 startRecording    : Step
 startRecording td = MkThread td.naState (record {recording = True} td.vmState)
 
+public export
 emitPair          : Step
 emitPair td       = MkThread td.naState (record {evidence $= (:< PairMark)} td.vmState)
 
+public export
 stepForInstruction : (mc : Maybe Char) -> Instruction -> Step
 
 stepForInstruction mc       Record      = startRecording

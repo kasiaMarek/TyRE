@@ -7,6 +7,16 @@ import Data.Vect.Elem
 import Data.Maybe
 import Pred
 
+public export
+mapMaintainsLength: {a,b : Type} -> (xs: List a) -> (f: a -> b) -> (length xs = length (map f xs))
+mapMaintainsLength [] f = Refl
+mapMaintainsLength (x :: xs) f = cong (1+) (mapMaintainsLength xs f)
+
+public export
+lengthOfConcatIsPlus : (xs: List a) -> (ys: List a) -> (length xs + length ys = length (xs ++ ys))
+lengthOfConcatIsPlus [] ys = Refl
+lengthOfConcatIsPlus (x :: xs) ys = cong (1+) (lengthOfConcatIsPlus xs ys)
+
 ||| Proof that if an element is found on the list it belongs to that list.
 public export
 foundImpliesExists : (xs : List a) -> (pred : a -> Bool) -> (prf : find pred xs = Just elem) -> (elem : a ** (elem `Elem` xs, pred elem = True))
