@@ -6,6 +6,7 @@ import Data.List
 import Data.Vect
 import Extra
 import Extra.Reflects
+import Data.List.Elem
 
 --State for Predicate
 public export
@@ -79,7 +80,36 @@ nextGroup accepting nextNFA (Left st) c =
         (Just _) => ((Right EndState)::(map Left mappedNext) ** [EmitString]::(replicate (length $ map Left mappedNext) []))
 nextGroup accepting nextNFA (Right EndState) _ = ([] ** [])
 
---Thompson's construction
+--functions for Concat
+acceptingConcat : (CState a b) -> Bool
+acceptingConcat (CTh1 x) = False
+acceptingConcat (CTh2 x) = False
+acceptingConcat  CEnd = True
+
+forAcceptingAddNewStart : (oldStates: List c) -> (Vect (length oldStates) Routine) -> (accepting: c -> Bool) -> (conv: c -> (CState a b))
+                        -> (newStart: List (CState a b)) -> (Vect (length newStart) Routine)
+                        -> (states: List (CState a b) ** Vect (length states) Routine)
+
+forAcceptingAddNewStart [] [] accepting conv newStart ys = ([] ** [])
+forAcceptingAddNewStart (x :: xs) (y :: ys) accepting conv newStart newRoutines =
+  let next : (states: List (CState a b) ** Vect (length states) Routine)
+      next = forAcceptingAddNewStart xs ys accepting conv newStart newRoutines
+      withElem : (states: List (CState a b) ** Vect (length states) Routine)
+      withElem = ((conv x)::(fst next) ** y::(snd next))
+  in  if (accepting x)
+      then (newStart ++ (fst withElem) ** replace {p=(\l => Vect l Routine)} (lengthOfConcatIsPlus _ _) ((map (y++) newRoutines) ++ (snd withElem)))
+      else withElem
+
+nextConcat : (next1: a -> Char -> List a) -> ((st: a) -> (c: Char) -> Vect (length $ next1 st c) Routine) -> (acc1: a -> Bool)
+            -> (next2: b -> Char -> List b) -> ((st: b) -> (c: Char) -> Vect (length $ next2 st c) Routine) -> (acc2: b -> Bool)
+            -> (xs: List (CState a b) ** Vect (length xs) Routine)
+            -> (CState a b) -> Char -> (xs: List (CState a b) ** Vect (length xs) Routine)
+
+nextConcat next1 nextVM1 acc1 next2 nextVM2 acc2 start2 (CTh1 st) c = forAcceptingAddNewStart (next1 st c) (nextVM1 st c) acc1 CTh1 (fst start2) (snd start2)
+nextConcat _     nextVM1 acc1 next2 nextVM2 acc2 start2 (CTh2 st) c = forAcceptingAddNewStart (next2 st c) (nextVM2 st c) acc2 CTh2 [CEnd] [[EmitPair]]
+nextConcat next1 nextVM1 acc1 next2 nextVM2 acc2 start2 CEnd _ = ([] ** [])
+
+--Thompson construction
 public export
 thompson : CoreRE -> SM
 thompson (Pred f) = MkSM (MkNFA PState acceptingPred [StartState] (nextNFAPred f)) (MkProgram [[]] (nextPred f))
@@ -93,46 +123,23 @@ thompson (Concat re1 re2) =
       0 state : Type
       state = CState sm1.nfa.State sm2.nfa.State
 
-      accepting : state -> Bool
-      accepting (CTh1 x) = False
-      accepting (CTh2 x) = False
-      accepting CEnd = True
+      start2 : (xs: List state ** Vect (length xs) Routine)
+      start2 = forAcceptingAddNewStart sm2.nfa.start sm2.prog.init sm2.nfa.accepting CTh2 [CEnd] [[EmitPair]]
 
-      start : List state
-      start = map CTh1 sm1.nfa.start
-
-      nextMapLL : (sm1.nfa.State, Routine) -> (xs: List state ** Vect (length xs) Routine)
-      nextMapLL (st,r) =
-        let ns : state
-            ns = CTh1 st
-            mappedStart : List state
-            mappedStart = map CTh2 sm2.nfa.start
-            initRoutine : Vect (length mappedStart) Routine
-            initRoutine = replace {p=(\l => Vect l Routine)} (mapMaintainsLength _ _) $ map (r++ ) sm2.prog.init
-        in if (sm1.nfa.accepting st) then (ns::mappedStart ** r::initRoutine) else ([ns] ** [r])
-
-      nextMapLR : (sm2.nfa.State, Routine)-> (xs: List state ** Vect (length xs) Routine)
-      nextMapLR (st,r) =
-        if (sm2.nfa.accepting st)
-        then ([CTh2 st, CEnd] ** [r,r ++ [EmitPair]])
-        else ([CTh2 st] ** [r])
+      start : (xs: List state ** Vect (length xs) Routine)
+      start = forAcceptingAddNewStart sm1.nfa.start sm1.prog.init sm1.nfa.accepting CTh1 (fst start2) (snd start2)
 
       next : state -> Char -> (xs: List state ** Vect (length xs) Routine)
-      next (CTh1 st) c = flatMap nextMapLL (sm1.nfa.next st c) (sm1.prog.next st c)
-      next (CTh2 st) c = flatMap nextMapLR (sm2.nfa.next st c) (sm2.prog.next st c)
-      next CEnd _ = ([] ** [])
+      next = nextConcat sm1.nfa.next sm1.prog.next sm1.nfa.accepting sm2.nfa.next sm2.prog.next sm2.nfa.accepting start2
 
       _ := sm1.nfa.isEq
       _ := sm2.nfa.isEq
 
       nfa : NA
-      nfa = MkNFA state accepting start (\st => \c => fst $ next st c)
-
-      init : Vect (length start) Routine
-      init = replace {p=(\l => Vect l Routine)} (mapMaintainsLength _ _) sm1.prog.init
+      nfa = MkNFA state acceptingConcat (fst start) (\st => \c => fst (next st c))
 
       prog : Program nfa
-      prog = MkProgram init (\st => \c => snd $ next st c)
+      prog = MkProgram (snd start) (\st => \c => snd (next st c))
 
   in MkSM nfa prog
 
