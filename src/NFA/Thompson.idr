@@ -34,6 +34,22 @@ Eq a => Eq b => Eq (CState a b) where
   CEnd   == CEnd   = True
   x      == y      = False
 
+export
+Uninhabited (CTh1 e = CEnd) where
+  uninhabited Refl impossible
+
+export
+Uninhabited (CTh2 e = CEnd) where
+  uninhabited Refl impossible
+
+export
+Uninhabited (CTh1 e = CTh2 e') where
+  uninhabited Refl impossible
+
+export
+Uninhabited (CTh2 e = CTh1 e') where
+  uninhabited Refl impossible
+
 public export
 flatMap : (f: (a,b) -> (xs' : List c ** Vect (length xs') d)) -> (xs : List a) -> (Vect (length xs) b) -> (ys: List c ** Vect (length ys) d)
 flatMap f [] [] = ([] ** [])
@@ -81,11 +97,13 @@ nextGroup accepting nextNFA (Left st) c =
 nextGroup accepting nextNFA (Right EndState) _ = ([] ** [])
 
 --functions for Concat
+public export
 acceptingConcat : (CState a b) -> Bool
 acceptingConcat (CTh1 x) = False
 acceptingConcat (CTh2 x) = False
 acceptingConcat  CEnd = True
 
+public export
 forAcceptingAddNewStart : (oldStates: List c) -> (Vect (length oldStates) Routine) -> (accepting: c -> Bool) -> (conv: c -> (CState a b))
                         -> (newStart: List (CState a b)) -> (Vect (length newStart) Routine)
                         -> (states: List (CState a b) ** Vect (length states) Routine)
@@ -94,12 +112,11 @@ forAcceptingAddNewStart [] [] accepting conv newStart ys = ([] ** [])
 forAcceptingAddNewStart (x :: xs) (y :: ys) accepting conv newStart newRoutines =
   let next : (states: List (CState a b) ** Vect (length states) Routine)
       next = forAcceptingAddNewStart xs ys accepting conv newStart newRoutines
-      withElem : (states: List (CState a b) ** Vect (length states) Routine)
-      withElem = ((conv x)::(fst next) ** y::(snd next))
   in  if (accepting x)
-      then (newStart ++ (fst withElem) ** replace {p=(\l => Vect l Routine)} (lengthOfConcatIsPlus _ _) ((map (y++) newRoutines) ++ (snd withElem)))
-      else withElem
+      then ((conv x)::newStart ++ (fst next) ** y::(replace {p=(\l => Vect l Routine)} (lengthOfConcatIsPlus _ _) ((map (y++) newRoutines) ++ (snd next))))
+      else ((conv x)::(fst next) ** y::(snd next))
 
+public export
 nextConcat : (next1: a -> Char -> List a) -> ((st: a) -> (c: Char) -> Vect (length $ next1 st c) Routine) -> (acc1: a -> Bool)
             -> (next2: b -> Char -> List b) -> ((st: b) -> (c: Char) -> Vect (length $ next2 st c) Routine) -> (acc2: b -> Bool)
             -> (xs: List (CState a b) ** Vect (length xs) Routine)

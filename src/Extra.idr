@@ -89,6 +89,31 @@ extractBasedOnFst (x :: xs) (z :: ys) x Here = z
 extractBasedOnFst (x' :: xs) (z :: ys) x (There pos) = extractBasedOnFst xs ys x pos
 
 public export
+hereOrThereExtractBasedOnFst  : (xs: List a) -> (xs': List a) -> (ys: Vect (length xs) b) -> (ys': Vect (length xs') b)
+                              -> (x : a) -> (xInXs: x `Elem` (xs ++ xs'))
+                              -> Either (pos: x `Elem` xs ** extractBasedOnFst (xs ++ xs') (replace {p=(\l => Vect l b)} (lengthOfConcatIsPlus xs xs') (ys ++ ys')) x xInXs = extractBasedOnFst xs ys x pos)
+                                        (pos: x `Elem` xs' ** extractBasedOnFst (xs ++ xs') (replace {p=(\l => Vect l b)} (lengthOfConcatIsPlus xs xs') (ys ++ ys')) x xInXs = extractBasedOnFst xs' ys' x pos)
+
+hereOrThereExtractBasedOnFst [] (x :: xs) [] (y :: ys) x Here = Right (Here ** Refl)
+hereOrThereExtractBasedOnFst [] (x' :: xs) [] (y :: ys) x (There pos) =
+  let rest = hereOrThereExtractBasedOnFst [] xs [] ys x pos
+  in case rest of
+    (Left (pos ** prf)) => absurd pos
+    (Right (pos ** prf)) => Right (There pos ** prf)
+
+hereOrThereExtractBasedOnFst (x :: xs) xs' (y :: ys) ys' x Here = Left (Here ** Refl)
+hereOrThereExtractBasedOnFst (x' :: xs) xs' (y :: ys) ys' x (There pos) =
+  let rest = hereOrThereExtractBasedOnFst xs xs' ys ys' x pos
+  in case rest of
+    (Left (pos ** prf)) => Left (There pos ** prf)
+    (Right (pos ** prf)) => Right (pos ** prf)
+
+public export
+mapExtractBasedOnFst: (f: b -> c) -> (xs : List a) -> (ys: Vect (length xs) b) -> (x : a) -> (pos : x `Elem` xs) -> (extractBasedOnFst xs (map f ys) x pos = f (extractBasedOnFst xs ys x pos))
+mapExtractBasedOnFst f (_ :: xs) (y :: ys) x Here = Refl
+mapExtractBasedOnFst f (x' :: xs) (y :: ys) x (There pos) = mapExtractBasedOnFst f xs ys x pos
+
+public export
 rightCantBeElemOfLeft : (x : a) -> (xs : List b) -> (Not ((Right x) `Elem` (map (Left . f) xs)))
 rightCantBeElemOfLeft _ [] Here impossible
 rightCantBeElemOfLeft _ [] (There y) impossible
