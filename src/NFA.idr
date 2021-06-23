@@ -112,10 +112,7 @@ Step = VMState -> VMState
 
 public export
 step : Char -> Step
-step x v =
-  let updatedMemory =
-    if (v.recording) then (v.memory :< x) else (v.memory)
-  in MkVMState (v.recording) updatedMemory (v.evidence)
+step x v = MkVMState (v.recording) (if (v.recording) then (v.memory :< x) else (v.memory)) (v.evidence)
 
 -- public export
 -- stepMaintainsState : (c : Char) -> ThreadPredicate $
@@ -135,7 +132,7 @@ emitString v      = MkVMState False [<] (v.evidence :< GroupMark (v.memory))
 
 public export
 startRecording    : Step
-startRecording v  = (record {recording = True} v)
+startRecording v  = MkVMState True v.memory v.evidence
 
 public export
 emitPair          : Step

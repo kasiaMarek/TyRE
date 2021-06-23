@@ -52,18 +52,20 @@ execEqualityPrf vmState [] mc = Refl
 execEqualityPrf vmState (x :: xs) mc = execEqualityPrf {nfa} (stepForInstruction mc x vmState) xs mc
 
 public export
+stepOfExtractRoutine : {nfa : NA} -> {prog : Program nfa} -> {s : nfa.State}
+                  -> (acc: AcceptingFrom nfa s word)
+                  -> ExtendedRoutine
+stepOfExtractRoutine {word=[]} {nfa} {prog} (Accept s prf) = []
+stepOfExtractRoutine {word=c::_} {nfa} {prog} (Step s c t prf acc) = mapRoutine (Just c) (extractBasedOnFst (nfa.next s c) (prog.next s c) t prf)
+
+public export
 extractRoutineFrom : {nfa : NA} -> {prog : Program nfa} -> {s : nfa.State}
                   -> (acc: AcceptingFrom nfa s word)
                   -> ExtendedRoutine
 extractRoutineFrom {word=[]} {nfa} {prog} (Accept s prf) = []
 extractRoutineFrom {word=c::_} {nfa} {prog} (Step s c t prf acc) =
-  let r : Routine
-      r = extractBasedOnFst (nfa.next s c) (prog.next s c) t prf
-      nRout : ExtendedRoutine
-      nRout = extractRoutineFrom {nfa,prog} acc
-      extr : ExtendedRoutine
-      extr = mapRoutine (Just c) r
-  in (extr ++ nRout)
+  (stepOfExtractRoutine {nfa,prog} (Step s c t prf acc))
+      ++ (extractRoutineFrom {nfa,prog} acc)
 
 public export
 extractRoutine : (nfa: NA) -> Program nfa -> Accepting nfa word -> ExtendedRoutine
