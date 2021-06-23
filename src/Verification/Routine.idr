@@ -52,39 +52,67 @@ execEqualityPrf vmState [] mc = Refl
 execEqualityPrf vmState (x :: xs) mc = execEqualityPrf {nfa} (stepForInstruction mc x vmState) xs mc
 
 public export
-extractRoutineFrom : {nfa : NA} -> {prog : Program nfa}
+extractRoutineFrom : {nfa : NA} -> {prog : Program nfa} -> {s : nfa.State}
+                  -> (acc: AcceptingFrom nfa s word)
+                  -> ExtendedRoutine
+extractRoutineFrom {word=[]} {nfa} {prog} (Accept s prf) = []
+extractRoutineFrom {word=c::_} {nfa} {prog} (Step s c t prf acc) =
+  let r : Routine
+      r = extractBasedOnFst (nfa.next s c) (prog.next s c) t prf
+      nRout : ExtendedRoutine
+      nRout = extractRoutineFrom {nfa,prog} acc
+      extr : ExtendedRoutine
+      extr = mapRoutine (Just c) r
+  in (extr ++ nRout)
+
+public export
+extractRoutine : (nfa: NA) -> Program nfa -> Accepting nfa word -> ExtendedRoutine
+extractRoutine nfa prog (Start s prf acc) =
+  let r : Routine
+      r = extractBasedOnFst (nfa.start) (prog.init) s prf
+      extr : ExtendedRoutine
+      extr = mapRoutine Nothing r
+      nRout : ExtendedRoutine
+      nRout = extractRoutineFrom {nfa, prog} acc
+  in (extr ++ nRout)
+
+public export
+extractRoutineFromPrf : {nfa : NA} -> {prog : Program nfa}
                   -> (td : Thread nfa) -> (acc: AcceptingFrom nfa td.naState word)
                   -> (mc : Maybe Char)
-                  -> (routine: ExtendedRoutine ** executeRoutineFrom routine (mc, td.vmState) = extractEvidenceFrom td acc)
-
-extractRoutineFrom {word=[]} {nfa} {prog} td (Accept td.naState prf) mc = ([] ** Refl)
-extractRoutineFrom {word=c::_} {nfa} {prog} td (Step td.naState c t prf acc) mc =
+                  -> (executeRoutineFrom (extractRoutineFrom {nfa, prog} acc) (mc, td.vmState) = extractEvidenceFrom td acc)
+extractRoutineFromPrf {word=[]} {nfa} {prog} td (Accept td.naState prf) mc = Refl
+extractRoutineFromPrf {word=c::_} {nfa} {prog} td (Step td.naState c t prf acc) mc =
   let r : Routine
       r = extractBasedOnFst (nfa.next td.naState c) (prog.next td.naState c) t prf
       td' : Thread nfa
       td' = runFunction c td (t,r)
-      (nRout ** nPrf) := extractRoutineFrom td' acc (Just c)
+      nRout : ExtendedRoutine
+      nRout = extractRoutineFrom {nfa,prog} acc
+      nPrf := extractRoutineFromPrf {nfa,prog} td' acc (Just c)
       extr : ExtendedRoutine
       extr = mapRoutine (Just c) r
       prf0: (executeRoutineSteps extr (mc, td.vmState) = (Just c, td'.vmState))
       prf0 = (execEqualityPrf {nfa} _ _ _)
       prf: (executeRoutineSteps (extr ++ nRout) (mc, td.vmState) = executeRoutineSteps nRout (Just c, td'.vmState))
       prf = trans (routineComposition extr nRout (mc, td.vmState)) (cong (executeRoutineSteps nRout) prf0)
-  in (extr ++ nRout ** trans (cong (\e => (snd e).evidence) prf) nPrf)
+  in (trans (cong (\e => (snd e).evidence) prf) nPrf)
 
 public export
-extractRoutine  : (nfa : NA) -> (prog : Program nfa) -> (acc: Accepting nfa word)
-                -> (routine: ExtendedRoutine ** executeRoutine routine = extractEvidence acc)
-extractRoutine nfa prog (Start s prf acc) =
+extractRoutinePrf  : (nfa : NA) -> (prog : Program nfa) -> (acc: Accepting nfa word)
+                -> (executeRoutine (extractRoutine nfa prog acc) = extractEvidence acc)
+extractRoutinePrf nfa prog (Start s prf acc) =
   let r : Routine
       r = extractBasedOnFst (nfa .start) (prog .init) s prf
       td : Thread nfa
       td = initFuction (s,r)
       extr : ExtendedRoutine
       extr = mapRoutine Nothing r
-      (nRout ** nPrf) := extractRoutineFrom td acc Nothing
+      nRout : ExtendedRoutine
+      nRout = extractRoutineFrom acc
+      nPrf := extractRoutineFromPrf td acc Nothing
       prf0: (executeRoutineSteps extr (Nothing, MkVMState False [<] [<]) = (Nothing, td.vmState))
       prf0 = (execEqualityPrf {nfa} _ _ _)
       prf: (executeRoutineSteps (extr ++ nRout) (Nothing, MkVMState False [<] [<]) = executeRoutineSteps nRout (Nothing, td.vmState))
       prf = trans (routineComposition extr nRout (Nothing, MkVMState False [<] [<])) (cong (executeRoutineSteps nRout) prf0)
-  in (extr ++ nRout ** trans (cong (\e => (snd e).evidence) prf) nPrf)
+  in (trans (cong (\e => (snd e).evidence) prf) nPrf)
