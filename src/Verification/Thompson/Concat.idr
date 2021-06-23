@@ -28,18 +28,14 @@ notPrf2 s prf = absurd prf
 notPrf3 : (s : sm1.nfa.State) -> Not (CTh1 s = CTh2 s')
 notPrf3 s prf = absurd prf
 
-initMaintainsState : {nfa : NA} -> {prog : Program nfa} -> (s : nfa .State) -> (prf: s `Elem` nfa .start) -> ((extractEvidenceInitialStep s prf).naState = s)
-initMaintainsState s prf = (executeMaintainsNAState _ _ _)
-
-
-execConcatPrf : {nfa : NA} -> {nfa1 : NA} -> {nfa2 : NA}
-              -> (r1 : Routine) -> (r2 : Routine) -> (mc : Maybe Char)
-              -> (s: nfa.State) -> (s1 : nfa1.State) -> (s2 : nfa2.State)
-              -> (ev : Evidence)
-              -> ((execute {N = nfa} mc (r1 ++ r2) (MkThread s (MkVMState b0 w0 ev))).vmState.evidence
-                        = (execute {N = nfa1} mc r1 (MkThread s1 (MkVMState b1 w2 ev))).vmState.evidence ++ (execute {N = nfa2} Nothing r2 (MkThread s2 (MkVMState False [<] [<]))).vmState.evidence)
-execConcatPrf r1 [] mc s s1 s2 ev = ?execConcatPrf_rhs_1
-execConcatPrf r1 (x :: xs) mc s s1 s2 ev = ?execConcatPrf_rhs_2
+-- execConcatPrf : {nfa : NA} -> {nfa1 : NA} -> {nfa2 : NA}
+--               -> (r1 : Routine) -> (r2 : Routine) -> (mc : Maybe Char)
+--               -> (s: nfa.State) -> (s1 : nfa1.State) -> (s2 : nfa2.State)
+--               -> (ev : Evidence)
+--               -> ((execute {N = nfa} mc (r1 ++ r2) (MkThread s (MkVMState b0 w0 ev))).vmState.evidence
+--                         = (execute {N = nfa1} mc r1 (MkThread s1 (MkVMState b1 w2 ev))).vmState.evidence ++ (execute {N = nfa2} Nothing r2 (MkThread s2 (MkVMState False [<] [<]))).vmState.evidence)
+-- execConcatPrf r1 [] mc s s1 s2 ev = ?execConcatPrf_rhs_1
+-- execConcatPrf r1 (x :: xs) mc s s1 s2 ev = ?execConcatPrf_rhs_2
 
 
 aboutAddingStatesNew : (oldStates: List c) -> (rout1: Vect (length oldStates) Routine) -> (accept: c -> Bool) -> (conv: c -> (CState a b))
@@ -177,17 +173,17 @@ concatEvidencePrf {word=(c::w)} re1 re2 (Start (CTh2 s) prf (Step (CTh2 s) c t p
       td2 = extractEvidenceInitialStep {nfa = sm2.nfa} {prog = sm2.prog} s prfInit2
 
       acceptingFrom : AcceptingFrom sm.nfa td.naState (c::w)
-      acceptingFrom = (replace {p=(\s => AcceptingFrom sm.nfa s (c::w))} (sym $ executeMaintainsNAState {N = sm.nfa} _ _ _) (Step {nfa = sm.nfa} (CTh2 s) c t prf1 acc))
+      acceptingFrom = Step {nfa = sm.nfa} (CTh2 s) c t prf1 acc
 
       --TODO proof that execute on (routine1 +++ routine2) = (execute routine1) ++ (execute routine2)
       (word' ** (accept2 ** eqPrf)) := evidenceTh2 {re1, re2} td
                                       acceptingFrom
                                       td2 td1.vmState.evidence
-                                      (trans (initMaintainsState {nfa = sm.nfa} {prog = sm.prog} (CTh2 s) prf) (cong (CTh2) (sym $ initMaintainsState {nfa = sm2.nfa} {prog = sm2.prog} s prfInit2)))
+                                      Refl
                                       (rewrite rprf in (rewrite rprf' in ?p))
 
   in ([] ** (Start {nfa = (thompson re1).nfa} s1 prfInit1 (Accept {nfa = (thompson re1).nfa} s1 prfAcc1)
-        ** (word' ** (Start {nfa = sm2.nfa} s prfInit2 (replace {p=(\s => AcceptingFrom sm2.nfa s word')} (executeMaintainsNAState {N = sm2.nfa} _ _ _) accept2)
+        ** (word' ** (Start {nfa = sm2.nfa} s prfInit2 accept2
             ** eqPrf))))
 
 concatEvidencePrf re1 re2 (Start (CTh1 s) prf (Step (CTh1 s) c t prf1 acc)) = ?concatEvidencePrf_rhs_3

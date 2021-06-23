@@ -51,7 +51,7 @@ evidenceForGroup : (re : CoreRE)
 evidenceForGroup re td (Accept td.naState _) prf = ([<] ** prf)
 evidenceForGroup re td (Step td.naState c (Right EndState) prf1 (Accept (Right EndState) Refl)) prf =
   let routine = (stepInGroupToRightState c td.naState (thompson re).nfa.accepting (thompson re).nfa.next prf1)
-  in rewrite prf in (rewrite routine in ((step {N = (thompson (Group re)).nfa} c td).vmState.memory ** Refl))
+  in rewrite prf in (rewrite routine in ((step {N = (thompson (Group re)).nfa} c td.vmState).memory ** Refl))
 
 evidenceForGroup re td (Step td.naState c (Left s) prf1 (Step (Left s) c' t prf2 acc)) prf =
   let td' : Thread (thompson (Group re)).nfa
@@ -79,14 +79,12 @@ thompsonEvidencePrf (Concat re1 re2) acc =
                         = ([<] ++ (extractEvidence {nfa = (thompson re1).nfa, prog = (thompson re1).prog} acc1 ++ extractEvidence {nfa = (thompson re2).nfa, prog = (thompson re2).prog} acc2)) :< PairMark)
       ford = trans prf (cong (:<PairMark) (sym appendNilLeftNeutral))
   in APair Lin (thompsonEvidencePrf re1 acc1) (thompsonEvidencePrf re2 acc2) {ford}
-  
+
 thompsonEvidencePrf (Group re) (Start (Right z) initprf y) = absurd (rightCantBeElemOfLeft _ _ initprf)
 thompsonEvidencePrf (Group re) (Start (Left z) initprf (Accept (Left z) pos)) = absurd pos
 thompsonEvidencePrf (Group re) (Start (Left z) initprf (Step (Left z) c t prf acc)) =
   let td: Thread (thompson (Group re)).nfa
       td = extractEvidenceInitialStep {nfa = (thompson (Group re)).nfa, prog = (thompson (Group re)).prog} (Left z) initprf
-      u : (td.naState = (Left z))
-      u = (executeMaintainsNAState {N = (thompson (Group re)).nfa} _ _ _)
       q := extractBasedOnFstFromRep (thompson (Group re)).nfa.start ((the Routine) [Record]) (Left z) initprf
-      (w ** ev) := evidenceForGroup re td (Step {nfa = (thompson (Group re)).nfa} td.naState c t (rewrite u in prf) acc) (rewrite q in Refl)
+      (w ** ev) := evidenceForGroup re td (Step {nfa = (thompson (Group re)).nfa} td.naState c t prf acc) (rewrite q in Refl)
   in rewrite ev in AGroup [<] w

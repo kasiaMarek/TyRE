@@ -54,4 +54,4 @@ extractEvidence : {auto nfa : NA} -> {auto prog : Program nfa} -> Accepting nfa 
 extractEvidence (Start {w} s prf acc) =
   let td : Thread nfa
       td = extractEvidenceInitialStep s prf
-  in extractEvidenceFrom td (replace {p=(\s => AcceptingFrom nfa s w)} (sym $ executeMaintainsNAState _ _ _) acc)
+  in extractEvidenceFrom td acc

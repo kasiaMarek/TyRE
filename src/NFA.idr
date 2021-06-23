@@ -102,49 +102,44 @@ mapFSpec f q p (x1 :: xs) (x2 :: ys) spec y (pos, satP) =
       let (x1' ** (x2' ** (pos' ** (ex', eq', satQ')))) = mapFSpec f q p xs ys spec y (pos, satP)
       in (x1' ** (x2' ** (There pos' ** (ex', eq', satQ'))))
 
-parameters {auto N : NA}
-
 public export
 0 Step : Type
-Step = (td : Thread N) -> Thread N
+Step = VMState -> VMState
 
-public export
-0 ThreadPredicate : ((td : Thread N) -> Type) -> Type
-ThreadPredicate pred = (td : Thread N) -> pred td
+-- public export
+-- 0 ThreadPredicate : ((td : Thread N) -> Type) -> Type
+-- ThreadPredicate pred = (td : Thread N) -> pred td
 
 public export
 step : Char -> Step
-step x td =
+step x v =
   let updatedMemory =
-    if (td.vmState.recording) then (td.vmState.memory :< x) else (td.vmState.memory)
-      vmState = MkVMState (td.vmState.recording) updatedMemory (td.vmState.evidence)
-  in MkThread td.naState vmState
+    if (v.recording) then (v.memory :< x) else (v.memory)
+  in MkVMState (v.recording) updatedMemory (v.evidence)
 
-public export
-stepMaintainsState : (c : Char) -> ThreadPredicate $
-     (\td => (step c td).naState = td.naState)
-  /\ (\td => (step c td).vmState.recording = td.vmState.recording)
-  /\ (\td => (step c td).vmState.evidence  = td.vmState.evidence)
-
-stepMaintainsState c td = (Refl,Refl,Refl)
+-- public export
+-- stepMaintainsState : (c : Char) -> ThreadPredicate $
+--      (\td => (step c td).naState = td.naState)
+--   /\ (\td => (step c td).vmState.recording = td.vmState.recording)
+--   /\ (\td => (step c td).vmState.evidence  = td.vmState.evidence)
+--
+-- stepMaintainsState c td = (Refl,Refl,Refl)
 
 public export
 emitChar          : (c : Char) -> Step
-emitChar c td     = MkThread td.naState (record {evidence $= (:< CharMark c)} td.vmState)
+emitChar c v      = (record {evidence $= (:< CharMark c)} v)
 
 public export
 emitString        : Step
-emitString td     =
-  let vmState = MkVMState False [<] (td.vmState.evidence :< GroupMark (td.vmState.memory))
-  in MkThread td.naState vmState
+emitString v      = MkVMState False [<] (v.evidence :< GroupMark (v.memory))
 
 public export
 startRecording    : Step
-startRecording td = MkThread td.naState (record {recording = True} td.vmState)
+startRecording v  = (record {recording = True} v)
 
 public export
 emitPair          : Step
-emitPair td       = MkThread td.naState (record {evidence $= (:< PairMark)} td.vmState)
+emitPair v        = (record {evidence $= (:< PairMark)} v)
 
 public export
 stepForInstruction : (mc : Maybe Char) -> Instruction -> Step
@@ -157,27 +152,33 @@ stepForInstruction Nothing  EmitLast    = (\t => t)
 
 public export
 execute : (mc : Maybe Char) -> Routine -> Step
-execute mc [] td = td
-execute mc (x::xs) td = execute mc xs $ stepForInstruction mc x td
-
-stepForInstructionMaintainsNAState : (mc : Maybe Char) -> (ins: Instruction) -> ThreadPredicate $
-  \td => (stepForInstruction mc ins td).naState = td.naState
-
-stepForInstructionMaintainsNAState mc       Record      td = Refl
-stepForInstructionMaintainsNAState mc       EmitString  td = Refl
-stepForInstructionMaintainsNAState mc       EmitPair    td = Refl
-stepForInstructionMaintainsNAState (Just c) EmitLast    td = Refl
-stepForInstructionMaintainsNAState Nothing  EmitLast    td = Refl
+execute mc [] v = v
+execute mc (x::xs) v = execute mc xs $ stepForInstruction mc x v
 
 public export
-executeMaintainsNAState : (mc : Maybe Char) -> (routine : Routine) -> ThreadPredicate $
-  \td => (execute mc routine td).naState = td.naState
+initVM : VMState
+initVM = MkVMState False [<] [<]
 
-executeMaintainsNAState mc [] td      = Refl
-executeMaintainsNAState mc (x::xs) td =
-  let recur = executeMaintainsNAState mc xs (stepForInstruction mc x td)
-      sfim  = stepForInstructionMaintainsNAState mc x td
-  in trans recur sfim
+parameters {auto N : NA}
+
+-- stepForInstructionMaintainsNAState : (mc : Maybe Char) -> (ins: Instruction) -> ThreadPredicate $
+--   \td => (stepForInstruction mc ins td).naState = td.naState
+--
+-- stepForInstructionMaintainsNAState mc       Record      td = Refl
+-- stepForInstructionMaintainsNAState mc       EmitString  td = Refl
+-- stepForInstructionMaintainsNAState mc       EmitPair    td = Refl
+-- stepForInstructionMaintainsNAState (Just c) EmitLast    td = Refl
+-- stepForInstructionMaintainsNAState Nothing  EmitLast    td = Refl
+--
+-- public export
+-- executeMaintainsNAState : (mc : Maybe Char) -> (routine : Routine) -> ThreadPredicate $
+--   \td => (execute mc routine td).naState = td.naState
+--
+-- executeMaintainsNAState mc [] td      = Refl
+-- executeMaintainsNAState mc (x::xs) td =
+--   let recur = executeMaintainsNAState mc xs (stepForInstruction mc x td)
+--       sfim  = stepForInstructionMaintainsNAState mc x td
+--   in trans recur sfim
 
 run: Word -> List (N .State) -> Bool
 run [] ys = case (find (N .accepting) ys) of
@@ -188,13 +189,10 @@ run (c :: cs) ys = run cs (ys >>= (\s => N .next s c))
 parameters  {auto P : Program N}
 
 --implementation of initialise
-public export
-initVM : VMState
-initVM = MkVMState False [<] [<]
 
 public export
 initFuction : (N .State, Routine) -> Thread N
-initFuction (s,r) = execute Nothing r (MkThread s initVM)
+initFuction (s,r) = MkThread s (execute Nothing r initVM)
 
 public export
 initialise : List (Thread N)
@@ -203,7 +201,7 @@ initialise = mapF initFuction (N .start) (P .init)
 --implementation of runFrom
 public export
 runFunction : Char -> Thread N -> (N .State, Routine) -> Thread N
-runFunction c td (st, r) = MkThread st (execute (Just c) r (step c td)).vmState
+runFunction c td (st, r) = MkThread st (execute (Just c) r (step c td.vmState))
 
 public export
 runMapping: Char -> Thread N -> List (Thread N)
