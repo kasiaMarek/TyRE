@@ -24,6 +24,7 @@ executeRoutineSteps []                    st       = st
 executeRoutineSteps ((Regular inst)::r)   (mc, vm) = executeRoutineSteps r (mc, stepForInstruction mc inst vm)
 executeRoutineSteps ((Observe c)::r)      (mc, vm) = executeRoutineSteps r (Just c, (step c vm))
 
+
 public export
 executeRoutineFrom: ExtendedRoutine -> (Maybe Char, VMState) -> Evidence
 executeRoutineFrom routine st = (snd $ executeRoutineSteps routine st).evidence
@@ -45,6 +46,12 @@ mapRoutine Nothing [] = []
 mapRoutine Nothing (inst :: insts) = (Regular inst)::(mapRoutine Nothing insts)
 mapRoutine (Just c) insts = (Observe c)::(mapRoutine Nothing insts)
 
+public export
+mapRoutineConcat : (mc: Maybe Char) -> (xs: Routine) -> (ys: Routine) -> (mapRoutine mc (xs ++ ys) = mapRoutine mc xs ++ mapRoutine Nothing ys)
+mapRoutineConcat Nothing [] ys = Refl
+mapRoutineConcat (Just x) [] ys = Refl
+mapRoutineConcat Nothing (x :: xs) ys = cong (Regular x ::) (mapRoutineConcat Nothing xs ys)
+mapRoutineConcat (Just c) (x :: xs) ys = cong (\l => Observe c :: (Regular x :: l)) (mapRoutineConcat Nothing xs ys)
 public export
 execEqualityPrf : {nfa : NA} -> (vmState : VMState) -> (r : Routine) -> (mc : Maybe Char)
                 -> (executeRoutineSteps (mapRoutine Nothing r) (mc, vmState) = (mc, execute mc r vmState))
