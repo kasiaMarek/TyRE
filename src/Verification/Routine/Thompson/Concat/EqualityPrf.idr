@@ -3,6 +3,7 @@ module Verification.Routine.Thompson.Concat.EqualityPrf
 import Verification.Routine
 import Data.List
 import NFA
+import
 
 public export
 eqPrf2E : (a : Routine)
