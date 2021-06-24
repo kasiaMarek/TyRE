@@ -52,6 +52,7 @@ mapRoutineConcat Nothing [] ys = Refl
 mapRoutineConcat (Just x) [] ys = Refl
 mapRoutineConcat Nothing (x :: xs) ys = cong (Regular x ::) (mapRoutineConcat Nothing xs ys)
 mapRoutineConcat (Just c) (x :: xs) ys = cong (\l => Observe c :: (Regular x :: l)) (mapRoutineConcat Nothing xs ys)
+
 public export
 execEqualityPrf : {nfa : NA} -> (vmState : VMState) -> (r : Routine) -> (mc : Maybe Char)
                 -> (executeRoutineSteps (mapRoutine Nothing r) (mc, vmState) = (mc, execute mc r vmState))
