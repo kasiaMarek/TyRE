@@ -57,6 +57,7 @@ thompsonRoutinePrf (Group re) (Start (Left z) initprf (Step (Left z) c t prf acc
       (w ** ev) := evidenceForGroup re {mc,ev = vm.evidence} (Step {nfa = (thompson (Group re)).nfa} (Left z) c t prf acc) (MkVMState True vm.memory vm.evidence) Refl
   in ([< GroupMark w] ** rewrite q in (rewrite ev in (Refl, AGroup [<] w)))
 
+public export
 thompsonPrf : (re : CoreRE)
             -> (acc: Accepting (thompson re).nfa word)
             -> (extractEvidence {nfa = (thompson re).nfa, prog = (thompson re).prog} acc `Encodes` [< ShapeCode re])

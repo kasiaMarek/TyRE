@@ -212,3 +212,7 @@ public export
 runFrom : Word -> (tds : List $ Thread N) -> Maybe Evidence
 runFrom [] tds =  map (\td => td.vmState.evidence) (findR (\td => N .accepting td.naState) tds).Holds
 runFrom (c::cs) tds = runFrom cs $ runMain c tds
+
+public export
+runAutomaton : Word -> Maybe Evidence
+runAutomaton word = runFrom word initialise

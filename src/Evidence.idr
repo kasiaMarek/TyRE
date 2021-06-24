@@ -84,6 +84,6 @@ extractResult (evs :< GroupMark str) (AGroup prf str) =
   let string = (reverse (pack (asList str)))
   in MkResult string evs prf
 
-
+public export
 extract : (ev : Evidence) -> (0 prf : ev `Encodes` [< c]) -> Sem c
 extract ev prf = (extractResult ev prf).result

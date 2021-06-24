@@ -56,11 +56,12 @@ recordPath {nfa} tds (c :: cs) prf =
           (td' ** (pos', (acc' ** isEq')))
   in (x ** (isElem, satQ))
 
+public export
 0 extractEvidenceEquality : (nfa : NA)
                         -> (prog : Program nfa)
                         -> (str : Word)
                         -> (ev : Evidence)
-                        -> (prf : runFrom str NFA.initialise = Just ev)
+                        -> (prf : runAutomaton str = Just ev)
                         -> (acc: Accepting nfa str ** extractEvidence acc = ev)
 
 extractEvidenceEquality nfa prog str ev prf =
@@ -71,7 +72,7 @@ extractEvidenceEquality nfa prog str ev prf =
                                                                   (\t => (td.naState = t.naState))
                                                                   (nfa .start)
                                                                   (prog .init)
-                                                                  (\x1 => \x2 => \p => trans p (executeMaintainsNAState _ _ _))
+                                                                  (\x1 => \x2 => \p => p)
                                                                   td
                                                                   (pos, Refl)
       acc' : AcceptingFrom nfa x1 str
