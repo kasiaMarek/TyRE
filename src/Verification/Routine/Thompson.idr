@@ -16,9 +16,7 @@ import Verification.Routine.Thompson.Group
 import Data.Vect
 import Extra.Reflects
 import Verification.Routine.Thompson.Concat
-
-pairEq: (x : (a,b)) -> ((fst x, snd x) = x)
-pairEq (x, y) = Refl
+import Verification.Routine.Thompson.Concat.EqualityPrf
 
 thompsonRoutinePrf : (re : CoreRE)
                   -> (acc : Accepting (thompson re).nfa word)
@@ -43,9 +41,14 @@ thompsonRoutinePrf (Concat re1 re2) acc mcvm =
       vmmc' : (Maybe Char, VMState)
       vmmc' = executeRoutineSteps exr1 mcvm
       (ev2 ** (eq2, encodes2)) := thompsonRoutinePrf re2 acc2 vmmc'
-      prf : ((snd $ executeRoutineSteps (exr1 ++ exr2 ++ [Regular EmitPair]) mcvm).evidence = (snd $ executeRoutineSteps exr2 (executeRoutineSteps exr1 mcvm)).evidence :< PairMark)
-      prf = ?hole
-  in rewrite eqPrf in rewrite prf in (ev1 ++ ev2 ++ [< PairMark] ** rewrite eq2 in (rewrite eq1 in (cong (:< PairMark) (sym $ appendAssociative), ?kkk)))
+
+      routineEquality : ((snd $ executeRoutineSteps (exr1 ++ exr2 ++ [Regular EmitPair]) mcvm).evidence = (snd $ executeRoutineSteps exr2 (executeRoutineSteps exr1 mcvm)).evidence :< PairMark)
+      routineEquality = concatRoutinePrf exr1 exr2 mcvm
+      encodesWL : ((([<] ++ ev1 ++ ev2) :< PairMark) `Encodes` ([<] :< PairC (ShapeCode re1) (ShapeCode re2)))
+      encodesWL = APair Lin encodes1 encodes2
+      encodes : (((ev1 ++ ev2) :< PairMark) `Encodes` ([<] :< PairC (ShapeCode re1) (ShapeCode re2)))
+      encodes = replace {p=(`Encodes` ([<] :< PairC (ShapeCode re1) (ShapeCode re2)))} (cong (:< PairMark) appendNilLeftNeutral) encodesWL
+  in rewrite eqPrf in rewrite routineEquality in (ev1 ++ ev2 ++ [< PairMark] ** rewrite eq2 in (rewrite eq1 in (cong (:< PairMark) (sym $ appendAssociative), encodes)))
 
 thompsonRoutinePrf (Group re) (Start (Right z) initprf acc) _ = absurd (rightCantBeElemOfLeft _ _ initprf)
 thompsonRoutinePrf (Group re) (Start (Left z) initprf (Accept (Left z) pos)) _ = absurd pos

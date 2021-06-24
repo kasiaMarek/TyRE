@@ -136,7 +136,7 @@ startRecording v  = MkVMState True v.memory v.evidence
 
 public export
 emitPair          : Step
-emitPair v        = (record {evidence $= (:< PairMark)} v)
+emitPair v        = MkVMState v.recording v.memory (v.evidence :< PairMark)
 
 public export
 stepForInstruction : (mc : Maybe Char) -> Instruction -> Step
