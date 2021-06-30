@@ -1,5 +1,6 @@
 module Verification
 
+import Pred
 import NFA
 import Evidence
 import Data.List.Elem
@@ -7,7 +8,6 @@ import Data.List
 import Data.Vect
 import Data.Vect.Elem
 import Extra
-import Pred
 import Extra.Reflects
 import Verification.AcceptingPath
 

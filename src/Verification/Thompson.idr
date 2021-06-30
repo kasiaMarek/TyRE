@@ -1,4 +1,4 @@
-module Verification.Routine.Thompson
+module Verification.Thompson
 
 import NFA
 import NFA.Thompson
@@ -12,11 +12,11 @@ import Data.SnocList
 import Data.SnocList.Extra
 import Verification.Routine
 import Data.List.Elem
-import Verification.Routine.Thompson.Group
+import Verification.Thompson.Group
 import Data.Vect
 import Extra.Reflects
-import Verification.Routine.Thompson.Concat
-import Verification.Routine.Thompson.Concat.EqualityPrf
+import Verification.Thompson.Concat
+import Verification.Thompson.Concat.EqualityPrf
 
 thompsonRoutinePrf : (re : CoreRE)
                   -> (acc : Accepting (thompson re).nfa word)
@@ -54,7 +54,9 @@ thompsonRoutinePrf (Group re) (Start (Right z) initprf acc) _ = absurd (rightCan
 thompsonRoutinePrf (Group re) (Start (Left z) initprf (Accept (Left z) pos)) _ = absurd pos
 thompsonRoutinePrf (Group re) (Start (Left z) initprf (Step (Left z) c t prf acc)) (mc,vm) =
   let q := extractBasedOnFstFromRep (thompson (Group re)).nfa.start ((the Routine) [Record]) (Left z) initprf
-      (w ** ev) := evidenceForGroup re {mc,ev = vm.evidence} (Step {nfa = (thompson (Group re)).nfa} (Left z) c t prf acc) (MkVMState True vm.memory vm.evidence) Refl
+      (w ** ev) := evidenceForGroup re {mc,ev = vm.evidence} 
+                      (Step {nfa = (thompson (Group re)).nfa} (Left z) c t prf acc)
+                      (MkVMState True vm.memory vm.evidence) Refl
   in ([< GroupMark w] ** rewrite q in (rewrite ev in (Refl, AGroup [<] w)))
 
 public export

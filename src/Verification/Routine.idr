@@ -18,7 +18,7 @@ public export
 ExtendedRoutine : Type
 ExtendedRoutine = List ExtendedInstruction
 
-
+public export
 executeRoutineSteps: ExtendedRoutine -> (Maybe Char, VMState) -> (Maybe Char, VMState)
 executeRoutineSteps []                    st       = st
 executeRoutineSteps ((Regular inst)::r)   (mc, vm) = executeRoutineSteps r (mc, stepForInstruction mc inst vm)
@@ -34,7 +34,7 @@ executeRoutine: ExtendedRoutine -> Evidence
 executeRoutine routine = executeRoutineFrom routine (Nothing, initVM)
 
 public export
-routineComposition  : (xs: ExtendedRoutine) -> (ys: ExtendedRoutine) -> (st:(Maybe Char, VMState))
+routineComposition  : (xs: ExtendedRoutine) -> (ys: ExtendedRoutine) -> (st: (Maybe Char, VMState))
                   -> (executeRoutineSteps (xs ++ ys) st = executeRoutineSteps ys (executeRoutineSteps xs st))
 routineComposition []                     ys st           = Refl
 routineComposition ((Regular inst) :: xs) ys (mc, vm)     = routineComposition xs ys (mc, stepForInstruction mc inst vm)
@@ -42,20 +42,26 @@ routineComposition ((Observe c) :: xs)    ys (mc, vm)     = routineComposition x
 
 public export
 mapRoutine : Maybe Char -> Routine -> ExtendedRoutine
-mapRoutine Nothing [] = []
-mapRoutine Nothing (inst :: insts) = (Regular inst)::(mapRoutine Nothing insts)
-mapRoutine (Just c) insts = (Observe c)::(mapRoutine Nothing insts)
+mapRoutine Nothing  []              = []
+mapRoutine Nothing  (inst :: insts) = (Regular inst)::(mapRoutine Nothing insts)
+mapRoutine (Just c) insts           = (Observe c)::(mapRoutine Nothing insts)
 
 public export
-mapRoutineConcat : (mc: Maybe Char) -> (xs: Routine) -> (ys: Routine) -> (mapRoutine mc (xs ++ ys) = mapRoutine mc xs ++ mapRoutine Nothing ys)
-mapRoutineConcat Nothing [] ys = Refl
-mapRoutineConcat (Just x) [] ys = Refl
-mapRoutineConcat Nothing (x :: xs) ys = cong (Regular x ::) (mapRoutineConcat Nothing xs ys)
-mapRoutineConcat (Just c) (x :: xs) ys = cong (\l => Observe c :: (Regular x :: l)) (mapRoutineConcat Nothing xs ys)
+mapRoutineConcat  : (mc: Maybe Char) -> (xs: Routine) -> (ys: Routine)
+                  -> (mapRoutine mc (xs ++ ys) = mapRoutine mc xs ++ mapRoutine Nothing ys)
+
+mapRoutineConcat Nothing  []        ys  = Refl
+mapRoutineConcat (Just x) []        ys  = Refl
+mapRoutineConcat Nothing  (x :: xs) ys  = cong (Regular x ::) (mapRoutineConcat Nothing xs ys)
+mapRoutineConcat (Just c) (x :: xs) ys  =
+  cong
+    (\l => Observe c :: (Regular x :: l))
+    (mapRoutineConcat Nothing xs ys)
 
 public export
 execEqualityPrf : {nfa : NA} -> (vmState : VMState) -> (r : Routine) -> (mc : Maybe Char)
                 -> (executeRoutineSteps (mapRoutine Nothing r) (mc, vmState) = (mc, execute mc r vmState))
+
 execEqualityPrf vmState [] mc = Refl
 execEqualityPrf vmState (x :: xs) mc = execEqualityPrf {nfa} (stepForInstruction mc x vmState) xs mc
 
@@ -63,13 +69,16 @@ public export
 stepOfExtractRoutine : {nfa : NA} -> {prog : Program nfa} -> {s : nfa.State}
                   -> (acc: AcceptingFrom nfa s word)
                   -> ExtendedRoutine
+
 stepOfExtractRoutine {word=[]} {nfa} {prog} (Accept s prf) = []
-stepOfExtractRoutine {word=c::_} {nfa} {prog} (Step s c t prf acc) = mapRoutine (Just c) (extractBasedOnFst (nfa.next s c) (prog.next s c) t prf)
+stepOfExtractRoutine {word=c::_} {nfa} {prog} (Step s c t prf acc)
+  = mapRoutine (Just c) (extractBasedOnFst (nfa.next s c) (prog.next s c) t prf)
 
 public export
 extractRoutineFrom : {nfa : NA} -> {prog : Program nfa} -> {s : nfa.State}
                   -> (acc: AcceptingFrom nfa s word)
                   -> ExtendedRoutine
+
 extractRoutineFrom {word=[]} {nfa} {prog} (Accept s prf) = []
 extractRoutineFrom {word=c::_} {nfa} {prog} (Step s c t prf acc) =
   (stepOfExtractRoutine {nfa,prog} (Step s c t prf acc))
@@ -78,51 +87,65 @@ extractRoutineFrom {word=c::_} {nfa} {prog} (Step s c t prf acc) =
 public export
 extractRoutine : (nfa: NA) -> Program nfa -> Accepting nfa word -> ExtendedRoutine
 extractRoutine nfa prog (Start s prf acc) =
-  let r : Routine
-      r = extractBasedOnFst (nfa.start) (prog.init) s prf
-      extr : ExtendedRoutine
-      extr = mapRoutine Nothing r
-      nRout : ExtendedRoutine
-      nRout = extractRoutineFrom {nfa, prog} acc
-  in (extr ++ nRout)
+  let r         : Routine
+      r         = extractBasedOnFst (nfa.start) (prog.init) s prf
+      extr      : ExtendedRoutine
+      extr      = mapRoutine Nothing r
+      rest      : ExtendedRoutine
+      rest      = extractRoutineFrom {nfa, prog} acc
+  in (extr ++ rest)
 
 public export
 extractRoutineFromPrf : {nfa : NA} -> {prog : Program nfa}
-                  -> (td : Thread nfa) -> (acc: AcceptingFrom nfa td.naState word)
-                  -> (mc : Maybe Char)
-                  -> (executeRoutineFrom (extractRoutineFrom {nfa, prog} acc) (mc, td.vmState) = extractEvidenceFrom td acc)
+                      -> (td : Thread nfa)
+                      -> (acc: AcceptingFrom nfa td.naState word)
+                      -> (mc : Maybe Char)
+                      -> (executeRoutineFrom (extractRoutineFrom {nfa, prog} acc) (mc, td.vmState)
+                            = extractEvidenceFrom td acc)
+
 extractRoutineFromPrf {word=[]} {nfa} {prog} td (Accept td.naState prf) mc = Refl
 extractRoutineFromPrf {word=c::_} {nfa} {prog} td (Step td.naState c t prf acc) mc =
-  let r : Routine
-      r = extractBasedOnFst (nfa.next td.naState c) (prog.next td.naState c) t prf
-      td' : Thread nfa
-      td' = runFunction c td (t,r)
-      nRout : ExtendedRoutine
-      nRout = extractRoutineFrom {nfa,prog} acc
-      nPrf := extractRoutineFromPrf {nfa,prog} td' acc (Just c)
-      extr : ExtendedRoutine
-      extr = mapRoutine (Just c) r
-      prf0: (executeRoutineSteps extr (mc, td.vmState) = (Just c, td'.vmState))
-      prf0 = (execEqualityPrf {nfa} _ _ _)
-      prf: (executeRoutineSteps (extr ++ nRout) (mc, td.vmState) = executeRoutineSteps nRout (Just c, td'.vmState))
-      prf = trans (routineComposition extr nRout (mc, td.vmState)) (cong (executeRoutineSteps nRout) prf0)
-  in (trans (cong (\e => (snd e).evidence) prf) nPrf)
+  let r         : Routine
+      r         = extractBasedOnFst (nfa.next td.naState c) (prog.next td.naState c) t prf
+      td'       : Thread nfa
+      td'       = runFunction c td (t,r)
+      extr      : ExtendedRoutine
+      extr      = mapRoutine (Just c) r
+      rest      : ExtendedRoutine
+      rest      = extractRoutineFrom {nfa,prog} acc
+
+      restPrf   := extractRoutineFromPrf {nfa,prog} td' acc (Just c)
+      prf       : (executeRoutineSteps (extr ++ rest) (mc, td.vmState)
+                    = executeRoutineSteps rest (Just c, td'.vmState))
+      prf       = trans
+                    (routineComposition extr rest (mc, td.vmState))
+                    (cong
+                      (executeRoutineSteps rest)
+                      (execEqualityPrf {nfa} _ _ _)
+                    )
+  in (trans (cong (\e => (snd e).evidence) prf) restPrf)
 
 public export
 extractRoutinePrf  : (nfa : NA) -> (prog : Program nfa) -> (acc: Accepting nfa word)
                 -> (executeRoutine (extractRoutine nfa prog acc) = extractEvidence acc)
+
 extractRoutinePrf nfa prog (Start s prf acc) =
-  let r : Routine
-      r = extractBasedOnFst (nfa .start) (prog .init) s prf
-      td : Thread nfa
-      td = initFuction (s,r)
-      extr : ExtendedRoutine
-      extr = mapRoutine Nothing r
-      nRout : ExtendedRoutine
-      nRout = extractRoutineFrom acc
-      nPrf := extractRoutineFromPrf td acc Nothing
-      prf0: (executeRoutineSteps extr (Nothing, MkVMState False [<] [<]) = (Nothing, td.vmState))
-      prf0 = (execEqualityPrf {nfa} _ _ _)
-      prf: (executeRoutineSteps (extr ++ nRout) (Nothing, MkVMState False [<] [<]) = executeRoutineSteps nRout (Nothing, td.vmState))
-      prf = trans (routineComposition extr nRout (Nothing, MkVMState False [<] [<])) (cong (executeRoutineSteps nRout) prf0)
-  in (trans (cong (\e => (snd e).evidence) prf) nPrf)
+  let r        : Routine
+      r        = extractBasedOnFst (nfa .start) (prog .init) s prf
+      td       : Thread nfa
+      td       = initFuction (s,r)
+      extr     : ExtendedRoutine
+      extr     = mapRoutine Nothing r
+      rest     : ExtendedRoutine
+      rest     = extractRoutineFrom acc
+
+      restPrf := extractRoutineFromPrf td acc Nothing
+      prf     : (executeRoutineSteps (extr ++ rest) (Nothing, MkVMState False [<] [<])
+                  = executeRoutineSteps rest (Nothing, td.vmState))
+      prf     = trans
+                (routineComposition extr rest (Nothing, MkVMState False [<] [<]))
+                (cong
+                  (executeRoutineSteps rest)
+                  (execEqualityPrf {nfa} _ _ _)
+                )
+  in (trans (cong (\e => (snd e).evidence) prf) restPrf)

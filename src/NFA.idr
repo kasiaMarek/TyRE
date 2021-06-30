@@ -106,25 +106,13 @@ public export
 0 Step : Type
 Step = VMState -> VMState
 
--- public export
--- 0 ThreadPredicate : ((td : Thread N) -> Type) -> Type
--- ThreadPredicate pred = (td : Thread N) -> pred td
-
 public export
 step : Char -> Step
 step x v = MkVMState (v.recording) (if (v.recording) then (v.memory :< x) else (v.memory)) (v.evidence)
 
--- public export
--- stepMaintainsState : (c : Char) -> ThreadPredicate $
---      (\td => (step c td).naState = td.naState)
---   /\ (\td => (step c td).vmState.recording = td.vmState.recording)
---   /\ (\td => (step c td).vmState.evidence  = td.vmState.evidence)
---
--- stepMaintainsState c td = (Refl,Refl,Refl)
-
 public export
 emitChar          : (c : Char) -> Step
-emitChar c v      = (record {evidence $= (:< CharMark c)} v)
+emitChar c v      = MkVMState v.recording v.memory (v.evidence :< CharMark c)
 
 public export
 emitString        : Step
@@ -158,25 +146,6 @@ initVM = MkVMState False [<] [<]
 
 parameters {auto N : NA}
 
--- stepForInstructionMaintainsNAState : (mc : Maybe Char) -> (ins: Instruction) -> ThreadPredicate $
---   \td => (stepForInstruction mc ins td).naState = td.naState
---
--- stepForInstructionMaintainsNAState mc       Record      td = Refl
--- stepForInstructionMaintainsNAState mc       EmitString  td = Refl
--- stepForInstructionMaintainsNAState mc       EmitPair    td = Refl
--- stepForInstructionMaintainsNAState (Just c) EmitLast    td = Refl
--- stepForInstructionMaintainsNAState Nothing  EmitLast    td = Refl
---
--- public export
--- executeMaintainsNAState : (mc : Maybe Char) -> (routine : Routine) -> ThreadPredicate $
---   \td => (execute mc routine td).naState = td.naState
---
--- executeMaintainsNAState mc [] td      = Refl
--- executeMaintainsNAState mc (x::xs) td =
---   let recur = executeMaintainsNAState mc xs (stepForInstruction mc x td)
---       sfim  = stepForInstructionMaintainsNAState mc x td
---   in trans recur sfim
-
 run: Word -> List (N .State) -> Bool
 run [] ys = case (find (N .accepting) ys) of
               (Just _)  => True
@@ -186,7 +155,6 @@ run (c :: cs) ys = run cs (ys >>= (\s => N .next s c))
 parameters  {auto P : Program N}
 
 --implementation of initialise
-
 public export
 initFuction : (N .State, Routine) -> Thread N
 initFuction (s,r) = MkThread s (execute Nothing r initVM)

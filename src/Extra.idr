@@ -7,6 +7,8 @@ import Data.Vect.Elem
 import Data.Maybe
 import Pred
 
+%default total
+
 public export
 mapMaintainsLength: {a,b : Type} -> (xs: List a) -> (f: a -> b) -> (length xs = length (map f xs))
 mapMaintainsLength [] f = Refl

@@ -1,4 +1,4 @@
-module Verification.Routine.Thompson.Concat.EqualityPrf
+module Verification.Thompson.Concat.EqualityPrf
 
 import Verification.Routine
 import Evidence

@@ -69,7 +69,8 @@ cNP : (n: NA ** Program n)
 cNP =
   let start : (a: List CState ** Vect (length a) Routine)
       start = ([Empty] ** [[Record]])
-  in (MkNFA CState cAccepting (fst start) (\s => \c => fst $ cNext s c) ** MkProgram (snd start) (\s => \c => snd $ cNext s c))
+  in (MkNFA CState cAccepting (fst start) (\s => \c => fst $ cNext s c)
+        ** MkProgram (snd start) (\s => \c => snd $ cNext s c))
 
 c : NA
 c = fst cNP
@@ -81,7 +82,7 @@ cRejectsExamples : List Word
 cRejectsExamples = map unpack ["fo", "f", "", "fooo"]
 
 cResultAcc : Maybe Evidence
-cResultAcc = runFrom {N = c} (snd cNP) ['f','o','o'] (initialise {N = c} (snd cNP))
+cResultAcc = runFrom {N = c, P = (snd cNP)} ['f','o','o'] (initialise {N = c, P = (snd cNP)})
 
 cResultRej : Maybe Evidence
-cResultRej = runFrom {N = c} (snd cNP) ['f','o','o', 'o'] (initialise {N = c} (snd cNP))
+cResultRej = runFrom {N = c, P = (snd cNP)} ['f','o','o', 'o'] (initialise {N = c, P = (snd cNP)})

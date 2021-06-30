@@ -1,4 +1,4 @@
-module Verification.Routine.Thompson.Group
+module Verification.Thompson.Group
 
 import Core
 import Evidence

@@ -8,6 +8,8 @@ import Extra
 import Extra.Reflects
 import Data.List.Elem
 
+%default total
+
 --State for Predicate
 public export
 data PState = StartState | AcceptState
@@ -51,16 +53,6 @@ Uninhabited (CTh2 e = CTh1 e') where
   uninhabited Refl impossible
 
 public export
-flatMap : (f: (a,b) -> (xs' : List c ** Vect (length xs') d)) -> (xs : List a) -> (Vect (length xs) b) -> (ys: List c ** Vect (length ys) d)
-flatMap f [] [] = ([] ** [])
-flatMap {c,d} f (x :: xs) (y :: ys) =
-  let head : (xs' : List c ** Vect (length xs') d)
-      head = f (x,y)
-      tail : (xs' : List c ** Vect (length xs') d)
-      tail = flatMap f xs ys
-  in  (fst head ++ (fst tail) ** (replace {p = \l => Vect l d} (lengthOfConcatIsPlus _ _)  (snd head ++ (snd tail))))
-
-public export
 record SM where
   constructor MkSM
   nfa: NA
@@ -93,7 +85,10 @@ nextGroup accepting nextNFA (Left st) c =
       mappedNext = nextNFA st c
   in case (findR accepting mappedNext).Holds of
         Nothing => (map Left mappedNext ** replicate (length $ map Left mappedNext) [])
-        (Just _) => ((Right EndState)::(map Left mappedNext) ** [EmitString]::(replicate (length $ map Left mappedNext) []))
+        (Just _) => (
+                      (Right EndState)::(map Left mappedNext)
+                      ** [EmitString]::(replicate (length $ map Left mappedNext) [])
+                    )
 nextGroup accepting nextNFA (Right EndState) _ = ([] ** [])
 
 --functions for Concat
@@ -104,27 +99,80 @@ acceptingConcat (CTh2 x) = False
 acceptingConcat  CEnd = True
 
 public export
-forAcceptingAddNewStart : (oldStates: List c) -> (Vect (length oldStates) Routine) -> (accepting: c -> Bool) -> (conv: c -> (CState a b))
-                        -> (newStart: List (CState a b)) -> (Vect (length newStart) Routine)
-                        -> (states: List (CState a b) ** Vect (length states) Routine)
+record CombineTransitionData a b c where
+  constructor MkCTD
+  oldStates: List c
+  rout1: Vect (length oldStates) Routine
+  accept: c -> Bool
+  conv: c -> (CState a b)
+  newStart: List (CState a b)
+  rout2: Vect (length newStart) Routine
 
-forAcceptingAddNewStart [] [] accepting conv newStart ys = ([] ** [])
-forAcceptingAddNewStart (x :: xs) (y :: ys) accepting conv newStart newRoutines =
+public export
+combineTransitionsAux  :
+                          (oldStates: List c)
+                      ->  (Vect (length oldStates) Routine)
+                      ->  (c -> Bool)
+                      ->  (c -> (CState a b))
+                      ->  (newStart: List (CState a b))
+                      ->  (Vect (length newStart) Routine)
+                      ->  (states: List (CState a b) ** Vect (length states) Routine)
+combineTransitionsAux []        []        _         _    _        _           = ([] ** [])
+combineTransitionsAux (x :: xs) (y :: ys) accepting conv newStart newRoutines =
   let next : (states: List (CState a b) ** Vect (length states) Routine)
-      next = forAcceptingAddNewStart xs ys accepting conv newStart newRoutines
+      next = combineTransitionsAux xs ys accepting conv newStart newRoutines
   in  if (accepting x)
-      then ((conv x)::newStart ++ (fst next) ** y::(replace {p=(\l => Vect l Routine)} (lengthOfConcatIsPlus _ _) ((map (y++) newRoutines) ++ (snd next))))
+      then (
+            (conv x)::newStart ++ (fst next)
+            ** y::(replace
+                      {p=(\l => Vect l Routine)}
+                      (lengthOfConcatIsPlus _ _)
+                      ((map (y++) newRoutines) ++ (snd next)))
+                  )
       else ((conv x)::(fst next) ** y::(snd next))
 
 public export
-nextConcat : (next1: a -> Char -> List a) -> ((st: a) -> (c: Char) -> Vect (length $ next1 st c) Routine) -> (acc1: a -> Bool)
-            -> (next2: b -> Char -> List b) -> ((st: b) -> (c: Char) -> Vect (length $ next2 st c) Routine) -> (acc2: b -> Bool)
-            -> (xs: List (CState a b) ** Vect (length xs) Routine)
-            -> (CState a b) -> Char -> (xs: List (CState a b) ** Vect (length xs) Routine)
+combineTransitions  : CombineTransitionData a b c
+                    -> (states: List (CState a b) ** Vect (length states) Routine)
+combineTransitions (MkCTD oldStates rout1 accept conv newStart rout2) =
+  combineTransitionsAux oldStates rout1 accept conv newStart rout2
 
-nextConcat next1 nextVM1 acc1 next2 nextVM2 acc2 start2 (CTh1 st) c = forAcceptingAddNewStart (next1 st c) (nextVM1 st c) acc1 CTh1 (fst start2) (snd start2)
-nextConcat _     nextVM1 acc1 next2 nextVM2 acc2 start2 (CTh2 st) c = forAcceptingAddNewStart (next2 st c) (nextVM2 st c) acc2 CTh2 [CEnd] [[EmitPair]]
-nextConcat next1 nextVM1 acc1 next2 nextVM2 acc2 start2 CEnd _ = ([] ** [])
+public export
+initTwo : (sm2 : SM)
+        -> (CombineTransitionData state1 sm2.nfa.State sm2.nfa.State)
+initTwo sm2 =
+  MkCTD sm2.nfa.start sm2.prog.init sm2.nfa.accepting CTh2 [CEnd] [[EmitPair]]
+
+public export
+start2Cons : (sm2 : SM) -> (xs: List $ CState state1 sm2.nfa.State ** Vect (length xs) Routine)
+start2Cons sm2 = combineTransitions (initTwo sm2)
+
+public export
+initOne : (sm1: SM) -> (sm2 : SM)
+        -> (CombineTransitionData sm1.nfa.State sm2.nfa.State sm1.nfa.State)
+initOne sm1 sm2 =
+  MkCTD sm1.nfa.start sm1.prog.init sm1.nfa.accepting CTh1 (fst (start2Cons sm2)) (snd (start2Cons sm2))
+
+public export
+nextFromOne : (sm1: SM) -> (sm2 : SM) -> sm1.nfa.State -> Char
+            -> (CombineTransitionData sm1.nfa.State sm2.nfa.State sm1.nfa.State)
+nextFromOne sm1 sm2 st c =
+  MkCTD (sm1.nfa.next st c) (sm1.prog.next st c) sm1.nfa.accepting CTh1 (fst (start2Cons sm2)) (snd (start2Cons sm2))
+
+public export
+nextFromTwo : (sm2: SM) -> sm2.nfa.State -> Char
+            -> (CombineTransitionData a sm2.nfa.State sm2.nfa.State)
+nextFromTwo sm2 st c =
+  MkCTD (sm2.nfa.next st c) (sm2.prog.next st c) sm2.nfa.accepting CTh2 [CEnd] [[EmitPair]]
+
+public export
+nextConcat : (sm1 : SM) -> (sm2 : SM)
+          -> (CState sm1.nfa.State sm2.nfa.State) -> Char
+          -> (xs: List (CState sm1.nfa.State sm2.nfa.State) ** Vect (length xs) Routine)
+
+nextConcat sm1 sm2 (CTh1 st) c = combineTransitions $ nextFromOne sm1 sm2 st c
+nextConcat sm1 sm2 (CTh2 st) c = combineTransitions $ nextFromTwo sm2 st c
+nextConcat sm1 sm2 CEnd      _ = ([] ** [])
 
 --Thompson construction
 public export
@@ -140,14 +188,11 @@ thompson (Concat re1 re2) =
       0 state : Type
       state = CState sm1.nfa.State sm2.nfa.State
 
-      start2 : (xs: List state ** Vect (length xs) Routine)
-      start2 = forAcceptingAddNewStart sm2.nfa.start sm2.prog.init sm2.nfa.accepting CTh2 [CEnd] [[EmitPair]]
-
       start : (xs: List state ** Vect (length xs) Routine)
-      start = forAcceptingAddNewStart sm1.nfa.start sm1.prog.init sm1.nfa.accepting CTh1 (fst start2) (snd start2)
+      start = combineTransitions $ initOne sm1 sm2
 
       next : state -> Char -> (xs: List state ** Vect (length xs) Routine)
-      next = nextConcat sm1.nfa.next sm1.prog.next sm1.nfa.accepting sm2.nfa.next sm2.prog.next sm2.nfa.accepting start2
+      next = nextConcat sm1 sm2
 
       _ := sm1.nfa.isEq
       _ := sm2.nfa.isEq

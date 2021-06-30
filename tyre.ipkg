@@ -4,10 +4,11 @@ depends = contrib
 
 sourcedir = "src"
 
-modules = Sheets.FP
-          , Data.SnocList.Elem
+modules = Data.SnocList.Elem
           , Core
           , Codes
           , Evidence
           , NFA
           , Verification
+          , Extra
+          , Pred

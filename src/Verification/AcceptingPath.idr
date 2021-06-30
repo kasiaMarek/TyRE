@@ -35,9 +35,13 @@ stepOfExtractEvidence td c s prf =
  in runFunction c td (s,r)
 
 public export
-extractEvidenceFrom : {auto nfa : NA} -> {auto prog : Program nfa} -> (td : Thread nfa) -> AcceptingFrom nfa td.naState word -> Evidence
+extractEvidenceFrom : {auto nfa : NA} -> {auto prog : Program nfa}
+                    -> (td : Thread nfa) -> AcceptingFrom nfa td.naState word
+                    -> Evidence
+
 extractEvidenceFrom td (Accept td.naState prf) = td.vmState.evidence
-extractEvidenceFrom td (Step {w} td.naState c s prf acc) = extractEvidenceFrom (stepOfExtractEvidence td c s prf) acc
+extractEvidenceFrom td (Step {w} td.naState c s prf acc) =
+  extractEvidenceFrom (stepOfExtractEvidence td c s prf) acc
 
 public export
 extractEvidenceInitialStep : {auto nfa : NA} -> {auto prog : Program nfa}
@@ -50,7 +54,8 @@ extractEvidenceInitialStep s prf =
   in initFuction (s,r)
 
 public export
-extractEvidence : {auto nfa : NA} -> {auto prog : Program nfa} -> Accepting nfa word -> Evidence
+extractEvidence : {auto nfa : NA} -> {auto prog : Program nfa}
+                -> Accepting nfa word -> Evidence
 extractEvidence (Start {w} s prf acc) =
   let td : Thread nfa
       td = extractEvidenceInitialStep s prf
