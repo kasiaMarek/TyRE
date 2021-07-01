@@ -7,7 +7,7 @@ import NFA.Thompson
 import Codes
 import Verification.AcceptingPath
 import Verification
-import Verification.Routine.Thompson
+import Verification.Thompson
 
 runAutomatonSM : SM -> String -> Maybe Evidence
 runAutomatonSM sm word = runAutomaton {N = sm.nfa, P = sm.prog} (unpack word)
