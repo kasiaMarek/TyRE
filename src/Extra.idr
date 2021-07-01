@@ -120,3 +120,10 @@ rightCantBeElemOfLeft : (x : a) -> (xs : List b) -> (Not ((Right x) `Elem` (map 
 rightCantBeElemOfLeft _ [] Here impossible
 rightCantBeElemOfLeft _ [] (There y) impossible
 rightCantBeElemOfLeft x (z :: xs) (There y) = rightCantBeElemOfLeft x xs y
+
+public export
+extractBasedOnFstFromRep  : (xs: List a) -> (rep : b) -> (elem: a) -> (pos: elem `Elem` xs)
+                          -> (extractBasedOnFst xs (replicate (length xs) rep) elem pos = rep)
+
+extractBasedOnFstFromRep (_ :: xs) rep elem Here = Refl
+extractBasedOnFstFromRep (y :: xs) rep elem (There x) = extractBasedOnFstFromRep xs rep elem x

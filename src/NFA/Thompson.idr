@@ -122,13 +122,11 @@ combineTransitionsAux (x :: xs) (y :: ys) accepting conv newStart newRoutines =
   let next : (states: List (CState a b) ** Vect (length states) Routine)
       next = combineTransitionsAux xs ys accepting conv newStart newRoutines
   in  if (accepting x)
-      then (
-            (conv x)::newStart ++ (fst next)
-            ** y::(replace
-                      {p=(\l => Vect l Routine)}
-                      (lengthOfConcatIsPlus _ _)
-                      ((map (y++) newRoutines) ++ (snd next)))
-                  )
+      then ((conv x)::newStart ++ (fst next) **
+              y::(replace
+                    {p=(\l => Vect l Routine)}
+                    (lengthOfConcatIsPlus _ _)
+                    ((map (y++) newRoutines) ++ (snd next))))
       else ((conv x)::(fst next) ** y::(snd next))
 
 public export

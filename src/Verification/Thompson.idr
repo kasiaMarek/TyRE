@@ -21,7 +21,9 @@ import Verification.Thompson.Concat.EqualityPrf
 thompsonRoutinePrf : (re : CoreRE)
                   -> (acc : Accepting (thompson re).nfa word)
                   -> (mcvm  : (Maybe Char, VMState))
-                  -> (ev  : Evidence ** (executeRoutineFrom (extractRoutine (thompson re).nfa (thompson re).prog acc) mcvm = (snd mcvm).evidence ++ ev, ev `Encodes` [< ShapeCode re]))
+                  -> (ev  : Evidence
+                        ** (executeRoutineFrom (extractRoutine (thompson re).nfa (thompson re).prog acc) mcvm
+                              = (snd mcvm).evidence ++ ev, ev `Encodes` [< ShapeCode re]))
 
 thompsonRoutinePrf (Pred f) (Start s (There prf) x) mcvm = absurd prf
 thompsonRoutinePrf {word = []} (Pred f) (Start StartState Here (Accept StartState prf)) mcvm = absurd prf
@@ -32,29 +34,33 @@ thompsonRoutinePrf {word = c::_} (Pred f) (Start StartState Here (Step StartStat
   thompsonRoutinePrf {word = [c]} (Pred f) (Start StartState Here (Step StartState c AcceptState Here (Accept AcceptState Refl))) (mc, vm) | True = ([< CharMark c] ** (Refl, AChar [<] c))
 
 thompsonRoutinePrf (Concat re1 re2) acc mcvm =
-  let (word1 ** (acc1 ** (word2 ** (acc2 ** eqPrf)))) = concatEvidencePrf re1 re2 acc
+  let p : ConcatEvidencePrfData re1 re2 acc
+      p = concatEvidencePrf re1 re2 acc
       exr1 : ExtendedRoutine
-      exr1 = extractRoutine (thompson re1).nfa (thompson re1).prog acc1
+      exr1 = extractRoutine (thompson re1).nfa (thompson re1).prog p.acc1
       exr2 : ExtendedRoutine
-      exr2 = extractRoutine (thompson re2).nfa (thompson re2).prog acc2
-      (ev1 ** (eq1, encodes1)) := thompsonRoutinePrf re1 acc1 mcvm
+      exr2 = extractRoutine (thompson re2).nfa (thompson re2).prog p.acc2
+      (ev1 ** (eq1, encodes1)) := thompsonRoutinePrf re1 p.acc1 mcvm
       vmmc' : (Maybe Char, VMState)
       vmmc' = executeRoutineSteps exr1 mcvm
-      (ev2 ** (eq2, encodes2)) := thompsonRoutinePrf re2 acc2 vmmc'
+      (ev2 ** (eq2, encodes2)) := thompsonRoutinePrf re2 p.acc2 vmmc'
 
-      routineEquality : ((snd $ executeRoutineSteps (exr1 ++ exr2 ++ [Regular EmitPair]) mcvm).evidence = (snd $ executeRoutineSteps exr2 (executeRoutineSteps exr1 mcvm)).evidence :< PairMark)
+      routineEquality : ((snd $ executeRoutineSteps (exr1 ++ exr2 ++ [Regular EmitPair]) mcvm).evidence
+                            = (snd $ executeRoutineSteps exr2 (executeRoutineSteps exr1 mcvm)).evidence :< PairMark)
       routineEquality = concatRoutinePrf exr1 exr2 mcvm
-      encodesWL : ((([<] ++ ev1 ++ ev2) :< PairMark) `Encodes` ([<] :< PairC (ShapeCode re1) (ShapeCode re2)))
-      encodesWL = APair Lin encodes1 encodes2
       encodes : (((ev1 ++ ev2) :< PairMark) `Encodes` ([<] :< PairC (ShapeCode re1) (ShapeCode re2)))
-      encodes = replace {p=(`Encodes` ([<] :< PairC (ShapeCode re1) (ShapeCode re2)))} (cong (:< PairMark) appendNilLeftNeutral) encodesWL
-  in rewrite eqPrf in rewrite routineEquality in (ev1 ++ ev2 ++ [< PairMark] ** rewrite eq2 in (rewrite eq1 in (cong (:< PairMark) (sym $ appendAssociative), encodes)))
+      encodes = replace
+                  {p=(`Encodes` ([<] :< PairC (ShapeCode re1) (ShapeCode re2)))}
+                  (cong (:< PairMark) appendNilLeftNeutral)
+                  (APair Lin encodes1 encodes2)
+  in rewrite p.routineEq in rewrite routineEquality in (ev1 ++ ev2 ++ [< PairMark]
+        ** rewrite eq2 in (rewrite eq1 in (cong (:< PairMark) (sym $ appendAssociative), encodes)))
 
 thompsonRoutinePrf (Group re) (Start (Right z) initprf acc) _ = absurd (rightCantBeElemOfLeft _ _ initprf)
 thompsonRoutinePrf (Group re) (Start (Left z) initprf (Accept (Left z) pos)) _ = absurd pos
 thompsonRoutinePrf (Group re) (Start (Left z) initprf (Step (Left z) c t prf acc)) (mc,vm) =
   let q := extractBasedOnFstFromRep (thompson (Group re)).nfa.start ((the Routine) [Record]) (Left z) initprf
-      (w ** ev) := evidenceForGroup re {mc,ev = vm.evidence} 
+      (w ** ev) := evidenceForGroup re {mc,ev = vm.evidence}
                       (Step {nfa = (thompson (Group re)).nfa} (Left z) c t prf acc)
                       (MkVMState True vm.memory vm.evidence) Refl
   in ([< GroupMark w] ** rewrite q in (rewrite ev in (Refl, AGroup [<] w)))

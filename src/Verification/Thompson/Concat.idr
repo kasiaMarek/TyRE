@@ -15,118 +15,97 @@ import Verification.Thompson.Concat.EqualityPrf
 
 %default total
 
-injectionForCTh1 : (x : a) -> (y: a) -> (CTh1 x = CTh1 y) -> (x = y)
-injectionForCTh1 x x Refl = Refl
+record EvidenceTh2Data  {word' : Word} {re1 : CoreRE} {re2 : CoreRE} {s : (thompson re2).nfa.State}
+                        (acc' : AcceptingFrom (thompson $ Concat re1 re2).nfa (CTh2 s) word') where
+  constructor MkEvidenceTh2Data
+  word: Word
+  acc: AcceptingFrom (thompson re2).nfa s word
+  routineEq : extractRoutineFrom {nfa = (thompson $ Concat re1 re2).nfa, prog = (thompson $ Concat re1 re2).prog} acc' =
+      (extractRoutineFrom {nfa = (thompson re2).nfa, prog = (thompson re2).prog} acc) ++ [Regular EmitPair]
 
-injectionForCTh2 : (x : a) -> (y: a) -> (CTh2 x = CTh2 y) -> (x = y)
-injectionForCTh2 x x Refl = Refl
+record EvidenceTh1Data  {word' : Word} {re1 : CoreRE} {re2 : CoreRE} {s : (thompson re1).nfa.State}
+                        (acc' : AcceptingFrom (thompson $ Concat re1 re2).nfa (CTh1 s) word') where
+  constructor MkEvidenceTh1Data
+  word1: Word
+  acc1: AcceptingFrom (thompson re1).nfa s word1
+  word2: Word
+  acc2: Accepting (thompson re2).nfa word2
+  routineEq : extractRoutineFrom {nfa = (thompson $ Concat re1 re2).nfa, prog = (thompson $ Concat re1 re2).prog} acc'
+                = (extractRoutineFrom {nfa = (thompson re1).nfa, prog = (thompson re1).prog} acc1)
+                  ++  (extractRoutine (thompson re2).nfa (thompson re2).prog acc2) ++ [Regular EmitPair]
 
-rforEnd : (pos: CEnd `Elem` [CEnd]) -> (extractBasedOnFst {b = Routine} [CEnd] [[EmitPair]] CEnd pos = [EmitPair])
-rforEnd Here = Refl
-rforEnd (There _) impossible
-
-ch2NotElemOFEnd : (s : a) -> (CTh2 s `Elem` [CEnd]) -> Void
-ch2NotElemOFEnd s (There _) impossible
-
-cannotStepFrom2To1 : {0 a : Type} -> (sm2 : SM) -> (s: sm2.nfa.State) -> (c : Char) -> (t: a)
-                  -> ((CTh1 t) `Elem` (fst $ combineTransitions $ nextFromTwo {a} sm2 s c)) -> Void
-cannotStepFrom2To1 {a} sm2 s c t pos with (fst $ combineTransitions $ nextFromTwo {a} sm2 s c)
-  cannotStepFrom2To1 {a = a} sm2 s c t pos | [] impossible
-  cannotStepFrom2To1 {a = a} sm2 s c t pos | (x :: xs) impossible
-
-cTh1NotInStart2Cons : {0 a : Type} -> (sm2 : SM) -> (s : a)
-                    -> ((CTh1 s) `Elem` (fst $ start2Cons sm2)) -> Void
-cTh1NotInStart2Cons sm2 s pos with (sm2.prog.init)
-  cTh1NotInStart2Cons sm2 s pos | init with (sm2.nfa.start)
-    cTh1NotInStart2Cons sm2 s pos | [] | [] impossible
-    cTh1NotInStart2Cons sm2 s pos | (x :: xs) | (y :: ys) with (sm2.nfa.accepting y)
-      cTh1NotInStart2Cons sm2 s (There (There pos')) | (x :: xs) | (y :: ys) | True =
-        cTh1NotInStart2Cons sm2 s pos' | xs | ys
-      cTh1NotInStart2Cons sm2 s (There pos') | (x :: xs) | (y :: ys) | False =
-        cTh1NotInStart2Cons sm2 s pos' | xs | ys
 
 |||Function for a transitions from state in the second automaton
 evidenceTh2 : {re1 : CoreRE} -> {re2 : CoreRE}
             -> {s : (thompson re2).nfa.State}
             -> (acc : AcceptingFrom (thompson $ Concat re1 re2).nfa (CTh2 s) word)
-            -> (word': Word ** (acc2: AcceptingFrom (thompson re2).nfa s word' **
-                  (extractRoutineFrom {nfa = (thompson $ Concat re1 re2).nfa, prog = (thompson $ Concat re1 re2).prog} acc =
-                      (extractRoutineFrom {nfa = (thompson re2).nfa, prog = (thompson re2).prog} acc2) ++ [Regular EmitPair]
-                    )))
+            -> EvidenceTh2Data {re1,re2} acc
 
-evidenceTh2 {re2} (Step (CTh2 s) c (CTh1 t) prf1 (Step (CTh1 t) c' r prf2 acc)) = absurd $ cannotStepFrom2To1 (thompson re2) s c t prf1
+evidenceTh2 {re2} (Step (CTh2 s) c (CTh1 t) prf1 (Step (CTh1 t) c' r prf2 acc)) =
+  absurd $ cannotStepFrom2To1 (thompson re2) s c t prf1
+
 evidenceTh2 {re2} (Step (CTh2 s) c CEnd prf1 (Accept CEnd Refl)) =
   let sm2 : SM
       sm2 = (thompson re2)
-      (s2 ** (prfNext2 ** (prff ** (prfAcc2, rprf2)))) := aboutCombiningTransitionsForNew (nextFromTwo sm2 s c) CEnd prf1 CTh2notEqCEnd
+      ans : CombiningTransitionsForNewData (nextFromTwo sm2 s c) CEnd prf1
+      ans = aboutCombiningTransitionsForNew (nextFromTwo sm2 s c) CEnd prf1 CTh2notEqCEnd
       word : Word
       word = [c]
       acc' : AcceptingFrom (thompson re2).nfa s word
-      acc' = (Step {nfa = (thompson re2).nfa} s c s2 prfNext2 (Accept {nfa = (thompson re2).nfa} s2 prfAcc2))
-  in rewrite rprf2 in (word ** acc' ** rewrite (rforEnd prff) in (eqPrf2E _))
+      acc' = (Step {nfa = (thompson re2).nfa} s c ans.oldState ans.oldIsElemOfOld
+                  (Accept {nfa = (thompson re2).nfa} ans.oldState ans.oldAccepts))
+  in MkEvidenceTh2Data
+          word acc'
+          rewrite ans.routineEqualityPrf in rewrite (rforEnd ans.stateIsElemOfNew) in (eqPrf2ToEnd _)
 
-evidenceTh2 {re2} (Step (CTh2 s) c (CTh2 t) prf1 acc) =
-  let rest : (word': Word ** (acc2: AcceptingFrom (thompson re2).nfa t word' **
-                (extractRoutineFrom {nfa = (thompson $ Concat re1 re2).nfa, prog = (thompson $ Concat re1 re2).prog} acc =
-                    (extractRoutineFrom {nfa = (thompson re2).nfa, prog = (thompson re2).prog} acc2) ++ [Regular EmitPair]
-                  )))
+evidenceTh2 {re1, re2} (Step (CTh2 s) c (CTh2 t) prf1 acc) =
+  let rest : EvidenceTh2Data {re1,re2} acc
       rest = evidenceTh2 acc
-      (word ** (acc2 ** eqPrf)) := rest
-      (prfNext2 ** rprf) := aboutCombiningTransitionsForOld (nextFromTwo (thompson re2) s c) (CTh2 t) prf1 t injectionForCTh2 Refl (ch2NotElemOFEnd _)
-
-  in (c::word ** (Step {nfa = (thompson re2).nfa} s c t prfNext2 acc2
-                        ** rewrite rprf in (rewrite eqPrf in (cong (Observe c ::) (appendAssociative _ _ _)))))
+      aos : CombiningTransitionsForOldData (nextFromTwo (thompson re2) s c) (CTh2 t) prf1 t
+      aos = aboutCombiningTransitionsForOld (nextFromTwo (thompson re2) s c) (CTh2 t) prf1 t injectionForCTh2 Refl (ch2NotElemOFEnd _)
+  in MkEvidenceTh2Data
+          (c::rest.word) (Step {nfa = (thompson re2).nfa} s c t aos.oldIsElemOfOld rest.acc)
+          rewrite aos.routineEqualityPrf in (rewrite rest.routineEq in
+                      (cong (Observe c ::) (appendAssociative _ _ _)))
 
 
 -- |||Function for a transitions from state in the first automaton
 evidenceTh1 : {re1 : CoreRE} -> {re2 : CoreRE}
             -> {s : (thompson re1).nfa.State}
             -> (acc : AcceptingFrom (thompson $ Concat re1 re2).nfa (CTh1 s) word)
-            -> (word': Word ** (acc1: AcceptingFrom (thompson re1).nfa s word' ** (word'': Word ** (acc2: Accepting (thompson re2).nfa word'' **
-                                      (extractRoutineFrom {nfa = (thompson $ Concat re1 re2).nfa, prog = (thompson $ Concat re1 re2).prog} acc =
-                                        (extractRoutineFrom {nfa = (thompson re1).nfa, prog = (thompson re1).prog} acc1) ++
-                                          (extractRoutine (thompson re2).nfa (thompson re2).prog acc2) ++ [Regular EmitPair]
-                                        )))))
+            -> EvidenceTh1Data {re1, re2} acc
 
 evidenceTh1 {re1, re2} (Step (CTh1 s) c (CTh1 t) prf1 acc) =
   let sm1 : SM
       sm1 = thompson re1
       sm2 : SM
       sm2 = thompson re2
-      rest : (word': Word ** (acc1: AcceptingFrom (thompson re1).nfa t word' ** (word'': Word ** (acc2: Accepting (thompson re2).nfa word'' **
-                            (extractRoutineFrom {nfa = (thompson $ Concat re1 re2).nfa, prog = (thompson $ Concat re1 re2).prog} acc =
-                              (extractRoutineFrom {nfa = (thompson re1).nfa, prog = (thompson re1).prog} acc1) ++
-                                (extractRoutine (thompson re2).nfa (thompson re2).prog acc2) ++ [Regular EmitPair]
-                              )))))
+      rest : EvidenceTh1Data {re1, re2} acc
       rest = evidenceTh1 acc
-      (word1 ** (acc1 ** (word2 ** (acc2 ** eqPrf)))) := rest
-      aos : (aboutCombiningTransitionsForOldType (nextFromOne sm1 sm2  s c) (CTh1 t) prf1 t)
+      aos : CombiningTransitionsForOldData (nextFromOne sm1 sm2  s c) (CTh1 t) prf1 t
       aos = aboutCombiningTransitionsForOld (nextFromOne sm1 sm2  s c) (CTh1 t) prf1 t injectionForCTh1 Refl (cTh1NotInStart2Cons (thompson re2) t)
-  in (c::word1 ** (Step {nfa = (thompson re1).nfa} s c t (fst aos) acc1 ** (word2 ** (acc2
-                          ** rewrite (snd aos) in (rewrite eqPrf in (cong (Observe c ::) (appendAssociative _ _ _)))))))
+  in MkEvidenceTh1Data
+          (c::(rest.word1)) (Step {nfa = (thompson re1).nfa} s c t aos.oldIsElemOfOld rest.acc1)
+          rest.word2        rest.acc2
+          rewrite aos.routineEqualityPrf in (rewrite (rest.routineEq) in (cong (Observe c ::) (appendAssociative _ _ _)))
 
 evidenceTh1 (Step (CTh1 s) c (CTh2 t) prf1 acc) =
   let sm1 : SM
       sm1 = thompson re1
       sm2 : SM
       sm2 = thompson re2
-
-      rest : (word': Word ** (acc2: AcceptingFrom (thompson re2).nfa t word' **
-                  (extractRoutineFrom {nfa = (thompson $ Concat re1 re2).nfa, prog = (thompson $ Concat re1 re2).prog} acc =
-                      (extractRoutineFrom {nfa = (thompson re2).nfa, prog = (thompson re2).prog} acc2) ++ [Regular EmitPair]
-                    )))
+      rest : EvidenceTh2Data {re1,re2} acc
       rest = evidenceTh2 acc
-      (word2 ** (acc2 ** eqPrf)) := rest
-
-      ans : aboutCombiningTransitionsForNewType (nextFromOne sm1 sm2 s c) (CTh2 t) prf1
+      ans : CombiningTransitionsForNewData (nextFromOne sm1 sm2 s c) (CTh2 t) prf1
       ans = aboutCombiningTransitionsForNew (nextFromOne sm1 sm2 s c) (CTh2 t) prf1 CTh2notEqCTh1
-      (s1 ** (prfNext1 ** (prf2 ** (prfAcc1, rprf)))) := ans
-
-      (prfInit2 ** rprf2) := aboutCombiningTransitionsForOld (initTwo sm2) (CTh2 t) prf2 t injectionForCTh2 Refl (ch2NotElemOFEnd _)
-
-  in ([c] ** (Step {nfa = sm1.nfa} s c s1 prfNext1 (Accept {nfa = sm1.nfa} s1 prfAcc1)
-            ** (word2 ** (Start {nfa = sm2.nfa} t prfInit2 acc2
-              ** rewrite rprf in rewrite rprf2 in rewrite eqPrf in (cong (Observe c ::) (eqPrfS2 _ _ _))))))
+      aos : CombiningTransitionsForOldData (initTwo sm2) (CTh2 t) ans.stateIsElemOfNew t
+      aos = aboutCombiningTransitionsForOld (initTwo sm2) (CTh2 t) ans.stateIsElemOfNew t injectionForCTh2 Refl (ch2NotElemOFEnd _)
+  in MkEvidenceTh1Data
+        [c]         (Step {nfa = sm1.nfa} s c ans.oldState ans.oldIsElemOfOld
+                        (Accept {nfa = sm1.nfa} ans.oldState ans.oldAccepts))
+        rest.word   (Start {nfa = sm2.nfa} t aos.oldIsElemOfOld rest.acc)
+        rewrite ans.routineEqualityPrf in rewrite aos.routineEqualityPrf in
+          rewrite rest.routineEq in (cong (Observe c ::) (eqPrf1To2 _ _ _))
 
 
 evidenceTh1 (Step (CTh1 s) c CEnd prf1 (Accept CEnd Refl)) =
@@ -134,69 +113,82 @@ evidenceTh1 (Step (CTh1 s) c CEnd prf1 (Accept CEnd Refl)) =
       sm1 = thompson re1
       sm2 : SM
       sm2 = thompson re2
+      ans1 : CombiningTransitionsForNewData (nextFromOne sm1 sm2 s c) CEnd prf1
+      ans1 = aboutCombiningTransitionsForNew (nextFromOne sm1 sm2 s c) CEnd prf1 CTh1notEqCEnd
+      ans2 : CombiningTransitionsForNewData (initTwo sm2) CEnd ans1.stateIsElemOfNew
+      ans2 = aboutCombiningTransitionsForNew (initTwo sm2) CEnd ans1.stateIsElemOfNew CTh2notEqCEnd
+  in MkEvidenceTh1Data
+        [c] (Step {nfa = sm1.nfa} s c ans1.oldState ans1.oldIsElemOfOld
+                    (Accept {nfa = sm1.nfa} ans1.oldState ans1.oldAccepts))
+        []  (Start {nfa = sm2.nfa} ans2.oldState ans2.oldIsElemOfOld
+                    (Accept {nfa = sm2.nfa} ans2.oldState ans2.oldAccepts))
+        rewrite ans1.routineEqualityPrf in (rewrite ans2.routineEqualityPrf in
+          (rewrite (rforEnd ans2.stateIsElemOfNew) in (cong (Observe c ::) (eqPrf1ToEnd _ _))))
 
-      ans : aboutCombiningTransitionsForNewType (nextFromOne sm1 sm2 s c) CEnd prf1
-      ans = aboutCombiningTransitionsForNew (nextFromOne sm1 sm2 s c) CEnd prf1 CTh1notEqCEnd
-      (s1 ** (prfNext1 ** (prf2 ** (prfAcc1, rprf)))) := ans
-
-      (s2 ** (prfInit2 ** (prff ** (prfAcc2, rprf2)))) := aboutCombiningTransitionsForNew (initTwo sm2) CEnd prf2 CTh2notEqCEnd
-
-  in ([c] ** (Step {nfa = sm1.nfa} s c s1 prfNext1 (Accept {nfa = sm1.nfa} s1 prfAcc1)
-        ** ([] ** (Start {nfa = sm2.nfa} s2 prfInit2 (Accept {nfa = sm2.nfa} s2 prfAcc2)
-          ** rewrite rprf in (rewrite rprf2 in (rewrite (rforEnd prff) in (cong (Observe c ::) (threePartEq _ _))))))))
+public export
+record ConcatEvidencePrfData  {word : Word} (re1 : CoreRE) (re2: CoreRE)
+                              (acc: Accepting (thompson $ Concat re1 re2).nfa word) where
+  constructor MkConcatEvidencePrfData
+  word1 : Word
+  acc1: Accepting (thompson re1).nfa word1
+  word2 : Word
+  acc2 : Accepting (thompson re2).nfa word2
+  routineEq : extractRoutine (thompson $ Concat re1 re2).nfa (thompson $ Concat re1 re2).prog acc =
+                extractRoutine (thompson re1).nfa (thompson re1).prog acc1 ++
+                extractRoutine (thompson re2).nfa (thompson re2).prog acc2 ++ [Regular EmitPair]
 
 public export
 concatEvidencePrf : (re1 : CoreRE) -> (re2: CoreRE)
                               -> (acc: Accepting (thompson $ Concat re1 re2).nfa word)
-                              -> (word' : Word ** (acc1: Accepting (thompson re1).nfa word' ** (word'' : Word ** (acc2: Accepting (thompson re2).nfa word'' **
-                                                            extractRoutine (thompson $ Concat re1 re2).nfa (thompson $ Concat re1 re2).prog acc =
-                                                              extractRoutine (thompson re1).nfa (thompson re1).prog acc1 ++
-                                                              extractRoutine (thompson re2).nfa (thompson re2).prog acc2 ++ [Regular EmitPair]
-                                                          ))))
+                              -> ConcatEvidencePrfData re1 re2 acc
 
 concatEvidencePrf re1 re2 (Start CEnd prf (Accept CEnd Refl)) =
   let sm1 : SM
       sm1 = thompson re1
       sm2 : SM
       sm2 = thompson re2
-
-      (s1 ** (prfInit1 ** (prf2 ** (prfAcc1, rprf)))) := aboutCombiningTransitionsForNew (initOne sm1 sm2) CEnd prf CTh1notEqCEnd
-      (s2 ** (prfInit2 ** (prff ** (prfAcc2, rprf2)))) := aboutCombiningTransitionsForNew (initTwo sm2) CEnd prf2 CTh2notEqCEnd
-
-  in ([] ** (Start {nfa = (thompson re1).nfa} s1 prfInit1 (Accept {nfa = (thompson re1).nfa}  s1 prfAcc1)
-        ** ([] ** (Start {nfa = (thompson re2).nfa} s2 prfInit2 (Accept {nfa = (thompson re2).nfa} s2 prfAcc2)
-          ** rewrite rprf in (rewrite rprf2 in (rewrite (rforEnd prff) in (threePartEq _ _)))))))
+      ans1 : CombiningTransitionsForNewData (initOne sm1 sm2) CEnd prf
+      ans1 = aboutCombiningTransitionsForNew (initOne sm1 sm2) CEnd prf CTh1notEqCEnd
+      ans2 : CombiningTransitionsForNewData (initTwo sm2) CEnd ans1.stateIsElemOfNew
+      ans2 = aboutCombiningTransitionsForNew (initTwo sm2) CEnd ans1.stateIsElemOfNew CTh2notEqCEnd
+  in MkConcatEvidencePrfData
+        [] (Start {nfa = (thompson re1).nfa} ans1.oldState ans1.oldIsElemOfOld
+              (Accept {nfa = (thompson re1).nfa} ans1.oldState ans1.oldAccepts))
+        [] (Start {nfa = (thompson re2).nfa} ans2.oldState ans2.oldIsElemOfOld
+              (Accept {nfa = (thompson re2).nfa} ans2.oldState ans2.oldAccepts))
+        rewrite ans1.routineEqualityPrf in (rewrite ans2.routineEqualityPrf in
+            (rewrite (rforEnd ans2.stateIsElemOfNew) in (eqPrf1ToEnd _ _)))
 
 concatEvidencePrf {word=(c::w)} re1 re2 (Start (CTh2 s) prf (Step (CTh2 s) c t prf1 acc)) =
   let sm1 : SM
       sm1 = thompson re1
       sm2 : SM
       sm2 = thompson re2
-
-      (s1 ** (prfInit1 ** (prf2 ** (prfAcc1, rprf)))) := aboutCombiningTransitionsForNew (initOne sm1 sm2) (CTh2 s) prf CTh2notEqCTh1
-      (prfInit2 ** rprf') := aboutCombiningTransitionsForOld (initTwo sm2) (CTh2 s) prf2 s injectionForCTh2 Refl (ch2NotElemOFEnd _)
-      (word' ** (accept2 ** eqPrf)) := evidenceTh2 {re1, re2} (Step {nfa = (thompson $ Concat re1 re2).nfa} (CTh2 s) c t prf1 acc)
-
-  in ([] ** (Start {nfa = (thompson re1).nfa} s1 prfInit1 (Accept {nfa = (thompson re1).nfa} s1 prfAcc1)
-          ** (word' ** (Start {nfa = sm2.nfa} s prfInit2 accept2
-            ** (rewrite rprf in (rewrite rprf' in rewrite eqPrf in (eqPrfS2 _ _ _)))))))
+      ans : CombiningTransitionsForNewData (initOne sm1 sm2) (CTh2 s) prf
+      ans = aboutCombiningTransitionsForNew (initOne sm1 sm2) (CTh2 s) prf CTh2notEqCTh1
+      aos : CombiningTransitionsForOldData (initTwo sm2) (CTh2 s) ans.stateIsElemOfNew s
+      aos = aboutCombiningTransitionsForOld (initTwo sm2) (CTh2 s) ans.stateIsElemOfNew s injectionForCTh2 Refl (ch2NotElemOFEnd _)
+      ev2 : EvidenceTh2Data {re1,re2,s} (Step {nfa = (thompson $ Concat re1 re2).nfa} (CTh2 s) c t prf1 acc)
+      ev2 = evidenceTh2 {re1, re2} (Step {nfa = (thompson $ Concat re1 re2).nfa} (CTh2 s) c t prf1 acc)
+  in MkConcatEvidencePrfData
+          []        (Start {nfa = (thompson re1).nfa} ans.oldState ans.oldIsElemOfOld
+                          (Accept {nfa = (thompson re1).nfa} ans.oldState ans.oldAccepts))
+          ev2.word  (Start {nfa = sm2.nfa} s aos.oldIsElemOfOld ev2.acc)
+          (rewrite ans.routineEqualityPrf in (rewrite aos.routineEqualityPrf in
+              rewrite ev2.routineEq in (eqPrf1To2 _ _ _)))
 
 concatEvidencePrf re1 re2 (Start (CTh1 s) prfInit (Step (CTh1 s) c t prf1 acc)) =
   let sm1 : SM
       sm1 = thompson re1
       sm2 : SM
       sm2 = thompson re2
-
-      allNext : (word': Word ** (acc1: AcceptingFrom (thompson re1).nfa s word' ** (word'': Word ** (acc2: Accepting (thompson re2).nfa word'' **
-                                (extractRoutineFrom {nfa = (thompson $ Concat re1 re2).nfa, prog = (thompson $ Concat re1 re2).prog} (Step {nfa = (thompson $ Concat re1 re2).nfa} (CTh1 s) c t prf1 acc) =
-                                  (extractRoutineFrom {nfa = (thompson re1).nfa, prog = (thompson re1).prog} acc1) ++
-                                    (extractRoutine (thompson re2).nfa (thompson re2).prog acc2) ++ [Regular EmitPair]
-                                  )))))
-
-      allNext = evidenceTh1 (Step {nfa = (thompson $ Concat re1 re2).nfa} (CTh1 s) c t prf1 acc)
-      (prfInit1 ** rprf) :=
-        aboutCombiningTransitionsForOld (initOne sm1 sm2) (CTh1 s) prfInit s injectionForCTh1 Refl (cTh1NotInStart2Cons sm2 s)
-
-  in ((fst (allNext)) ** ((Start {nfa = (thompson re1).nfa} s prfInit1 (fst $ snd allNext))
-          ** ((fst $ snd $ snd allNext) ** ((fst $ snd $ snd $ snd allNext)
-              ** rewrite rprf in rewrite (snd $ snd $ snd $ snd allNext) in (appendAssociative _ _ _)))))
+      acc' : AcceptingFrom (thompson $ Concat re1 re2).nfa (CTh1 s) word
+      acc' = Step {nfa = (thompson $ Concat re1 re2).nfa} (CTh1 s) c t prf1 acc
+      allNext : EvidenceTh1Data {re1, re2} acc'
+      allNext = evidenceTh1 acc'
+      aos : CombiningTransitionsForOldData (initOne sm1 sm2) (CTh1 s) prfInit s
+      aos = aboutCombiningTransitionsForOld (initOne sm1 sm2) (CTh1 s) prfInit s injectionForCTh1 Refl (cTh1NotInStart2Cons sm2 s)
+  in MkConcatEvidencePrfData
+        allNext.word1   (Start {nfa = (thompson re1).nfa} s aos.oldIsElemOfOld allNext.acc1)
+        allNext.word2   allNext.acc2
+        rewrite aos.routineEqualityPrf in rewrite allNext.routineEq in (appendAssociative _ _ _)

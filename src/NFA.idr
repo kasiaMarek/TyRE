@@ -146,6 +146,7 @@ initVM = MkVMState False [<] [<]
 
 parameters {auto N : NA}
 
+public export
 run: Word -> List (N .State) -> Bool
 run [] ys = case (find (N .accepting) ys) of
               (Just _)  => True

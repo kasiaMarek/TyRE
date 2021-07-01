@@ -14,21 +14,19 @@ import Data.List.Elem
 import Extra
 import Extra.Reflects
 
-public export
-extractBasedOnFstFromRep : (xs: List a) -> (rep : b) -> (elem: a) -> (pos: elem `Elem` xs) -> (extractBasedOnFst xs (replicate (length xs) rep) elem pos = rep)
-extractBasedOnFstFromRep (_ :: xs) rep elem Here = Refl
-extractBasedOnFstFromRep (y :: xs) rep elem (There x) = extractBasedOnFstFromRep xs rep elem x
+stepInGroupToLeftState  : {0 a : Type} -> (c: Char) -> (s : Either a AState) -> (t : a) -> (acc : a -> Bool)
+                        -> (next : a -> Char -> List a) -> (prf: (Left t) `Elem` (fst (nextGroup {a} acc next s c)))
+                        -> (extractBasedOnFst (fst (nextGroup acc next s c)) (snd (nextGroup acc next s c)) (Left t) prf = [])
 
----Functions for Group proof
-stepInGroupToLeftState: {0 a : Type} -> (c: Char) -> (s : Either a AState) -> (t : a) -> (acc : a -> Bool) -> (next : a -> Char -> List a) -> (prf: (Left t) `Elem` (fst (nextGroup {a} acc next s c)))
-    -> (extractBasedOnFst (fst (nextGroup acc next s c)) (snd (nextGroup acc next s c)) (Left t) prf = [])
 stepInGroupToLeftState c (Right EndState) t acc next prf = absurd prf
 stepInGroupToLeftState c (Left x) t acc next pos with ((findR acc (next x c)).Holds)
   stepInGroupToLeftState c (Left x) t acc next pos | Nothing = (extractBasedOnFstFromRep _ _ _ _)
   stepInGroupToLeftState c (Left x) t acc next (There pos) | (Just _) = (extractBasedOnFstFromRep _ _ _ _)
 
-stepInGroupToRightState: {0 a : Type} -> (c: Char) -> (s : Either a AState) -> (acc : a -> Bool) -> (next : a -> Char -> List a) -> (prf: (Right EndState) `Elem` (fst (nextGroup {a} acc next s c)))
-    -> (extractBasedOnFst (fst (nextGroup acc next s c)) (snd (nextGroup acc next s c)) (Right EndState) prf = [EmitString])
+stepInGroupToRightState : {0 a : Type} -> (c: Char) -> (s : Either a AState) -> (acc : a -> Bool)
+                        -> (next : a -> Char -> List a) -> (prf: (Right EndState) `Elem` (fst (nextGroup {a} acc next s c)))
+                        -> (extractBasedOnFst (fst (nextGroup acc next s c)) (snd (nextGroup acc next s c)) (Right EndState) prf = [EmitString])
+
 stepInGroupToRightState c (Right EndState) acc next prf = absurd prf
 stepInGroupToRightState c (Left x) acc next pos with ((findR acc (next x c)).Holds)
   stepInGroupToRightState c (Left x) acc next pos | Nothing = absurd (rightCantBeElemOfLeft EndState (next x c) pos)
@@ -41,17 +39,21 @@ evidenceForGroup  : (re : CoreRE) -> {s : (thompson (Group re)).nfa.State}
                   -> (acc : AcceptingFrom (thompson (Group re)).nfa s word)
                   -> (vm  : VMState)
                   -> (vm.evidence = ev ++ (case acc of {(Accept _ _) => [< GroupMark _]; (Step _ _ _ _ _) => [<]}))
-                  -> (word'': SnocList Char ** executeRoutineFrom (extractRoutineFrom {nfa = (thompson (Group re)).nfa, prog = (thompson (Group re)).prog} acc) (mc, vm) = ev ++ [< GroupMark word''])
+                  -> (word'': SnocList Char **
+                      executeRoutineFrom (extractRoutineFrom {nfa = (thompson (Group re)).nfa, prog
+                              = (thompson (Group re)).prog} acc) (mc, vm) = ev ++ [< GroupMark word''])
 
 evidenceForGroup re (Accept s prf) vm eqPrf = ([<] ** eqPrf)
 
 evidenceForGroup re (Step s c (Right EndState) prf1 (Accept (Right EndState) prf2)) vm eqPrf =
-    let routine = (stepInGroupToRightState c s (thompson re).nfa.accepting (thompson re).nfa.next prf1)
+    let routine = stepInGroupToRightState c s (thompson re).nfa.accepting (thompson re).nfa.next prf1
         word: SnocList Char
         word = (step c vm).memory
     in rewrite routine in (word ** cong (:< GroupMark word) eqPrf)
 
 evidenceForGroup re {mc} {ev} (Step s c (Left t) prf1 (Step (Left t) c' r prf2 acc)) vm eqPrf =
   let routine := stepInGroupToLeftState c s t (thompson re).nfa.accepting (thompson re).nfa.next prf1
-      (w ** u) := evidenceForGroup re {mc, ev, s=(Left t)} (Step {nfa = (thompson (Group re)).nfa} (Left t) c' r prf2 acc) (step c vm) eqPrf
+      (w ** u) := evidenceForGroup re {mc, ev, s=(Left t)}
+                      (Step {nfa = (thompson (Group re)).nfa} (Left t) c' r prf2 acc)
+                      (step c vm) eqPrf
   in (w ** rewrite routine in u)

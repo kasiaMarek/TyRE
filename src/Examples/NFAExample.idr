@@ -1,4 +1,4 @@
-module NFA.Examples
+module Examples.NFAExample
 
 import NFA
 import Data.Vect
@@ -25,9 +25,14 @@ aAccepting NumStateAcc  = True
 aAccepting NumStateRej  = False
 
 aNext : AState -> Char -> List AState
-aNext NumStateAcc   c = if (isDigit c) then if (ord c `mod` 2 == 1) then [NumStateRej] else [NumStateAcc] else [FinishAcc]
+aNext NumStateAcc   c = if (isDigit c)
+                        then if (ord c `mod` 2 == 1) then [NumStateRej] else [NumStateAcc]
+                        else [FinishAcc]
+                        
 aNext FinishAcc     _ = [FinishAcc]
-aNext _             c = if (isDigit c) then if (ord c `mod` 2 == 1) then [NumStateRej] else [NumStateAcc] else [Start]
+aNext _             c = if (isDigit c)
+                        then if (ord c `mod` 2 == 1) then [NumStateRej] else [NumStateAcc]
+                        else [Start]
 
 a : NA
 a = MkNFA AState aAccepting [Start] aNext
