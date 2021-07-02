@@ -24,5 +24,3 @@ modules =   Data.SnocList.Elem
           , Extra
           , Extra.Reflects
           , Pred
-          , Examples.NFAExample
-          , Examples.TimeExample

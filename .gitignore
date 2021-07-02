@@ -1,3 +1,5 @@
 *.ibc
 *.o
 *\build
+*\output
+*\failures

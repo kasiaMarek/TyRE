@@ -4,8 +4,16 @@ import Test.Golden
 
 %default covering
 
+nfa : TestPool
+nfa = MkTestPool "nfa" [] Nothing
+      [ "nfa/even",
+        "nfa/empty",
+        "nfa/foo"
+      ]
+
 fullTests : TestPool
-fullTests = MkTestPool "fulltests" [] [ "fulltests/time"]
+fullTests = MkTestPool "fulltests" [] Nothing
+            [ "fulltests/time"]
 
 main : IO ()
-main = runner [ fullTests ]
+main = runner [ nfa, fullTests ]
