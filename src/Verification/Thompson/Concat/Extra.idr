@@ -45,9 +45,14 @@ ch2NotElemOFEnd s (There _) impossible
 public export
 cannotStepFrom2To1 : {0 a : Type} -> (sm2 : SM) -> (s: sm2.nfa.State) -> (c : Char) -> (t: a)
                   -> ((CTh1 t) `Elem` (fst $ combineTransitions $ nextFromTwo {a} sm2 s c)) -> Void
-cannotStepFrom2To1 {a} sm2 s c t pos with (fst $ combineTransitions $ nextFromTwo {a} sm2 s c)
-  cannotStepFrom2To1 {a = a} sm2 s c t pos | [] impossible
-  cannotStepFrom2To1 {a = a} sm2 s c t pos | (x :: xs) impossible
+cannotStepFrom2To1 sm2 s c t pos with (sm2.prog.next s c)
+  cannotStepFrom2To1 sm2 s c t pos | routine with (sm2.nfa.next s c)
+    cannotStepFrom2To1 sm2 s c t pos | [] | [] impossible
+    cannotStepFrom2To1 sm2 s c t pos | (x :: xs) | (y :: ys) with (sm2.nfa.accepting y)
+      cannotStepFrom2To1 sm2 s c t (There (There pos)) | (x :: xs) | (y :: ys) | True =
+        cannotStepFrom2To1 sm2 s c t pos | xs | ys
+      cannotStepFrom2To1 sm2 s c t (There pos) | (x :: xs) | (y :: ys) | False =
+        cannotStepFrom2To1 sm2 s c t pos | xs | ys
 
 public export
 cTh1NotInStart2Cons : {0 a : Type} -> (sm2 : SM) -> (s : a)
