@@ -3,3 +3,5 @@
 *\build
 *\output
 *\failures
+*\depends
+performance/simpletest/out.png
