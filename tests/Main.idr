@@ -13,7 +13,10 @@ nfa = MkTestPool "nfa" [] Nothing
 
 fullTests : TestPool
 fullTests = MkTestPool "fulltests" [] Nothing
-            [ "fulltests/time"]
+            [ "fulltests/time",
+              "fulltests/foo",
+              "fulltests/ab"
+            ]
 
 main : IO ()
 main = runner [ nfa, fullTests ]

@@ -2,7 +2,6 @@ import API
 import Core
 import Codes
 import NFA.Thompson
-import Data.List
 
 Exactly: Char -> CoreRE
 Exactly x = Pred (\c =>  c == x)
@@ -28,17 +27,12 @@ Time =
         ('0' `Range` '9')
     )
 
-exampleStrings : List String
-exampleStrings = [
-                    --match regex
-                    "10:30",
-                    "00:00",
-                    --don't match regex
-                    "03:02",
-                    "45:33",
-                    "o5:33"
-
-  ]
+printResult : String -> IO ()
+printResult str = putStrLn $ show $ run Time str
 
 main : IO ()
-main = putStrLn $ show $ map (run Time) exampleStrings
+main = do printResult "10:30"
+          printResult "00:00"
+          printResult "03:02"
+          printResult "45:33"
+          printResult "o5:33"
