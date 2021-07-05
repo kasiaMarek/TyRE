@@ -10,7 +10,7 @@ buildtests:
 	make -C tests testbin IDRIS2=${IDRIS2} IDRIS2_PATH=${TYRE}
 
 runtests: buildtests
-	make -C tests test IDRIS2=${IDRIS2} IDRIS2_PATH=${TYRE}
+	make -C tests test IDRIS2=${IDRIS2} IDRIS2_PATH=${TYRE} only=$(only)
 
 clean:
 	$(RM) -r build
