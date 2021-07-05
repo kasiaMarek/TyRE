@@ -94,8 +94,7 @@ hereOrThereExtractBasedOnFst [] (x' :: xs) [] (y :: ys) x (There pos) =
 
 hereOrThereExtractBasedOnFst (x :: xs) xs' (y :: ys) ys' x Here = Left (Here ** Refl)
 hereOrThereExtractBasedOnFst (x' :: xs) xs' (y :: ys) ys' x (There pos) =
-  let rest = hereOrThereExtractBasedOnFst xs xs' ys ys' x pos
-  in case rest of
+  case hereOrThereExtractBasedOnFst xs xs' ys ys' x pos of
     (Left (pos ** prf)) => Left (There pos ** prf)
     (Right (pos ** prf)) => Right (pos ** prf)
 
