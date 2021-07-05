@@ -9,6 +9,7 @@ import Evidence
 import Pred
 import Extra.Reflects
 import Extra
+import Data.Stream
 
 ||| A non-deterministic automaton
 public export
@@ -183,5 +184,16 @@ runFrom [] tds =  map (\td => td.vmState.evidence) (findR (\td => N .accepting t
 runFrom (c::cs) tds = runFrom cs $ runMain c tds
 
 public export
+runFromStream : (Stream Char) -> (tds : List $ Thread N) -> Maybe Evidence
+runFromStream cs      []  = Nothing
+runFromStream (c::cs) tds = case (findR (\td => N .accepting td.naState) tds).Holds of
+                                    (Just td) => Just td.vmState.evidence
+                                    Nothing   => runFromStream cs $ runMain c tds
+
+public export
 runAutomaton : Word -> Maybe Evidence
 runAutomaton word = runFrom word initialise
+
+public export
+runAutomatonStream : (Stream Char) -> Maybe Evidence
+runAutomatonStream stream = runFromStream stream initialise
