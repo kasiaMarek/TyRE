@@ -7,6 +7,7 @@ import Data.Vect
 import Extra
 import Extra.Reflects
 import Data.List.Elem
+import Data.List.Equalities
 
 %default total
 
@@ -125,7 +126,7 @@ combineTransitionsAux (x :: xs) (y :: ys) accepting conv newStart newRoutines =
       then ((conv x)::newStart ++ (fst next) **
               y::(replace
                     {p=(\l => Vect l Routine)}
-                    (lengthOfConcatIsPlus _ _)
+                    (sym $ lengthDistributesOverAppend _ _)
                     ((map (y++) newRoutines) ++ (snd next))))
       else ((conv x)::(fst next) ** y::(snd next))
 

@@ -20,8 +20,8 @@ stepInGroupToLeftState  : {0 a : Type} -> (c: Char) -> (s : Either a AState) -> 
 
 stepInGroupToLeftState c (Right EndState) t acc next prf = absurd prf
 stepInGroupToLeftState c (Left x) t acc next pos with ((findR acc (next x c)).Holds)
-  stepInGroupToLeftState c (Left x) t acc next pos | Nothing = (extractBasedOnFstFromRep _ _ _ _)
-  stepInGroupToLeftState c (Left x) t acc next (There pos) | (Just _) = (extractBasedOnFstFromRep _ _ _ _)
+  stepInGroupToLeftState c (Left x) t acc next pos | Nothing = (extractBasedOnFstFromRep _ _ _)
+  stepInGroupToLeftState c (Left x) t acc next (There pos) | (Just _) = (extractBasedOnFstFromRep _ _ _)
 
 stepInGroupToRightState : {0 a : Type} -> (c: Char) -> (s : Either a AState) -> (acc : a -> Bool)
                         -> (next : a -> Char -> List a) -> (prf: (Right EndState) `Elem` (fst (nextGroup {a} acc next s c)))

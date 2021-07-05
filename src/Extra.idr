@@ -6,32 +6,23 @@ import Data.Vect
 import Data.Vect.Elem
 import Data.Maybe
 import Pred
+import Data.List.Equalities
 
 %default total
 
-public export
-mapMaintainsLength: {a,b : Type} -> (xs: List a) -> (f: a -> b) -> (length xs = length (map f xs))
-mapMaintainsLength [] f = Refl
-mapMaintainsLength (x :: xs) f = cong (1+) (mapMaintainsLength xs f)
-
-public export
-lengthOfConcatIsPlus : (xs: List a) -> (ys: List a) -> (length xs + length ys = length (xs ++ ys))
-lengthOfConcatIsPlus [] ys = Refl
-lengthOfConcatIsPlus (x :: xs) ys = cong (1+) (lengthOfConcatIsPlus xs ys)
-
 ||| Proof that if an element is found on the list it belongs to that list.
 public export
-foundImpliesExists : (xs : List a) -> (pred : a -> Bool) -> (prf : find pred xs = Just elem) -> (elem : a ** (elem `Elem` xs, pred elem = True))
+foundImpliesExists : (xs : List a) -> (pred : a -> Bool) -> (0 prf : find pred xs = Just e) -> (e : a ** (e `Elem` xs, pred e = True))
 foundImpliesExists [] _ Refl impossible
 foundImpliesExists (x :: xs) pred prf with (pred x) proof p
   foundImpliesExists (x :: xs) pred prf | False =
-    let (elem ** (inTail, eq)) = foundImpliesExists xs pred prf
-    in (elem ** (There inTail, eq))
+    let (e ** (inTail, eq)) = foundImpliesExists xs pred prf
+    in (e ** (There inTail, eq))
   foundImpliesExists (x :: xs) pred prf | True = (x ** (Here, p))
 
 ||| Map Just
 public export
-mapJust : (f : a -> b) -> (m : Maybe a) -> (prf : map f m = Just e) -> (elem: a ** (f elem = e, m = Just elem))
+mapJust : (f : a -> b) -> (m : Maybe a) -> (prf : map f m = Just e) -> (e': a ** (f e' = e, m = Just e'))
 mapJust _ Nothing Refl impossible
 mapJust f (Just x) Refl = (x ** (Refl, Refl))
 
@@ -42,14 +33,12 @@ fromJust (Just x) Refl = x
 
 ||| Proof that if an element belongs to concatenetion of lists xs ++ ys it belongs either to xs of ys
 public export
-hereOrThereConcat: (xs: List a) -> (ys: List a) -> (elem `Elem` (xs ++ ys)) -> Either (elem `Elem` xs) (elem `Elem` ys)
-hereOrThereConcat [] ys x = Right x
-hereOrThereConcat (elem :: xs) ys Here = Left Here
-hereOrThereConcat (y :: xs) ys (There x) =
-  let tail = hereOrThereConcat xs ys x
-  in case tail of
-    (Left e) => Left $ There e
-    (Right e) => Right e
+hereOrThereConcat: (xs: List a) -> (ys: List a) -> (e `Elem` (xs ++ ys)) -> Either (e `Elem` xs) (e `Elem` ys)
+hereOrThereConcat [] ys pos = Right pos
+hereOrThereConcat (e :: xs) ys Here = Left Here
+hereOrThereConcat (x :: xs) ys (There pos) = case hereOrThereConcat xs ys pos of
+                                              (Left pos) => Left $ There pos
+                                              (Right pos) => Right pos
 
 ---bind proofs
 foldLeftIsConcatPrfAux: (xs: List a) -> (ys: List b) -> (zs: List b) -> (f: a -> List b) -> (foldl (\acc, elem => acc ++ f elem) (ys ++ zs) xs = ys ++ foldl (\acc, elem => acc ++ f elem) (zs) xs)
@@ -93,8 +82,8 @@ extractBasedOnFst (x' :: xs) (z :: ys) x (There pos) = extractBasedOnFst xs ys x
 public export
 hereOrThereExtractBasedOnFst  : (xs: List a) -> (xs': List a) -> (ys: Vect (length xs) b) -> (ys': Vect (length xs') b)
                               -> (x : a) -> (xInXs: x `Elem` (xs ++ xs'))
-                              -> Either (pos: x `Elem` xs ** extractBasedOnFst (xs ++ xs') (replace {p=(\l => Vect l b)} (lengthOfConcatIsPlus xs xs') (ys ++ ys')) x xInXs = extractBasedOnFst xs ys x pos)
-                                        (pos: x `Elem` xs' ** extractBasedOnFst (xs ++ xs') (replace {p=(\l => Vect l b)} (lengthOfConcatIsPlus xs xs') (ys ++ ys')) x xInXs = extractBasedOnFst xs' ys' x pos)
+                              -> Either (pos: x `Elem` xs ** extractBasedOnFst (xs ++ xs') (replace {p=(\l => Vect l b)} (sym $ lengthDistributesOverAppend xs xs') (ys ++ ys')) x xInXs = extractBasedOnFst xs ys x pos)
+                                        (pos: x `Elem` xs' ** extractBasedOnFst (xs ++ xs') (replace {p=(\l => Vect l b)} (sym $ lengthDistributesOverAppend xs xs') (ys ++ ys')) x xInXs = extractBasedOnFst xs' ys' x pos)
 
 hereOrThereExtractBasedOnFst [] (x :: xs) [] (y :: ys) x Here = Right (Here ** Refl)
 hereOrThereExtractBasedOnFst [] (x' :: xs) [] (y :: ys) x (There pos) =
@@ -122,8 +111,8 @@ rightCantBeElemOfLeft _ [] (There y) impossible
 rightCantBeElemOfLeft x (z :: xs) (There y) = rightCantBeElemOfLeft x xs y
 
 public export
-extractBasedOnFstFromRep  : (xs: List a) -> (rep : b) -> (elem: a) -> (pos: elem `Elem` xs)
-                          -> (extractBasedOnFst xs (replicate (length xs) rep) elem pos = rep)
+extractBasedOnFstFromRep  : (xs: List a) -> (rep : b) -> (pos: e `Elem` xs)
+                          -> (extractBasedOnFst xs (replicate (length xs) rep) e pos = rep)
 
-extractBasedOnFstFromRep (_ :: xs) rep elem Here = Refl
-extractBasedOnFstFromRep (y :: xs) rep elem (There x) = extractBasedOnFstFromRep xs rep elem x
+extractBasedOnFstFromRep (_ :: xs) rep Here = Refl
+extractBasedOnFstFromRep (y :: xs) rep (There x) = extractBasedOnFstFromRep xs rep x

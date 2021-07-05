@@ -59,7 +59,7 @@ thompsonRoutinePrf (Concat re1 re2) acc mcvm =
 thompsonRoutinePrf (Group re) (Start (Right z) initprf acc) _ = absurd (rightCantBeElemOfLeft _ _ initprf)
 thompsonRoutinePrf (Group re) (Start (Left z) initprf (Accept (Left z) pos)) _ = absurd pos
 thompsonRoutinePrf (Group re) (Start (Left z) initprf (Step (Left z) c t prf acc)) (mc,vm) =
-  let q := extractBasedOnFstFromRep (thompson (Group re)).nfa.start ((the Routine) [Record]) (Left z) initprf
+  let q := extractBasedOnFstFromRep (thompson (Group re)).nfa.start ((the Routine) [Record]) initprf
       (w ** ev) := evidenceForGroup re {mc,ev = vm.evidence}
                       (Step {nfa = (thompson (Group re)).nfa} (Left z) c t prf acc)
                       (MkVMState True vm.memory vm.evidence) Refl
