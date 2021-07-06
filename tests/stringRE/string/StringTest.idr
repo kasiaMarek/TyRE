@@ -3,7 +3,7 @@ module StringTest
 import StringRE
 
 printParsed : String -> IO ()
-printParsed str = case (r str) of
+printParsed str = case (rAux str) of
                     (Just result) => putStrLn $ show result
                     Nothing => putStrLn $ str ++ " does not parse"
 

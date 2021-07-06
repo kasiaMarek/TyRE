@@ -1,6 +1,6 @@
 module Core
 
-import Codes
+import public Codes
 
 %default total
 

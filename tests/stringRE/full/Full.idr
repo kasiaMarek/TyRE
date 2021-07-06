@@ -2,10 +2,10 @@ import API
 import Core
 import StringRE
 
-printResult : (Maybe RE) -> String -> IO ()
-printResult re str =
-  let _ := showREResultCond re
-  in putStrLn $ show $ runCond re str
+printResult : RE -> String -> IO ()
+printResult re str = case run (compile re) str of
+                          Nothing => putStrLn "Nothing"
+                          (Just res) => putStrLn $ showAux res
 
 main : IO ()
 main = do printResult (r "[0-9]")                     "1"

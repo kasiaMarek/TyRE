@@ -6,6 +6,12 @@ sourcedir = "src"
 
 modules =   Data.SnocList.Elem
           , Data.SnocList.Extra
+          , Text.Lexer
+          , Text.Lexer.Core
+          , Text.Parser
+          , Text.Parser.Core
+          , Text.Quantity
+          , Text.Token
           , API
           , Core
           , Codes

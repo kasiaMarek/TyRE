@@ -2,9 +2,9 @@ module StringRE
 
 import Core
 import Data.List
-import Text.Lexer
-import Text.Parser.Core
-import Text.Parser
+import public Text.Lexer
+import public Text.Parser
+import public Data.Maybe
 
 public export
 data RE =
@@ -32,9 +32,11 @@ compile (To x y)      = Pred (\c =>  x <= c && c <= y)
 compile (Concat x y)  = Concat (compile x) (compile y)
 compile (Group x)     = Group (compile x)
 
+public export
 specialChars : String
 specialChars = "[]()\\`-"
 
+public export
 mapChar : Char -> String
 mapChar c = case (find (\sc => c == sc) (unpack specialChars)) of {Just _ => "\\" ++ (cast c); Nothing => (cast c)}
 
@@ -47,6 +49,7 @@ Show RE where
   show (Concat atomX y) = show atomX ++ show y
   show (Group x) = "`" ++ show x ++ "`"
 
+public export
 data Token =
               OParQ
             | CParQ
@@ -56,9 +59,11 @@ data Token =
             | Dash
             | CharLit String
 
+public export
 reCharLit : Lexer
 reCharLit = (non $ some $ oneOf specialChars) <|> (is '\\' <+> any)
 
+public export
 reTokenMap : TokenMap Token
 reTokenMap = [
               (reCharLit, \x => CharLit x),
@@ -70,9 +75,11 @@ reTokenMap = [
               (is '-',    \x => Dash)
               ]
 
+public export
 Rule : Type -> Type
 Rule ty = Grammar (TokenData Token) True ty
 
+public export
 getCharLit : (TokenData Token) -> Maybe Char
 getCharLit (MkToken _ _ (CharLit str)) with (unpack str)
   getCharLit (MkToken _ _ (CharLit str)) | [] = Nothing --should not happen
@@ -82,45 +89,59 @@ getCharLit (MkToken _ _ (CharLit str)) with (unpack str)
   getCharLit (MkToken _ _ (CharLit str)) | (c :: (c' :: cs)) = Nothing --should not happen
 getCharLit _ = Nothing
 
+public export
 charLit : Rule Char
 charLit = terminal "char" getCharLit
 
+public export
 getTerminalRule : String -> (Token -> Bool) -> Rule ()
 getTerminalRule str pred = terminal str (\(MkToken _ _ tok) => if (pred tok) then Just () else Nothing)
 
+public export
 openParQ : Rule ()
 openParQ = getTerminalRule "[" \case {OParQ => True; _ => False}
 
+public export
 closedParQ : Rule ()
 closedParQ = getTerminalRule "]" \case {CParQ => True; _ => False}
 
+public export
 openPar : Rule ()
 openPar = getTerminalRule "(" \case {OPar => True; _ => False}
 
+public export
 closedPar : Rule ()
 closedPar = getTerminalRule ")" \case {CPar => True; _ => False}
 
+public export
 backTic : Rule ()
 backTic = getTerminalRule "`" \case {BackTic => True; _ => False}
 
+public export
 dash : Rule ()
 dash = getTerminalRule "-" \case {Dash => True; _ => False}
 
+public export
 charLitsRep : Rule (List Char)
 charLitsRep = (map (::) charLit <*> charLitsRep) <|> (map (\x => [x]) charLit)
 
+public export
 fromTo : Rule RE
 fromTo = (map To ((openParQ *> charLit) <* dash) <*> charLit) <* closedParQ
 
+public export
 oneOf : Rule RE
 oneOf = map OneOf $ openParQ *> charLitsRep <* closedParQ
 
+public export
 exactly : Rule RE
 exactly = map Exactly charLit
 
+public export
 atomREnoGroup : Rule RE
 atomREnoGroup = fromTo <|> oneOf <|> exactly
 
+public export
 reNoGroup : Rule RE
 reNoGroup =   (map Concat atomREnoGroup                       <*> reNoGroup)
           <|> (map Concat atomREnoGroup                       <*> (openPar *> reNoGroup <* closedPar))
@@ -129,12 +150,15 @@ reNoGroup =   (map Concat atomREnoGroup                       <*> reNoGroup)
           <|> atomREnoGroup
           <|> (openPar *> atomREnoGroup <* closedPar)
 
+public export
 group : Rule RE
 group = map Group (backTic *> reNoGroup <* backTic)
 
+public export
 atomRE : Rule RE
 atomRE = group <|> atomREnoGroup
 
+public export
 reRule : Rule RE
 reRule =
       (map Concat atomRE                            <*> reRule)
@@ -145,7 +169,11 @@ reRule =
   <|> (openPar *> atomRE <* closedPar)
 
 public export
-r : String -> Maybe RE
-r str = case (parse reRule (fst (lex reTokenMap str))) of
+rAux : String -> Maybe RE
+rAux str = case (parse reRule (fst (lex reTokenMap str))) of
                     Right (reg, _) => Just reg
                     Left _ => Nothing
+
+public export
+r : (str: String) -> {auto isJust : IsJust (rAux str)} -> RE
+r str {isJust} = fromJust (rAux str) @{isJust}

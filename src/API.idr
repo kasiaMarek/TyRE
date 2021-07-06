@@ -1,10 +1,9 @@
 module API
 
-import Core
+import public Core
 import Evidence
 import NFA
 import NFA.Thompson
-import Codes
 import Verification.AcceptingPath
 import Verification
 import Verification.Thompson
@@ -12,6 +11,7 @@ import StringRE
 
 %default total
 
+public export
 runAutomatonSM : SM -> Word -> Maybe Evidence
 runAutomatonSM sm word = runAutomaton {N = sm.nfa, P = sm.prog} word
 
@@ -29,30 +29,11 @@ runWord : (re: CoreRE) -> List Char -> Maybe (Shape re)
 runWord re str = match (thompson re) str
 
 public export
-showREResult : {auto showChar : Show Char}
-            -> {auto showString : Show String}
-            -> {auto showPair : {0 a,b : Type} -> (Show a, Show b) => Show (a,b)}
-            -> (re : CoreRE) -> Show (Shape re)
-showREResult (Pred f) = showChar
-showREResult (Concat x y) =
-  let _ := showREResult x
-      _ := showREResult y
-  in showPair
-showREResult (Group x) = showString
-
-public export
-showREResultCond : {auto showMaybe : {0 a : Type} -> (Show a) => Show (Maybe a)}
-            -> (mre: Maybe RE) -> Show (case mre of {Just re => Maybe (Shape (compile re)); Nothing => Maybe ()})
-showREResultCond Nothing = showMaybe
-showREResultCond (Just re) =
-  let _ := showREResult (compile re)
-  in showMaybe
+showAux : {re : CoreRE} -> Shape re -> String
+showAux {re = (Pred _)} c = show c
+showAux {re = (Concat re1 re2)} (sh1, sh2) = "(" ++ showAux sh1 ++ ", " ++ showAux sh2 ++ ")"
+showAux {re = (Group _)} str = str
 
 public export
 run : (re: CoreRE) -> String -> Maybe (Shape re)
 run re str = runWord re (unpack str)
-
-public export
-runCond : (mre: Maybe RE) -> String -> (case mre of {Just re => Maybe (Shape (compile re)); Nothing => Maybe ()})
-runCond (Just re) str = runWord (compile re) (unpack str)
-runCond Nothing str = Nothing
