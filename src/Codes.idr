@@ -7,7 +7,7 @@ data Code =
     CharC
     | PairC Code Code
     | StringC
-    -- | UnitC
+    | UnitC
     -- | EitherC Code Code
     -- | ListC Code
     -- | MaybeC Code
@@ -18,7 +18,7 @@ Eq Code where
     CharC == CharC                  = True
     (PairC x z) == (PairC y v)      = (x == y) && (z == v)
     StringC == StringC              = True
-    -- UnitC == UnitC                  = True
+    UnitC == UnitC                  = True
     -- (EitherC x z) == (EitherC y v)  = ((x == y) && (z == v))
     -- (ListC x) == (ListC y)          = x == y
     -- (MaybeC x) == (MaybeC y)        = x == y
@@ -29,13 +29,14 @@ Sem: Code -> Type
 Sem CharC         = Char
 Sem (PairC x y)   = (Sem x, Sem y)
 Sem StringC       = String
--- Sem UnitC         = ()
+Sem UnitC         = ()
 -- Sem (EitherC x y) = Either (Sem x) (Sem y)
 -- Sem (ListC x)     = List (Sem x)
 -- Sem (MaybeC x)    = Maybe (Sem x)
 -- Sem BoolC         = Bool
 -- Sem NatC          = Nat
 
+public export
 SimplifyCode : Code -> Code
 
 -- SimplifyCode (ListC x) =
@@ -54,8 +55,8 @@ SimplifyCode (PairC x y) =
   let sx: Code = SimplifyCode x
       sy: Code = SimplifyCode y
   in case (sx, sy) of
-    -- (UnitC, x) => x
-    -- (x, UnitC) => x
+    (UnitC, x) => x
+    (x, UnitC) => x
     _ => PairC sx sy
 
 -- SimplifyCode (EitherC x y) =
@@ -69,12 +70,13 @@ SimplifyCode (PairC x y) =
 
 SimplifyCode code = code
 
+public export
 ConvertSimplification : (c : Code) -> Sem c -> Sem (SimplifyCode c)
 ConvertSimplification CharC m   = m
 ConvertSimplification StringC m = m
 -- ConvertSimplification BoolC m   = m
 -- ConvertSimplification NatC m    = m
--- ConvertSimplification UnitC _   = ()
+ConvertSimplification UnitC _   = ()
 
 -- ConvertSimplification (MaybeC x) Nothing with (SimplifyCode x)
 --   ConvertSimplification (MaybeC x) Nothing | CharC          = Nothing
@@ -117,7 +119,7 @@ ConvertSimplification (PairC x y) m with (ConvertSimplification x $ fst m, Conve
       ConvertSimplification (PairC x y) m | (csx, csy) | CharC          | CharC         = (csx, csx)
       ConvertSimplification (PairC x y) m | (csx, csy) | CharC          | (PairC z w)   = (csx, csy)
       ConvertSimplification (PairC x y) m | (csx, csy) | CharC          | StringC       = (csx, csy)
-      -- ConvertSimplification (PairC x y) m | (csx, csy) | CharC          | UnitC         = csx
+      ConvertSimplification (PairC x y) m | (csx, csy) | CharC          | UnitC         = csx
       -- ConvertSimplification (PairC x y) m | (csx, csy) | CharC          | (EitherC z w) = (csx, csy)
       -- ConvertSimplification (PairC x y) m | (csx, csy) | CharC          | (ListC z)     = (csx, csy)
       -- ConvertSimplification (PairC x y) m | (csx, csy) | CharC          | (MaybeC z)    = (csx, csy)
@@ -127,7 +129,7 @@ ConvertSimplification (PairC x y) m with (ConvertSimplification x $ fst m, Conve
       ConvertSimplification (PairC x y) m | (csx, csy) | (PairC _ _)    | CharC         = (csx, csy)
       ConvertSimplification (PairC x y) m | (csx, csy) | (PairC _ _)    | (PairC v s)   = (csx, csy)
       ConvertSimplification (PairC x y) m | (csx, csy) | (PairC _ _)    | StringC       = (csx, csy)
-      -- ConvertSimplification (PairC x y) m | (csx, csy) | (PairC _ _)    | UnitC         = csx
+      ConvertSimplification (PairC x y) m | (csx, csy) | (PairC _ _)    | UnitC         = csx
       -- ConvertSimplification (PairC x y) m | (csx, csy) | (PairC _ _)    | (EitherC v s) = (csx, csy)
       -- ConvertSimplification (PairC x y) m | (csx, csy) | (PairC _ _)    | (ListC v)     = (csx, csy)
       -- ConvertSimplification (PairC x y) m | (csx, csy) | (PairC _ _)    | (MaybeC v)    = (csx, csy)
@@ -137,17 +139,17 @@ ConvertSimplification (PairC x y) m with (ConvertSimplification x $ fst m, Conve
       ConvertSimplification (PairC x y) m | (csx, csy) | StringC        | CharC         = (csx, csy)
       ConvertSimplification (PairC x y) m | (csx, csy) | StringC        | (PairC z w)   = (csx, csy)
       ConvertSimplification (PairC x y) m | (csx, csy) | StringC        | StringC       = (csx, csx)
-      -- ConvertSimplification (PairC x y) m | (csx, csy) | StringC        | UnitC         = csx
+      ConvertSimplification (PairC x y) m | (csx, csy) | StringC        | UnitC         = csx
       -- ConvertSimplification (PairC x y) m | (csx, csy) | StringC        | (EitherC z w) = (csx, csy)
       -- ConvertSimplification (PairC x y) m | (csx, csy) | StringC        | (ListC z)     = (csx, csy)
       -- ConvertSimplification (PairC x y) m | (csx, csy) | StringC        | (MaybeC z)    = (csx, csy)
       -- ConvertSimplification (PairC x y) m | (csx, csy) | StringC        | BoolC         = (csx, csy)
       -- ConvertSimplification (PairC x y) m | (csx, csy) | StringC        | NatC          = (csx, csy)
 
---       ConvertSimplification (PairC x y) m | (csx, csy) | UnitC          | CharC         = csy
---       ConvertSimplification (PairC x y) m | (csx, csy) | UnitC          | (PairC z w)   = csy
---       ConvertSimplification (PairC x y) m | (csx, csy) | UnitC          | StringC       = csy
---       ConvertSimplification (PairC x y) m | (csx, csy) | UnitC          | UnitC         = ()
+      ConvertSimplification (PairC x y) m | (csx, csy) | UnitC          | CharC         = csy
+      ConvertSimplification (PairC x y) m | (csx, csy) | UnitC          | (PairC z w)   = csy
+      ConvertSimplification (PairC x y) m | (csx, csy) | UnitC          | StringC       = csy
+      ConvertSimplification (PairC x y) m | (csx, csy) | UnitC          | UnitC         = ()
 --       ConvertSimplification (PairC x y) m | (csx, csy) | UnitC          | (EitherC z w) = csy
 --       ConvertSimplification (PairC x y) m | (csx, csy) | UnitC          | (ListC z)     = csy
 --       ConvertSimplification (PairC x y) m | (csx, csy) | UnitC          | (MaybeC z)    = csy

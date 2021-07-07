@@ -25,3 +25,13 @@ ShapeCode (Group _)     = StringC
 public export
 Shape: CoreRE -> Type
 Shape = Sem . ShapeCode
+
+public export
+ShapeSimp: CoreRE -> Type
+ShapeSimp = Sem . SimplifyCode . ShapeCode
+
+public export
+showAux : {re : CoreRE} -> Shape re -> String
+showAux {re = (Pred _)} c = show c
+showAux {re = (Concat re1 re2)} (sh1, sh2) = "(" ++ showAux sh1 ++ ", " ++ showAux sh2 ++ ")"
+showAux {re = (Group _)} str = str

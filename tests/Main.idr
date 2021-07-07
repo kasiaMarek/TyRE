@@ -24,5 +24,10 @@ stringTests = MkTestPool "stringRE" [] Nothing
               "stringRE/full"
             ]
 
+fullTyRETests : TestPool
+fullTyRETests = MkTestPool "fulltyre" [] Nothing
+            [ "fulltyre/time"
+            ]
+
 main : IO ()
-main = runner [ nfa, fullTests, stringTests ]
+main = runner [ nfa, fullTests, stringTests, fullTyRETests ]

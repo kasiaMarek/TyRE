@@ -30,4 +30,5 @@ modules =   Data.SnocList.Elem
           , Extra
           , Extra.Reflects
           , Pred
+          , RE
           , StringRE

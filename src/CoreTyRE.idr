@@ -7,8 +7,8 @@ infixr 6 <*>
 public export
 data CoreTyRE: Type -> Type where
   Untyped: (r : CoreRE) -> CoreTyRE (Shape r)
-  (<*>): CoreTyRE a -> CoreTyRE b -> CoreTyRE (a, b)
-  Conv: (a -> b) -> CoreTyRE a -> CoreTyRE b
+  (<*>) : CoreTyRE a -> CoreTyRE b -> CoreTyRE (a, b)
+  Conv : (a -> b) -> CoreTyRE a -> CoreTyRE b
   --<|>: CoreTyRE a -> CoreTyRE b -> CoreTyRE (Either a b)
   --Rep: CoreTyRE a -> CoreTyRE (List a)
 

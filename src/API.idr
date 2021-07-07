@@ -8,6 +8,7 @@ import Verification.AcceptingPath
 import Verification
 import Verification.Thompson
 import StringRE
+import CoreTyRE
 
 %default total
 
@@ -29,11 +30,9 @@ runWord : (re: CoreRE) -> List Char -> Maybe (Shape re)
 runWord re str = match (thompson re) str
 
 public export
-showAux : {re : CoreRE} -> Shape re -> String
-showAux {re = (Pred _)} c = show c
-showAux {re = (Concat re1 re2)} (sh1, sh2) = "(" ++ showAux sh1 ++ ", " ++ showAux sh2 ++ ")"
-showAux {re = (Group _)} str = str
-
-public export
 run : (re: CoreRE) -> String -> Maybe (Shape re)
 run re str = runWord re (unpack str)
+
+public export
+parse : CoreTyRE a -> String -> Maybe a
+parse tyre str = map (extract tyre) $ run (compile tyre) str

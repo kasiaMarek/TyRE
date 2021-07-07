@@ -1,53 +1,10 @@
 module StringRE
 
-import Core
-import Data.List
+-- import Core
 import public Text.Lexer
 import public Text.Parser
 import public Data.Maybe
-
-public export
-data RE =
-    Exactly Char
-  | OneOf (List Char)
-  | To Char Char
-  | Concat RE RE
-  | Group RE
-
-public export
-Eq RE where
-  (Exactly x) == (Exactly x')                 = x == x'
-  (OneOf xs) == (OneOf ys)                    = xs == ys
-  (x `To` y) == (x' `To` y')                  = (x == x') && (y == y')
-  (re1 `Concat` re2) == (re1' `Concat` re2')  = (re1 == re1') && (re2 == re2')
-  (Group x) == (Group x')                     = x == x'
-  _ == _                                      = False
-
-
-public export
-compile               : RE -> CoreRE
-compile (Exactly x)   = Pred (\e => e == x)
-compile (OneOf xs)    = Pred (\e => case (find (\x => e == x) xs) of {(Just _) => True ; Nothing => False})
-compile (To x y)      = Pred (\c =>  x <= c && c <= y)
-compile (Concat x y)  = Concat (compile x) (compile y)
-compile (Group x)     = Group (compile x)
-
-public export
-specialChars : String
-specialChars = "[]()\\`-"
-
-public export
-mapChar : Char -> String
-mapChar c = case (find (\sc => c == sc) (unpack specialChars)) of {Just _ => "\\" ++ (cast c); Nothing => (cast c)}
-
-public export
-Show RE where
-  show (Exactly c) = mapChar c
-  show (OneOf xs) = "[" ++ (foldl (++) "" (map mapChar xs)) ++ "]"
-  show (x `To` y) = "[" ++ (mapChar x) ++ "-" ++ (mapChar y) ++ "]"
-  show (Concat (Concat x z) y) = "(" ++ (show (Concat x z)) ++ ")" ++ (show y)
-  show (Concat atomX y) = show atomX ++ show y
-  show (Group x) = "`" ++ show x ++ "`"
+import public RE
 
 public export
 data Token =
@@ -175,5 +132,9 @@ rAux str = case (parse reRule (fst (lex reTokenMap str))) of
                     Left _ => Nothing
 
 public export
-r : (str: String) -> {auto isJust : IsJust (rAux str)} -> RE
-r str {isJust} = fromJust (rAux str) @{isJust}
+toRE : (str: String) -> {auto isJust : IsJust (rAux str)} -> RE
+toRE str {isJust} = fromJust (rAux str) @{isJust}
+
+public export
+r : (str: String) -> {auto isJust : IsJust (rAux str)} -> CoreTyRE (TypeRE $ toRE str {isJust})
+r str {isJust} = compile (toRE str {isJust})
