@@ -83,32 +83,14 @@ map f (x :: xs) (y :: ys) =
   in (fst mp :: (fst rest) ** snd mp :: (snd rest))
 
 public export
-mapF : (f : (a,b) -> c) -> (xs : List a) -> (ys : Vect (length xs) b) -> List c
-mapF f [] [] = []
-mapF f (x :: xs) (y :: ys) = (f (x,y)) :: (mapF f xs ys)
-
-public export
-mapFSpec : (f : (a, b) -> c) -> (q : Pred (a,b)) -> (p : Pred c) -> (xs: List a) -> (ys: Vect (length xs) b)
-        -> ((x1 : a) -> (x2 : b) -> p(f(x1, x2)) -> q (x1, x2))
-        -> (y: c)
-        -> (y `Elem` mapF f xs ys, p y)
-        -> (x1: a ** (x2:b ** (prf: x1 `Elem` xs ** (extractBasedOnFst xs ys x1 prf = x2, f(x1, x2) = y, q (x1, x2)))))
-
-mapFSpec f q p [] [] spec y (isElem, satP) = absurd isElem
-mapFSpec f q p (x1 :: xs) (x2 :: ys) spec y (pos, satP) =
-  case pos of
-    Here => (x1 ** (x2 ** (Here ** (Refl, Refl, spec x1 x2 satP))))
-    There pos =>
-      let (x1' ** (x2' ** (pos' ** (ex', eq', satQ')))) = mapFSpec f q p xs ys spec y (pos, satP)
-      in (x1' ** (x2' ** (There pos' ** (ex', eq', satQ'))))
-
-public export
 0 Step : Type
 Step = VMState -> VMState
 
 public export
 step : Char -> Step
-step x v = MkVMState (v.recording) (if (v.recording) then (v.memory :< x) else (v.memory)) (v.evidence)
+step x v = MkVMState (v.recording) (if (v.recording)
+                                    then (v.memory :< x)
+                                    else (v.memory)) (v.evidence)
 
 public export
 emitChar          : (c : Char) -> Step
@@ -155,7 +137,7 @@ run (c :: cs) ys = run cs (ys >>= (\s => N .next s c))
 
 parameters  {auto P : Program N}
 
---implementation of initialise
+||| Main body of `initialise`
 public export
 initFuction : (N .State, Routine) -> Thread N
 initFuction (s,r) = MkThread s (execute Nothing r initVM)
@@ -164,14 +146,16 @@ public export
 initialise : List (Thread N)
 initialise = mapF initFuction (N .start) (P .init)
 
---implementation of runFrom
+||| Main body of `runFrom`
 public export
 runFunction : Char -> Thread N -> (N .State, Routine) -> Thread N
 runFunction c td (st, r) = MkThread st (execute (Just c) r (step c td.vmState))
 
 public export
 runMapping: Char -> Thread N -> List (Thread N)
-runMapping c td = mapF (runFunction c td) (N .next td.naState c) (P .next td.naState c)
+runMapping c td = mapF  (runFunction c td)
+                        (N .next td.naState c)
+                        (P .next td.naState c)
 
 public export
 runMain: Char -> List (Thread N) -> List (Thread N)
@@ -179,7 +163,8 @@ runMain c tds = tds >>= runMapping c
 
 public export
 runFrom : Word -> (tds : List $ Thread N) -> Maybe Evidence
-runFrom [] tds =  map (\td => td.vmState.evidence) (findR (\td => N .accepting td.naState) tds).Holds
+runFrom [] tds =  map (\td => td.vmState.evidence)
+                      (findR (\td => N .accepting td.naState) tds).Holds
 runFrom (c::cs) tds = runFrom cs $ runMain c tds
 
 public export

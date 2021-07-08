@@ -31,7 +31,7 @@ stepOfExtractEvidence  : {auto nfa : NA}
 
 stepOfExtractEvidence td c s prf =
  let r : Routine
-     r = extractBasedOnFst (nfa .next td.naState c) (prog .next td.naState c) s prf
+     r = extractBasedOnFst (nfa .next td.naState c) (prog .next td.naState c) prf
  in runFunction c td (s,r)
 
 public export
@@ -50,7 +50,7 @@ extractEvidenceInitialStep : {auto nfa : NA} -> {auto prog : Program nfa}
 
 extractEvidenceInitialStep s prf =
   let r : Routine
-      r = extractBasedOnFst (nfa .start) (prog .init) s prf
+      r = extractBasedOnFst (nfa .start) (prog .init) prf
   in initFuction (s,r)
 
 public export

@@ -16,7 +16,7 @@ import Extra.Reflects
 
 stepInGroupToLeftState  : {0 a : Type} -> (c: Char) -> (s : Either a AState) -> (t : a) -> (acc : a -> Bool)
                         -> (next : a -> Char -> List a) -> (prf: (Left t) `Elem` (fst (nextGroup {a} acc next s c)))
-                        -> (extractBasedOnFst (fst (nextGroup acc next s c)) (snd (nextGroup acc next s c)) (Left t) prf = [])
+                        -> (extractBasedOnFst (fst (nextGroup acc next s c)) (snd (nextGroup acc next s c)) prf = [])
 
 stepInGroupToLeftState c (Right EndState) t acc next prf = absurd prf
 stepInGroupToLeftState c (Left x) t acc next pos with ((findR acc (next x c)).Holds)
@@ -25,7 +25,7 @@ stepInGroupToLeftState c (Left x) t acc next pos with ((findR acc (next x c)).Ho
 
 stepInGroupToRightState : {0 a : Type} -> (c: Char) -> (s : Either a AState) -> (acc : a -> Bool)
                         -> (next : a -> Char -> List a) -> (prf: (Right EndState) `Elem` (fst (nextGroup {a} acc next s c)))
-                        -> (extractBasedOnFst (fst (nextGroup acc next s c)) (snd (nextGroup acc next s c)) (Right EndState) prf = [EmitString])
+                        -> (extractBasedOnFst (fst (nextGroup acc next s c)) (snd (nextGroup acc next s c)) prf = [EmitString])
 
 stepInGroupToRightState c (Right EndState) acc next prf = absurd prf
 stepInGroupToRightState c (Left x) acc next pos with ((findR acc (next x c)).Holds)

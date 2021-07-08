@@ -4,7 +4,7 @@ import Core
 import NFA
 import Data.List
 import Data.Vect
-import Extra
+import public Extra
 import Extra.Reflects
 import Data.List.Elem
 import Data.List.Equalities
@@ -25,7 +25,7 @@ public export
 data AState = EndState
 
 Eq AState where
-  EndState == EndState = True
+  _ == _ = True
 
 public export
 data CState a b = CTh1 a | CTh2 b | CEnd
@@ -71,7 +71,8 @@ acceptingPred AcceptState = True
 acceptingPred StartState  = False
 
 public export
-nextPred : (f : Char -> Bool) -> (st: PState) -> (c: Char) -> Vect (length (nextNFAPred f st c)) Routine
+nextPred  : (f : Char -> Bool) -> (st: PState) -> (c: Char)
+          -> Vect (length (nextNFAPred f st c)) Routine
 nextPred f StartState c with (f c)
   nextPred _ StartState _ | True = [[EmitLast]]
   nextPred _ StartState _ | False = []
@@ -80,16 +81,21 @@ nextPred _ AcceptState _ = []
 --functions for Group
 public export
 nextGroup : (a -> Bool) -> (nextNFA: a -> Char -> List a)
-    -> (Either a AState) -> Char -> (xs: List (Either a AState) ** Vect (length xs) Routine)
+    -> (Either a AState) -> Char
+    -> (xs: List (Either a AState) ** Vect (length xs) Routine)
+
 nextGroup accepting nextNFA (Left st) c =
   let mappedNext : List a
       mappedNext = nextNFA st c
   in case (findR accepting mappedNext).Holds of
-        Nothing => (map Left mappedNext ** replicate (length $ map Left mappedNext) [])
-        (Just _) => (
-                      (Right EndState)::(map Left mappedNext)
-                      ** [EmitString]::(replicate (length $ map Left mappedNext) [])
-                    )
+        -- case `thompson re`.next has no accepting states, we maintain the next states and substitute the routine with an empty one
+        Nothing => (map Left mappedNext **
+                      replicate (length $ map Left mappedNext) [])
+        -- case `thompson re`.next has an accepting state, we add `Right EndState` to next states
+        Just _ => ((Right EndState)::(map Left mappedNext) **
+                      [EmitString]::(replicate (length $ map Left mappedNext) []))
+
+--if the state is `Right EndState` we accept and there is no next for it
 nextGroup accepting nextNFA (Right EndState) _ = ([] ** [])
 
 --functions for Concat
@@ -118,7 +124,7 @@ combineTransitionsAux  :
                       ->  (newStart: List (CState a b))
                       ->  (Vect (length newStart) Routine)
                       ->  (states: List (CState a b) ** Vect (length states) Routine)
-combineTransitionsAux []        []        _         _    _        _           = ([] ** [])
+combineTransitionsAux [] []  _  _  _  _  = ([] ** [])
 combineTransitionsAux (x :: xs) (y :: ys) accepting conv newStart newRoutines =
   let next : (states: List (CState a b) ** Vect (length states) Routine)
       next = combineTransitionsAux xs ys accepting conv newStart newRoutines
@@ -143,26 +149,30 @@ initTwo sm2 =
   MkCTD sm2.nfa.start sm2.prog.init sm2.nfa.accepting CTh2 [CEnd] [[EmitPair]]
 
 public export
-start2Cons : (sm2 : SM) -> (xs: List $ CState state1 sm2.nfa.State ** Vect (length xs) Routine)
+start2Cons : (sm2 : SM)
+          -> (xs: List $ CState state1 sm2.nfa.State ** Vect (length xs) Routine)
 start2Cons sm2 = combineTransitions (initTwo sm2)
 
 public export
 initOne : (sm1: SM) -> (sm2 : SM)
         -> (CombineTransitionData sm1.nfa.State sm2.nfa.State sm1.nfa.State)
 initOne sm1 sm2 =
-  MkCTD sm1.nfa.start sm1.prog.init sm1.nfa.accepting CTh1 (fst (start2Cons sm2)) (snd (start2Cons sm2))
+  MkCTD sm1.nfa.start sm1.prog.init sm1.nfa.accepting
+        CTh1 (fst (start2Cons sm2)) (snd (start2Cons sm2))
 
 public export
 nextFromOne : (sm1: SM) -> (sm2 : SM) -> sm1.nfa.State -> Char
             -> (CombineTransitionData sm1.nfa.State sm2.nfa.State sm1.nfa.State)
 nextFromOne sm1 sm2 st c =
-  MkCTD (sm1.nfa.next st c) (sm1.prog.next st c) sm1.nfa.accepting CTh1 (fst (start2Cons sm2)) (snd (start2Cons sm2))
+  MkCTD (sm1.nfa.next st c) (sm1.prog.next st c) sm1.nfa.accepting
+        CTh1 (fst (start2Cons sm2)) (snd (start2Cons sm2))
 
 public export
 nextFromTwo : (sm2: SM) -> sm2.nfa.State -> Char
             -> (CombineTransitionData a sm2.nfa.State sm2.nfa.State)
 nextFromTwo sm2 st c =
-  MkCTD (sm2.nfa.next st c) (sm2.prog.next st c) sm2.nfa.accepting CTh2 [CEnd] [[EmitPair]]
+  MkCTD (sm2.nfa.next st c) (sm2.prog.next st c) sm2.nfa.accepting
+        CTh2 [CEnd] [[EmitPair]]
 
 public export
 nextConcat : (sm1 : SM) -> (sm2 : SM)
@@ -176,7 +186,8 @@ nextConcat sm1 sm2 CEnd      _ = ([] ** [])
 --Thompson construction
 public export
 thompson : CoreRE -> SM
-thompson (Pred f) = MkSM (MkNFA PState acceptingPred [StartState] (nextNFAPred f)) (MkProgram [[]] (nextPred f))
+thompson (Pred f) = MkSM (MkNFA PState acceptingPred [StartState]
+                                (nextNFAPred f)) (MkProgram [[]] (nextPred f))
 
 thompson (Concat re1 re2) =
   let sm1 : SM
@@ -222,10 +233,13 @@ thompson (Group re) =
       init: Vect (length start) Routine
       init = replicate (length start) [Record]
 
+      next : (s: state) -> Char -> (xs: List state ** Vect (length xs) Routine)
+      next st c = nextGroup prev.nfa.accepting prev.nfa.next st c
+
       nfa : NA
-      nfa = MkNFA state accepting start (\st => \c => fst $ nextGroup prev.nfa.accepting prev.nfa.next st c)
+      nfa = MkNFA state accepting start (\st => \c => fst $ next st c)
 
       prog : Program nfa
-      prog = MkProgram init (\st => \c => snd $ nextGroup prev.nfa.accepting prev.nfa.next st c)
+      prog = MkProgram init (\st => \c => snd $ next st c)
 
   in MkSM nfa prog
