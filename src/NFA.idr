@@ -3,7 +3,12 @@ module NFA
 import Data.Vect
 import Data.SnocList
 import Data.List
+import Data.List.Elem
+import Data.Vect.Elem
 import Evidence
+import Pred
+import Extra.Reflects
+import Extra
 
 ||| A non-deterministic automaton
 public export
@@ -22,17 +27,20 @@ record NA where
   ||| combining NAs (more later).
   next : State -> Char -> List State
 
+public export
 Word : Type
 Word = List Char
 
 ||| The VM we associate with an NFA can record a sub-sequence of characters
 ||| and act on an evidence
+public export
 record VMState where
   constructor MkVMState
   recording : Bool
   memory : SnocList Char
   evidence : Evidence
 
+public export
 data Instruction =
     ||| Start recording word
     Record
@@ -45,10 +53,12 @@ data Instruction =
   | ||| Emit that the tape currently stores a pair
     EmitPair
 
+public export
 Routine : Type
 Routine = List Instruction
 
 ||| A program, relative to a NFA, instructs what to do as we run the automaton:
+public export
 record Program (N : NA) where
   constructor MkProgram
   ||| Which routine to execute when we initialise a thread at each starting state
@@ -56,9 +66,11 @@ record Program (N : NA) where
   ||| Which routine to execute
   next : (st : N .State) -> (c : Char) -> Vect (length $ N .next st c) Routine
 
-
-0 Thread : NA -> Type
-Thread na = (na.State, VMState)
+public export
+record Thread (N : NA) where
+  constructor MkThread
+  naState : N .State
+  vmState : VMState
 
 map : (f : (a,b) -> (c,d)) -> (xs : List a) ->
   (ys : Vect (length xs) b) ->
@@ -70,50 +82,33 @@ map f (x :: xs) (y :: ys) =
       rest = map f xs ys
   in (fst mp :: (fst rest) ** snd mp :: (snd rest))
 
-infixr 4 /\
-(/\): {a: Type} -> (p : a -> Type) -> (q : a -> Type) -> a -> Type
-(/\) {a} p q x = (p x, q x)
-
-parameters {auto N : NA}
-
-(.naState) : Thread N -> N .State
-(.naState) = fst
-(.vmState) : Thread N -> VMState
-(.vmState) = snd
-
+public export
 0 Step : Type
-Step = (td : Thread N) -> Thread N
-0 ThreadPredicate : ((td : Thread N) -> Type) -> Type
-ThreadPredicate pred = (td : Thread N) -> pred td
+Step = VMState -> VMState
 
+public export
 step : Char -> Step
-step x td =
-  let updatedMemory =
-    if (td.vmState.recording) then (td.vmState.memory :< x) else (td.vmState.memory)
-      vmState = MkVMState (td.vmState.recording) updatedMemory (td.vmState.evidence)
-  in (td.naState, vmState)
+step x v = MkVMState (v.recording) (if (v.recording)
+                                    then (v.memory :< x)
+                                    else (v.memory)) (v.evidence)
 
-stepMaintainsState : (c : Char) -> ThreadPredicate $
-     (\td => (step c td).naState = td.naState)
-  /\ (\td => (step c td).vmState.recording = td.vmState.recording)
-  /\ (\td => (step c td).vmState.evidence  = td.vmState.evidence)
-
-stepMaintainsState c td = (Refl,Refl,Refl)
-
+public export
 emitChar          : (c : Char) -> Step
-emitChar c td     = (td.naState, record {evidence $= (:< CharMark c)} td.vmState)
+emitChar c v      = MkVMState v.recording v.memory (v.evidence :< CharMark c)
 
+public export
 emitString        : Step
-emitString td     =
-  let vmState = MkVMState False [<] (td.vmState.evidence :< GroupMark (td.vmState.memory))
-  in (td.naState, vmState)
+emitString v      = MkVMState False [<] (v.evidence :< GroupMark (v.memory))
 
+public export
 startRecording    : Step
-startRecording td = (td.naState, record {recording = True} td.vmState)
+startRecording v  = MkVMState True v.memory v.evidence
 
+public export
 emitPair          : Step
-emitPair td       = (td.naState, record {evidence $= (:< PairMark)} td.vmState)
+emitPair v        = MkVMState v.recording v.memory (v.evidence :< PairMark)
 
+public export
 stepForInstruction : (mc : Maybe Char) -> Instruction -> Step
 
 stepForInstruction mc       Record      = startRecording
@@ -122,52 +117,56 @@ stepForInstruction mc       EmitPair    = emitPair
 stepForInstruction (Just c) EmitLast    = emitChar c
 stepForInstruction Nothing  EmitLast    = (\t => t)
 
+public export
 execute : (mc : Maybe Char) -> Routine -> Step
-execute mc [] td = td
-execute mc (x::xs) td = execute mc xs $ stepForInstruction mc x td
+execute mc [] v = v
+execute mc (x::xs) v = execute mc xs $ stepForInstruction mc x v
 
-stepForInstructionMaintainsNAState : (mc : Maybe Char) -> (ins: Instruction) -> ThreadPredicate $
-  \td => (stepForInstruction mc ins td).naState = td.naState
+public export
+initVM : VMState
+initVM = MkVMState False [<] [<]
 
-stepForInstructionMaintainsNAState mc       Record      td = Refl
-stepForInstructionMaintainsNAState mc       EmitString  td = Refl
-stepForInstructionMaintainsNAState mc       EmitPair    td = Refl
-stepForInstructionMaintainsNAState (Just c) EmitLast    td = Refl
-stepForInstructionMaintainsNAState Nothing  EmitLast    td = Refl
+parameters {auto N : NA}
 
-executeMaintainsNAState : (mc : Maybe Char) -> (routine : Routine) -> ThreadPredicate $
-  \td => (execute mc routine td).naState = td.naState
-
-executeMaintainsNAState mc [] td      = Refl
-executeMaintainsNAState mc (x::xs) td =
-  let recur = executeMaintainsNAState mc xs (stepForInstruction mc x td)
-      sfim  = stepForInstructionMaintainsNAState mc x td
-  in trans recur sfim
-
+public export
 run: Word -> List (N .State) -> Bool
 run [] ys = case (find (N .accepting) ys) of
               (Just _)  => True
               Nothing   => False
 run (c :: cs) ys = run cs (ys >>= (\s => N .next s c))
 
-mapF : (f : (a,b) -> c) -> (xs : List a) -> (ys : Vect (length xs) b) -> List c
-mapF f xs ys = fst $ map (\x => (f x, ())) xs ys
+parameters  {auto P : Program N}
 
-parameters (P : Program N)
+||| Main body of `initialise`
+public export
+initFuction : (N .State, Routine) -> Thread N
+initFuction (s,r) = MkThread s (execute Nothing r initVM)
 
+public export
 initialise : List (Thread N)
-initialise =
-  let initVmState : VMState
-      initVmState = MkVMState False [<] [<]
-      f : (N .State, Routine) -> Thread N
-      f (s, r) = execute Nothing r (s, initVmState)
-  in mapF f (N .start) (P .init)
+initialise = mapF initFuction (N .start) (P .init)
 
+||| Main body of `runFrom`
+public export
+runFunction : Char -> Thread N -> (N .State, Routine) -> Thread N
+runFunction c td (st, r) = MkThread st (execute (Just c) r (step c td.vmState))
+
+public export
+runMapping: Char -> Thread N -> List (Thread N)
+runMapping c td = mapF  (runFunction c td)
+                        (N .next td.naState c)
+                        (P .next td.naState c)
+
+public export
+runMain: Char -> List (Thread N) -> List (Thread N)
+runMain c tds = tds >>= runMapping c
+
+public export
 runFrom : Word -> (tds : List $ Thread N) -> Maybe Evidence
-runFrom [] tds =  map (\td => (snd td) .evidence) (find (\td => N .accepting (fst td)) tds)
-runFrom (c::cs) tds =
-  let m : Thread N -> (N .State, Routine) -> (N .State, VMState)
-      m t (s, r) = (s, snd $ execute (Just c) r t)
-      f : Thread N -> List $ Thread N
-      f td = mapF (m td) (N .next (fst td) c) (P .next (fst td) c)
-  in runFrom cs (tds >>= f . (step c))
+runFrom [] tds =  map (\td => td.vmState.evidence)
+                      (findR (\td => N .accepting td.naState) tds).Holds
+runFrom (c::cs) tds = runFrom cs $ runMain c tds
+
+public export
+runAutomaton : Word -> Maybe Evidence
+runAutomaton word = runFrom word initialise

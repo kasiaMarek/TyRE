@@ -1,7 +1,5 @@
 module Codes
 
-import Core
-
 %default total
 
 public export
@@ -26,14 +24,6 @@ Eq Code where
     -- (MaybeC x) == (MaybeC y)        = x == y
     _ == _                          = False
 
-ShapeCode: CoreRE -> Code
-ShapeCode (Pred f)      = CharC
-ShapeCode (Concat x y)  = PairC (ShapeCode x) (ShapeCode y)
-ShapeCode (Group _)     = StringC
--- ShapeCode Empty         = UnitC
--- ShapeCode (Alt x y)     = EitherC (ShapeCode x) (ShapeCode y)
--- ShapeCode (Star x)      = ListC (ShapeCode x)
-
 public export
 Sem: Code -> Type
 Sem CharC         = Char
@@ -45,9 +35,6 @@ Sem StringC       = String
 -- Sem (MaybeC x)    = Maybe (Sem x)
 -- Sem BoolC         = Bool
 -- Sem NatC          = Nat
-
-Shape: CoreRE -> Type
-Shape = Sem . ShapeCode
 
 SimplifyCode : Code -> Code
 

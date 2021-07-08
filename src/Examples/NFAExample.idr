@@ -1,4 +1,4 @@
-module NFA.Examples
+module Examples.NFAExample
 
 import NFA
 import Data.Vect
@@ -25,9 +25,14 @@ aAccepting NumStateAcc  = True
 aAccepting NumStateRej  = False
 
 aNext : AState -> Char -> List AState
-aNext NumStateAcc   c = if (isDigit c) then if (ord c `mod` 2 == 1) then [NumStateRej] else [NumStateAcc] else [FinishAcc]
+aNext NumStateAcc   c = if (isDigit c)
+                        then if (ord c `mod` 2 == 1) then [NumStateRej] else [NumStateAcc]
+                        else [FinishAcc]
+                        
 aNext FinishAcc     _ = [FinishAcc]
-aNext _             c = if (isDigit c) then if (ord c `mod` 2 == 1) then [NumStateRej] else [NumStateAcc] else [Start]
+aNext _             c = if (isDigit c)
+                        then if (ord c `mod` 2 == 1) then [NumStateRej] else [NumStateAcc]
+                        else [Start]
 
 a : NA
 a = MkNFA AState aAccepting [Start] aNext
@@ -69,7 +74,8 @@ cNP : (n: NA ** Program n)
 cNP =
   let start : (a: List CState ** Vect (length a) Routine)
       start = ([Empty] ** [[Record]])
-  in (MkNFA CState cAccepting (fst start) (\s => \c => fst $ cNext s c) ** MkProgram (snd start) (\s => \c => snd $ cNext s c))
+  in (MkNFA CState cAccepting (fst start) (\s => \c => fst $ cNext s c)
+        ** MkProgram (snd start) (\s => \c => snd $ cNext s c))
 
 c : NA
 c = fst cNP
@@ -81,7 +87,7 @@ cRejectsExamples : List Word
 cRejectsExamples = map unpack ["fo", "f", "", "fooo"]
 
 cResultAcc : Maybe Evidence
-cResultAcc = runFrom {N = c} (snd cNP) ['f','o','o'] (initialise {N = c} (snd cNP))
+cResultAcc = runFrom {N = c, P = (snd cNP)} ['f','o','o'] (initialise {N = c, P = (snd cNP)})
 
 cResultRej : Maybe Evidence
-cResultRej = runFrom {N = c} (snd cNP) ['f','o','o', 'o'] (initialise {N = c} (snd cNP))
+cResultRej = runFrom {N = c, P = (snd cNP)} ['f','o','o', 'o'] (initialise {N = c, P = (snd cNP)})

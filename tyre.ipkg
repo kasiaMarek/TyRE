@@ -4,9 +4,25 @@ depends = contrib
 
 sourcedir = "src"
 
-modules = Sheets.FP
-          , Data.SnocList.Elem
+modules =   Data.SnocList.Elem
+          , Data.SnocList.Extra
+          , API
           , Core
           , Codes
+          , CoreTyRE
           , Evidence
           , NFA
+          , NFA.Thompson
+          , Verification
+          , Verification.Thompson
+          , Verification.Thompson.Concat
+          , Verification.Thompson.Concat.Extra
+          , Verification.Thompson.Concat.EqualityPrf
+          , Verification.Thompson.Group
+          , Verification.Routine
+          , Verification.AcceptingPath
+          , Extra
+          , Extra.Reflects
+          , Pred
+          , Examples.NFAExample
+          , Examples.TimeExample
