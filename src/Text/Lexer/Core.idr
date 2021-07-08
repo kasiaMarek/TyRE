@@ -1,3 +1,4 @@
+|||This is a slightly modified copy of the same module from `contrib` package.
 module Text.Lexer.Core
 
 import public Control.Delayed
