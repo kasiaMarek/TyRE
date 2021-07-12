@@ -132,7 +132,7 @@ altEvidencePrf re1 re2 (Start s prf acc) with (
         start1 = combineTransitions $ initOneAlt sm1
         start2 : (xs: List state ** Vect (length xs) Routine)
         start2 = combineTransitions $ initTwoAlt sm2
-    in hereOrThereExtractBasedOnFst (fst start1) (fst start2) (snd start1) (snd start2) s prf
+    in hereOrThereExtractBasedOnFst (fst start1) (fst start2) (snd start1) (snd start2) prf
   )
 
   altEvidencePrf {word = []} re1 re2 (Start CEnd prf (Accept CEnd Refl)) | (Left (pos ** eqPrf)) =

@@ -37,10 +37,10 @@ altRightEqPrf exr mcvm =
   ~~ (snd $ executeRoutineSteps exr mcvm).evidence :< RightBranchMark ...(altRightEqPrfAux _)
 
 export
-endEqPrf : (a : Routine) -> (b : Instruction) -> (mapRoutine Nothing (a ++ [b]) ++ [] = ((mapRoutine Nothing a) ++ []) ++ [Regular b])
+endEqPrf : (a : Routine) -> (b : Instruction) -> (cast (a ++ [b]) ++ [] = ((cast a) ++ []) ++ [Regular b])
 endEqPrf a b =
   Calc $
-    |~ (mapRoutine Nothing (a ++ [b]) ++ [])
-    ~~ (mapRoutine Nothing (a ++ [b])) ...(appendNilRightNeutral _)
-    ~~ ((mapRoutine Nothing a) ++ [Regular b]) ...(mapRoutineConcat _ _ _)
-    ~~ (((mapRoutine Nothing a) ++ []) ++ [Regular b]) ...(cong (++ [Regular b]) (sym $ appendNilRightNeutral _))
+    |~ (cast (a ++ [b]) ++ [])
+    ~~ (cast (a ++ [b])) ...(appendNilRightNeutral _)
+    ~~ ((cast a) ++ [Regular b]) ...(castConcat _ _)
+    ~~ (((cast a) ++ []) ++ [Regular b]) ...(cong (++ [Regular b]) (sym $ appendNilRightNeutral _))

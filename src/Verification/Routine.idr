@@ -19,10 +19,13 @@ ExtendedRoutine : Type
 ExtendedRoutine = List ExtendedInstruction
 
 public export
-executeRoutineSteps: ExtendedRoutine -> (Maybe Char, VMState) -> (Maybe Char, VMState)
+executeRoutineSteps : ExtendedRoutine -> (Maybe Char, VMState)
+                    -> (Maybe Char, VMState)
 executeRoutineSteps []                    st       = st
-executeRoutineSteps ((Regular inst)::r)   (mc, vm) = executeRoutineSteps r (mc, stepForInstruction mc inst vm)
-executeRoutineSteps ((Observe c)::r)      (mc, vm) = executeRoutineSteps r (Just c, (step c vm))
+executeRoutineSteps (Regular inst :: r)   (mc, vm) =
+  executeRoutineSteps r (mc, stepForInstruction mc inst vm)
+executeRoutineSteps (Observe c :: r)      (mc, vm) =
+  executeRoutineSteps r (Just c, (step c vm))
 
 
 public export
@@ -34,36 +37,36 @@ executeRoutine: ExtendedRoutine -> Evidence
 executeRoutine routine = executeRoutineFrom routine (Nothing, initVM)
 
 public export
-routineComposition  : (xs: ExtendedRoutine) -> (ys: ExtendedRoutine) -> (st: (Maybe Char, VMState))
-                  -> (executeRoutineSteps (xs ++ ys) st = executeRoutineSteps ys (executeRoutineSteps xs st))
+routineComposition  : (xs: ExtendedRoutine) -> (ys: ExtendedRoutine)
+                    -> (st: (Maybe Char, VMState))
+                    -> (executeRoutineSteps (xs ++ ys) st
+                          = executeRoutineSteps ys (executeRoutineSteps xs st))
 routineComposition []                     ys st           = Refl
-routineComposition ((Regular inst) :: xs) ys (mc, vm)     = routineComposition xs ys (mc, stepForInstruction mc inst vm)
-routineComposition ((Observe c) :: xs)    ys (mc, vm)     = routineComposition xs ys (Just c, (step c vm))
+routineComposition ((Regular inst) :: xs) ys (mc, vm)     =
+  routineComposition xs ys (mc, stepForInstruction mc inst vm)
+routineComposition ((Observe c) :: xs)    ys (mc, vm)     =
+  routineComposition xs ys (Just c, (step c vm))
 
 public export
-mapRoutine : Maybe Char -> Routine -> ExtendedRoutine
-mapRoutine Nothing  []              = []
-mapRoutine Nothing  (inst :: insts) = (Regular inst)::(mapRoutine Nothing insts)
-mapRoutine (Just c) insts           = (Observe c)::(mapRoutine Nothing insts)
+Cast Routine ExtendedRoutine where
+  cast [] = []
+  cast (inst :: insts) = (Regular inst)::(cast insts)
 
 public export
-mapRoutineConcat  : (mc: Maybe Char) -> (xs: Routine) -> (ys: Routine)
-                  -> (mapRoutine mc (xs ++ ys) = mapRoutine mc xs ++ mapRoutine Nothing ys)
-
-mapRoutineConcat Nothing  []        ys  = Refl
-mapRoutineConcat (Just x) []        ys  = Refl
-mapRoutineConcat Nothing  (x :: xs) ys  = cong (Regular x ::) (mapRoutineConcat Nothing xs ys)
-mapRoutineConcat (Just c) (x :: xs) ys  =
-  cong
-    (\l => Observe c :: (Regular x :: l))
-    (mapRoutineConcat Nothing xs ys)
+castConcat : (xs: Routine) -> (ys: Routine)
+          -> ((the ExtendedRoutine $ cast (xs ++ ys)) = cast xs ++ cast ys)
+castConcat [] ys = Refl
+castConcat (x :: xs) ys = cong (Regular x ::) (castConcat xs ys)
 
 public export
-execEqualityPrf : {nfa : NA} -> (vmState : VMState) -> (r : Routine) -> (mc : Maybe Char)
-                -> (executeRoutineSteps (mapRoutine Nothing r) (mc, vmState) = (mc, execute mc r vmState))
+execEqualityPrf : {nfa : NA} -> (vmState : VMState)
+                -> (r : Routine) -> (mc : Maybe Char)
+                -> (executeRoutineSteps (cast r) (mc, vmState)
+                        = (mc, execute mc r vmState))
 
 execEqualityPrf vmState [] mc = Refl
-execEqualityPrf vmState (x :: xs) mc = execEqualityPrf {nfa} (stepForInstruction mc x vmState) xs mc
+execEqualityPrf vmState (x :: xs) mc =
+  execEqualityPrf {nfa} (stepForInstruction mc x vmState) xs mc
 
 public export
 stepOfExtractRoutine : {nfa : NA} -> {prog : Program nfa} -> {s : nfa.State}
@@ -72,7 +75,7 @@ stepOfExtractRoutine : {nfa : NA} -> {prog : Program nfa} -> {s : nfa.State}
 
 stepOfExtractRoutine {word=[]} {nfa} {prog} (Accept s prf) = []
 stepOfExtractRoutine {word=c::_} {nfa} {prog} (Step s c t prf acc)
-  = mapRoutine (Just c) (extractBasedOnFst (nfa.next s c) (prog.next s c) t prf)
+  = Observe c :: (cast $ extractBasedOnFst (nfa.next s c) (prog.next s c) prf)
 
 public export
 extractRoutineFrom : {nfa : NA} -> {prog : Program nfa} -> {s : nfa.State}
@@ -88,9 +91,9 @@ public export
 extractRoutine : (nfa: NA) -> Program nfa -> Accepting nfa word -> ExtendedRoutine
 extractRoutine nfa prog (Start s prf acc) =
   let r         : Routine
-      r         = extractBasedOnFst (nfa.start) (prog.init) s prf
+      r         = extractBasedOnFst (nfa.start) (prog.init) prf
       extr      : ExtendedRoutine
-      extr      = mapRoutine Nothing r
+      extr      = cast r
       rest      : ExtendedRoutine
       rest      = extractRoutineFrom {nfa, prog} acc
   in (extr ++ rest)
@@ -106,11 +109,11 @@ extractRoutineFromPrf : {nfa : NA} -> {prog : Program nfa}
 extractRoutineFromPrf {word=[]} {nfa} {prog} td (Accept td.naState prf) mc = Refl
 extractRoutineFromPrf {word=c::_} {nfa} {prog} td (Step td.naState c t prf acc) mc =
   let r         : Routine
-      r         = extractBasedOnFst (nfa.next td.naState c) (prog.next td.naState c) t prf
+      r         = extractBasedOnFst (nfa.next td.naState c) (prog.next td.naState c) prf
       td'       : Thread nfa
       td'       = runFunction c td (t,r)
       extr      : ExtendedRoutine
-      extr      = mapRoutine (Just c) r
+      extr      =  Observe c :: cast r
       rest      : ExtendedRoutine
       rest      = extractRoutineFrom {nfa,prog} acc
 
@@ -131,11 +134,11 @@ extractRoutinePrf  : (nfa : NA) -> (prog : Program nfa) -> (acc: Accepting nfa w
 
 extractRoutinePrf nfa prog (Start s prf acc) =
   let r        : Routine
-      r        = extractBasedOnFst (nfa .start) (prog .init) s prf
+      r        = extractBasedOnFst (nfa .start) (prog .init) prf
       td       : Thread nfa
       td       = initFuction (s,r)
       extr     : ExtendedRoutine
-      extr     = mapRoutine Nothing r
+      extr     = cast r
       rest     : ExtendedRoutine
       rest     = extractRoutineFrom acc
 
