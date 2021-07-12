@@ -48,14 +48,15 @@ data Instruction =
     EmitString
   | ||| Emit the last character
     EmitLast
-  -- | ||| Emit a unit
-  --   EmitUnit
+  | ||| Emit a unit
+    EmitUnit
   | ||| Emit that the tape currently stores a pair
     EmitPair
   |
     EmitLeft
   |
     EmitRight
+
 public export
 Routine : Type
 Routine = List Instruction
@@ -120,6 +121,10 @@ emitRight          : Step
 emitRight v        = MkVMState v.recording v.memory (v.evidence :< RightBranchMark)
 
 public export
+emitUnit          : Step
+emitUnit v        = MkVMState v.recording v.memory (v.evidence :< UnitMark)
+
+public export
 stepForInstruction : (mc : Maybe Char) -> Instruction -> Step
 
 stepForInstruction mc       Record      = startRecording
@@ -127,6 +132,7 @@ stepForInstruction mc       EmitString  = emitString
 stepForInstruction mc       EmitPair    = emitPair
 stepForInstruction mc       EmitLeft    = emitLeft
 stepForInstruction mc       EmitRight   = emitRight
+stepForInstruction mc       EmitUnit    = emitUnit
 stepForInstruction (Just c) EmitLast    = emitChar c
 stepForInstruction Nothing  EmitLast    = (\t => t)
 

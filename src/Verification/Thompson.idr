@@ -35,6 +35,8 @@ thompsonRoutinePrf {word = c::_} (Pred f) (Start StartState Here (Step StartStat
   thompsonRoutinePrf {word = c::c'::_} (Pred f) (Start StartState Here (Step StartState c AcceptState Here (Step AcceptState c' t prf acc))) mcvm | True = absurd prf
   thompsonRoutinePrf {word = [c]} (Pred f) (Start StartState Here (Step StartState c AcceptState Here (Accept AcceptState Refl))) (mc, vm) | True = ([< CharMark c] ** (Refl, AChar [<] c))
 
+thompsonRoutinePrf Empty (Start EndState Here (Accept EndState Refl)) (mc, vm) = ([< UnitMark] ** (Refl, AnEmpty [<]))
+
 thompsonRoutinePrf (Concat re1 re2) acc mcvm =
   let p : ConcatEvidencePrfData re1 re2 acc
       p = concatEvidencePrf re1 re2 acc

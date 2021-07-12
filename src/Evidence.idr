@@ -15,6 +15,7 @@ data EvidenceMarker =
  | GroupMark (SnocList Char)
  | LeftBranchMark
  | RightBranchMark
+ | UnitMark
 
 public export
 Evidence : Type
@@ -49,6 +50,9 @@ data Encodes : Evidence -> SnocList Code -> Type where
     -> (c1 : Code)
     -> {auto ford : evs' = evs ++ ev2}
     -> (evs' :< RightBranchMark) `Encodes` (cs :< EitherC c1 c2)
+  AnEmpty
+    : (prf : evs `Encodes` cs)
+    -> (evs :< UnitMark) `Encodes` cs :< UnitC
 
 
 record Result (ev : Evidence) (c : Code) (cs : SnocList Code) where
@@ -79,6 +83,8 @@ recontextualise prf1 (ARight {ford, ev2, evs} prf prf2 c1) =
   ARight (recontextualise prf1 prf) prf2 c1
     {ford = trans (cong (evs1 ++) ford) appendAssociative}
 
+recontextualise prf1 (AnEmpty prf) = AnEmpty (recontextualise prf1 prf)
+
 extractResultAuxChar : (ev : Evidence) -> (0 prf : ev `Encodes` (cs :< c))
                     -> (0 prf1 : prf = AChar prf' c')
                     -> Result ev c cs
@@ -86,10 +92,6 @@ extractResultAuxChar : (ev : Evidence) -> (0 prf : ev `Encodes` (cs :< c))
 extractResultAuxChar (evs :< CharMark c') (AChar prf' c') Refl = MkResult c' evs prf'
 
 extractResult : (ev : Evidence) -> (0 prf : ev `Encodes` (cs :< c)) -> Result ev c cs
-
-extractResult [<] (APair prf prf1 prf2) impossible
-extractResult [<] (ALeft prf prf1 c2) impossible
-extractResult [<] (ARight prf prf2 c1) impossible
 
 extractResult (evs :< CharMark c') (AChar prf c') = MkResult c' evs prf
 
@@ -110,6 +112,8 @@ extractResult (e@(evs ++ ev) :< LeftBranchMark) (ALeft {ford = Refl} prf prf1 c2
 extractResult (e@(evs ++ ev) :< RightBranchMark) (ARight {ford = Refl} prf prf2 c1) =
   let result = extractResult e (recontextualise prf prf2)
   in MkResult (Right result.result) result.rest result.restValid
+
+extractResult (evs :< UnitMark) (AnEmpty prf) = MkResult () evs prf
 
 public export
 extract : (ev : Evidence) -> (0 prf : ev `Encodes` [< c]) -> Sem c

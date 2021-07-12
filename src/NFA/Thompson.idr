@@ -234,6 +234,8 @@ thompson : CoreRE -> SM
 thompson (Pred f) = MkSM (MkNFA PState acceptingPred [StartState]
                                 (nextNFAPred f)) (MkProgram [[]] (nextPred f))
 
+thompson (Empty) = MkSM (MkNFA AState (\_ => True) [EndState]
+                                (\_,_ => [])) (MkProgram [[EmitUnit]] (\_,_ => []))
 thompson (Group re) =
   let prev : SM
       prev = thompson re
