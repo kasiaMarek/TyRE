@@ -16,7 +16,9 @@ import Verification.Thompson.Group
 import Data.Vect
 import Extra.Reflects
 import Verification.Thompson.Concat
+import Verification.Thompson.Alt
 import Verification.Thompson.Concat.EqualityPrf
+import Verification.Thompson.Alt.EqualityPrf
 
 thompsonRoutinePrf : (re : CoreRE)
                   -> (acc : Accepting (thompson re).nfa word)
@@ -65,6 +67,28 @@ thompsonRoutinePrf (Group re) (Start (Left z) initprf (Step (Left z) c t prf acc
                       (MkVMState True vm.memory vm.evidence) Refl
   in ([< GroupMark w] ** rewrite q in (rewrite ev in (Refl, AGroup [<] w)))
 
+thompsonRoutinePrf (Alt re1 re2) acc mcvm with (altEvidencePrf re1 re2 acc)
+  thompsonRoutinePrf (Alt re1 re2) acc mcvm | (Left (MkAltEvidencePrfLeftData word1 acc1 routineEq)) =
+    let (ev ** (eq, encodesPrev)) := thompsonRoutinePrf re1 acc1 mcvm
+        encodes : (ev ++ [< LeftBranchMark]) `Encodes` ([<] :< EitherC (ShapeCode re1) (ShapeCode re2))
+        encodes = replace {p=(`Encodes` ([<] :< EitherC (ShapeCode re1) (ShapeCode re2)))}
+                      (cong (:< LeftBranchMark) appendNilLeftNeutral)
+                      (ALeft Lin encodesPrev (ShapeCode re2))
+    in rewrite routineEq in (ev ++ [< LeftBranchMark] **
+                            (trans  (altLeftEqPrf _ _)
+                                    (cong (:< LeftBranchMark) eq),
+                            encodes))
+
+  thompsonRoutinePrf (Alt re1 re2) acc mcvm | (Right (MkAltEvidencePrfRightData word2 acc2 routineEq)) =
+    let (ev ** (eq, encodesPrev)) := thompsonRoutinePrf re2 acc2 mcvm
+        encodes : (ev ++ [< RightBranchMark]) `Encodes` ([<] :< EitherC (ShapeCode re1) (ShapeCode re2))
+        encodes = replace {p=(`Encodes` ([<] :< EitherC (ShapeCode re1) (ShapeCode re2)))}
+                      (cong (:< RightBranchMark) appendNilLeftNeutral)
+                      (ARight Lin encodesPrev (ShapeCode re1))
+    in rewrite routineEq in (ev ++ [< RightBranchMark] **
+                            (trans  (altRightEqPrf _ _)
+                                    (cong (:< RightBranchMark) eq),
+                            encodes))
 public export
 thompsonPrf : (re : CoreRE)
             -> (acc: Accepting (thompson re).nfa word)

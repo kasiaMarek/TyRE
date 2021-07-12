@@ -7,6 +7,7 @@ import Data.Vect
 import Extra
 import Extra.Reflects
 import Data.List.Elem
+import Data.List.Equalities
 
 %default total
 
@@ -91,7 +92,7 @@ nextGroup accepting nextNFA (Left st) c =
                     )
 nextGroup accepting nextNFA (Right EndState) _ = ([] ** [])
 
---functions for Concat
+--functions for Concat and Alt
 public export
 acceptingConcat : (CState a b) -> Bool
 acceptingConcat (CTh1 x) = False
@@ -136,72 +137,94 @@ combineTransitions (MkCTD oldStates rout1 accept conv newStart rout2) =
   combineTransitionsAux oldStates rout1 accept conv newStart rout2
 
 public export
-initTwo : (sm2 : SM)
+initTwo : (r : Routine) -> (sm2 : SM)
         -> (CombineTransitionData state1 sm2.nfa.State sm2.nfa.State)
-initTwo sm2 =
-  MkCTD sm2.nfa.start sm2.prog.init sm2.nfa.accepting CTh2 [CEnd] [[EmitPair]]
+initTwo r sm2 =
+  MkCTD sm2.nfa.start sm2.prog.init sm2.nfa.accepting CTh2 [CEnd] [r]
+
+public export
+twoToEnd : (r : Routine) -> (sm2: SM) -> sm2.nfa.State -> Char
+            -> (CombineTransitionData a sm2.nfa.State sm2.nfa.State)
+twoToEnd r sm2 st c =
+  MkCTD (sm2.nfa.next st c) (sm2.prog.next st c) sm2.nfa.accepting CTh2 [CEnd] [r]
+
+public export
+oneToEnd : (r : Routine) -> (sm1: SM) -> sm1.nfa.State -> Char
+            -> (CombineTransitionData sm1.nfa.State a sm1.nfa.State)
+oneToEnd r sm1 st c =
+  MkCTD (sm1.nfa.next st c) (sm1.prog.next st c) sm1.nfa.accepting CTh1 [CEnd] [r]
+
+--functions for Concat
+public export
+initTwoConcat : (sm2 : SM)
+        -> (CombineTransitionData state1 sm2.nfa.State sm2.nfa.State)
+initTwoConcat = initTwo [EmitPair]
 
 public export
 start2Cons : (sm2 : SM) -> (xs: List $ CState state1 sm2.nfa.State ** Vect (length xs) Routine)
-start2Cons sm2 = combineTransitions (initTwo sm2)
+start2Cons sm2 = combineTransitions (initTwoConcat sm2)
 
 public export
-initOne : (sm1: SM) -> (sm2 : SM)
+concatInit : (sm1: SM) -> (sm2 : SM)
         -> (CombineTransitionData sm1.nfa.State sm2.nfa.State sm1.nfa.State)
-initOne sm1 sm2 =
+concatInit sm1 sm2 =
   MkCTD sm1.nfa.start sm1.prog.init sm1.nfa.accepting CTh1 (fst (start2Cons sm2)) (snd (start2Cons sm2))
 
 public export
-nextFromOne : (sm1: SM) -> (sm2 : SM) -> sm1.nfa.State -> Char
+oneToTwo : (sm1: SM) -> (sm2 : SM) -> sm1.nfa.State -> Char
             -> (CombineTransitionData sm1.nfa.State sm2.nfa.State sm1.nfa.State)
-nextFromOne sm1 sm2 st c =
+oneToTwo sm1 sm2 st c =
   MkCTD (sm1.nfa.next st c) (sm1.prog.next st c) sm1.nfa.accepting CTh1 (fst (start2Cons sm2)) (snd (start2Cons sm2))
 
 public export
-nextFromTwo : (sm2: SM) -> sm2.nfa.State -> Char
+twoToEndConcat : (sm2: SM) -> sm2.nfa.State -> Char
             -> (CombineTransitionData a sm2.nfa.State sm2.nfa.State)
-nextFromTwo sm2 st c =
-  MkCTD (sm2.nfa.next st c) (sm2.prog.next st c) sm2.nfa.accepting CTh2 [CEnd] [[EmitPair]]
+twoToEndConcat = twoToEnd [EmitPair]
 
 public export
 nextConcat : (sm1 : SM) -> (sm2 : SM)
           -> (CState sm1.nfa.State sm2.nfa.State) -> Char
           -> (xs: List (CState sm1.nfa.State sm2.nfa.State) ** Vect (length xs) Routine)
 
-nextConcat sm1 sm2 (CTh1 st) c = combineTransitions $ nextFromOne sm1 sm2 st c
-nextConcat sm1 sm2 (CTh2 st) c = combineTransitions $ nextFromTwo sm2 st c
+nextConcat sm1 sm2 (CTh1 st) c = combineTransitions $ oneToTwo sm1 sm2 st c
+nextConcat sm1 sm2 (CTh2 st) c = combineTransitions $ twoToEndConcat sm2 st c
 nextConcat sm1 sm2 CEnd      _ = ([] ** [])
+
+--functions for alt
+public export
+initTwoAlt : (sm2 : SM)
+        -> (CombineTransitionData state1 sm2.nfa.State sm2.nfa.State)
+initTwoAlt = initTwo [EmitRight]
+
+public export
+initOneAlt : (sm1 : SM)
+        -> (CombineTransitionData sm1.nfa.State state2 sm1.nfa.State)
+initOneAlt sm1 =
+  MkCTD sm1.nfa.start sm1.prog.init sm1.nfa.accepting CTh1 [CEnd] [[EmitLeft]]
+
+public export
+nextFromTwoAlt : (sm2: SM) -> sm2.nfa.State -> Char
+            -> (CombineTransitionData a sm2.nfa.State sm2.nfa.State)
+nextFromTwoAlt = twoToEnd [EmitRight]
+
+public export
+nextFromOneAlt : (sm1: SM) -> sm1.nfa.State -> Char
+            -> (CombineTransitionData sm1.nfa.State a sm1.nfa.State)
+nextFromOneAlt = oneToEnd [EmitLeft]
+
+public export
+nextAlt : (sm1 : SM) -> (sm2 : SM)
+          -> (CState sm1.nfa.State sm2.nfa.State) -> Char
+          -> (xs: List (CState sm1.nfa.State sm2.nfa.State) ** Vect (length xs) Routine)
+
+nextAlt sm1 sm2 (CTh1 st) c = combineTransitions $ nextFromOneAlt sm1 st c
+nextAlt sm1 sm2 (CTh2 st) c = combineTransitions $ nextFromTwoAlt sm2 st c
+nextAlt sm1 sm2 CEnd      _ = ([] ** [])
 
 --Thompson construction
 public export
 thompson : CoreRE -> SM
 thompson (Pred f) = MkSM (MkNFA PState acceptingPred [StartState] (nextNFAPred f)) (MkProgram [[]] (nextPred f))
-
-thompson (Concat re1 re2) =
-  let sm1 : SM
-      sm1 = thompson re1
-      sm2 : SM
-      sm2 = thompson re2
-
-      0 state : Type
-      state = CState sm1.nfa.State sm2.nfa.State
-
-      start : (xs: List state ** Vect (length xs) Routine)
-      start = combineTransitions $ initOne sm1 sm2
-
-      next : state -> Char -> (xs: List state ** Vect (length xs) Routine)
-      next = nextConcat sm1 sm2
-
-      _ := sm1.nfa.isEq
-      _ := sm2.nfa.isEq
-
-      nfa : NA
-      nfa = MkNFA state acceptingConcat (fst start) (\st => \c => fst (next st c))
-
-      prog : Program nfa
-      prog = MkProgram (snd start) (\st => \c => snd (next st c))
-
-  in MkSM nfa prog
 
 thompson (Group re) =
   let prev : SM
@@ -226,5 +249,65 @@ thompson (Group re) =
 
       prog : Program nfa
       prog = MkProgram init (\st => \c => snd $ nextGroup prev.nfa.accepting prev.nfa.next st c)
+
+  in MkSM nfa prog
+
+thompson (Concat re1 re2) =
+  let sm1 : SM
+      sm1 = thompson re1
+      sm2 : SM
+      sm2 = thompson re2
+
+      0 state : Type
+      state = CState sm1.nfa.State sm2.nfa.State
+
+      start : (xs: List state ** Vect (length xs) Routine)
+      start = combineTransitions $ concatInit sm1 sm2
+
+      next : state -> Char -> (xs: List state ** Vect (length xs) Routine)
+      next = nextConcat sm1 sm2
+
+      _ := sm1.nfa.isEq
+      _ := sm2.nfa.isEq
+
+      nfa : NA
+      nfa = MkNFA state acceptingConcat (fst start) (\st => \c => fst (next st c))
+
+      prog : Program nfa
+      prog = MkProgram (snd start) (\st => \c => snd (next st c))
+
+  in MkSM nfa prog
+
+thompson (Alt re1 re2) =
+  let sm1 : SM
+      sm1 = thompson re1
+      sm2 : SM
+      sm2 = thompson re2
+
+      0 state : Type
+      state = CState sm1.nfa.State sm2.nfa.State
+
+      _ := sm1.nfa.isEq
+      _ := sm2.nfa.isEq
+
+      start1 : (xs: List state ** Vect (length xs) Routine)
+      start1 = combineTransitions $ initOneAlt sm1
+
+      start2 : (xs: List state ** Vect (length xs) Routine)
+      start2 = combineTransitions $ initTwoAlt sm2
+
+      start : (xs: List state ** Vect (length xs) Routine)
+      start = (fst start1 ++ fst start2 **
+                replace {p=(\l => Vect l Routine)} (sym $ lengthDistributesOverAppend _ _)
+                  (snd start1 ++ snd start2))
+
+      next : state -> Char -> (xs: List state ** Vect (length xs) Routine)
+      next = nextAlt sm1 sm2
+
+      nfa : NA
+      nfa = MkNFA state  acceptingConcat (fst start) (\st => \c => fst (next st c))
+
+      prog : Program nfa
+      prog = MkProgram (snd start) (\st => \c => snd (next st c))
 
   in MkSM nfa prog

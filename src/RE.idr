@@ -10,6 +10,8 @@ data RE =
   | OneOf (List Char)
   | To Char Char
   | Concat RE RE
+  | Alt RE RE
+  | Maybe RE
   | Group RE
 
 public export

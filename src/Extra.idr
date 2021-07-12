@@ -52,6 +52,7 @@ hereOrThereConcat (y :: xs) ys (There x) =
     (Right e) => Right e
 
 ---bind proofs
+public export
 foldLeftIsConcatPrfAux: (xs: List a) -> (ys: List b) -> (zs: List b) -> (f: a -> List b) -> (foldl (\acc, elem => acc ++ f elem) (ys ++ zs) xs = ys ++ foldl (\acc, elem => acc ++ f elem) (zs) xs)
 foldLeftIsConcatPrfAux [] ys zs f = Refl
 foldLeftIsConcatPrfAux (x :: xs) ys zs f =

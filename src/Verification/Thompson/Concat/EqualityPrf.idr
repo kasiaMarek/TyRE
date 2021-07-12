@@ -6,10 +6,12 @@ import Data.List
 import NFA
 import Syntax.PreorderReasoning
 
+--Observe c :: (mapRoutine Nothing A ++ [EmitPair]) ++ []) = Observe c :: ((mapRoutine Nothing A) ++ []) ++ [Regular EmitPair]
+--Observe c :: (mapRoutine Nothing (A) ++ [EmitPair]) ++ []) = Observe c :: ((mapRoutine Nothing (A)) ++ []) ++ [Regular EmitPair])
 public export
 eqPrf2ToEnd : (a : Routine)
         -> (Observe c :: (mapRoutine Nothing (a ++ [EmitPair]) ++ [])
-                = Observe c :: ((mapRoutine Nothing a ++ []) ++ [Regular EmitPair]))
+                = Observe c :: (((mapRoutine Nothing a) ++ []) ++ [Regular EmitPair]))
 
 eqPrf2ToEnd a = cong (Observe c ::) $ Calc $
           |~ (mapRoutine Nothing (a ++ [EmitPair]) ++ [])

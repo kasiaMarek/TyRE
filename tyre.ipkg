@@ -24,6 +24,7 @@ modules =   Data.SnocList.Elem
           , Verification.Thompson.Concat
           , Verification.Thompson.Concat.Extra
           , Verification.Thompson.Concat.EqualityPrf
+          , Verification.Thompson.Alt
           , Verification.Thompson.Group
           , Verification.Routine
           , Verification.AcceptingPath

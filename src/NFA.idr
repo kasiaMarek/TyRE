@@ -52,7 +52,10 @@ data Instruction =
   --   EmitUnit
   | ||| Emit that the tape currently stores a pair
     EmitPair
-
+  |
+    EmitLeft
+  |
+    EmitRight
 public export
 Routine : Type
 Routine = List Instruction
@@ -127,13 +130,24 @@ emitPair          : Step
 emitPair v        = MkVMState v.recording v.memory (v.evidence :< PairMark)
 
 public export
+emitLeft          : Step
+emitLeft v        = MkVMState v.recording v.memory (v.evidence :< LeftBranchMark)
+
+public export
+emitRight          : Step
+emitRight v        = MkVMState v.recording v.memory (v.evidence :< RightBranchMark)
+
+public export
 stepForInstruction : (mc : Maybe Char) -> Instruction -> Step
 
 stepForInstruction mc       Record      = startRecording
 stepForInstruction mc       EmitString  = emitString
 stepForInstruction mc       EmitPair    = emitPair
+stepForInstruction mc       EmitLeft    = emitLeft
+stepForInstruction mc       EmitRight   = emitRight
 stepForInstruction (Just c) EmitLast    = emitChar c
 stepForInstruction Nothing  EmitLast    = (\t => t)
+
 
 public export
 execute : (mc : Maybe Char) -> Routine -> Step

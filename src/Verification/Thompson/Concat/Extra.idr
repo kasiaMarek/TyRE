@@ -32,19 +32,29 @@ public export
 injectionForCTh2 : (x : a) -> (y: a) -> (CTh2 x = CTh2 y) -> (x = y)
 injectionForCTh2 x x Refl = Refl
 
+export
+rforEnd : (pos: CEnd `Elem` [CEnd]) -> (r : Routine)
+        -> (extractBasedOnFst {b = Routine} [CEnd] [r] CEnd pos = r)
+rforEnd Here _ = Refl
+rforEnd (There _) _ impossible
+
 public export
-rforEnd : (pos: CEnd `Elem` [CEnd])
+rforEndConcat : (pos: CEnd `Elem` [CEnd])
         -> (extractBasedOnFst {b = Routine} [CEnd] [[EmitPair]] CEnd pos = [EmitPair])
-rforEnd Here = Refl
-rforEnd (There _) impossible
+rforEndConcat Here = Refl
+rforEndConcat (There _) impossible
 
 public export
 ch2NotElemOFEnd : (s : a) -> (CTh2 s `Elem` [CEnd]) -> Void
 ch2NotElemOFEnd s (There _) impossible
 
 public export
+ch1NotElemOFEnd : (s : a) -> (CTh1 s `Elem` [CEnd]) -> Void
+ch1NotElemOFEnd s (There _) impossible
+
+public export
 cannotStepFrom2To1 : {0 a : Type} -> (sm2 : SM) -> (s: sm2.nfa.State) -> (c : Char) -> (t: a)
-                  -> ((CTh1 t) `Elem` (fst $ combineTransitions $ nextFromTwo {a} sm2 s c)) -> Void
+                  -> ((CTh1 t) `Elem` (fst $ combineTransitions $ twoToEndConcat {a} sm2 s c)) -> Void
 cannotStepFrom2To1 sm2 s c t pos with (sm2.prog.next s c)
   cannotStepFrom2To1 sm2 s c t pos | routine with (sm2.nfa.next s c)
     cannotStepFrom2To1 sm2 s c t pos | [] | [] impossible
@@ -65,6 +75,7 @@ cTh1NotInStart2Cons sm2 s pos with (sm2.prog.init)
         cTh1NotInStart2Cons sm2 s pos' | xs | ys
       cTh1NotInStart2Cons sm2 s (There pos') | (x :: xs) | (y :: ys) | False =
         cTh1NotInStart2Cons sm2 s pos' | xs | ys
+
 
 aboutCombiningTransitionsForOldAux : (d : CombineTransitionData a b c)
                         -> (state: (CState a b))
@@ -153,7 +164,7 @@ record CombiningTransitionsForOldData  {a, b, c: Type}
   routineEqualityPrf : (extractBasedOnFst (fst $ combineTransitions d) (snd $ combineTransitions d) state prf
                           = extractBasedOnFst d.oldStates d.rout1 oldState oldIsElemOfOld)
 
-public export
+export
 aboutCombiningTransitionsForOld : (d : CombineTransitionData a b c)
                         -> (state: (CState a b))
                         -> (prf: state `Elem` fst (combineTransitions d))
@@ -181,7 +192,7 @@ record CombiningTransitionsForNewData  {a, b, c: Type}
                         = extractBasedOnFst d.oldStates d.rout1 oldState oldIsElemOfOld
                             ++ extractBasedOnFst d.newStart d.rout2 state stateIsElemOfNew
 
-public export
+export
 aboutCombiningTransitionsForNew : (d : CombineTransitionData a b c)
                         -> (state: (CState a b))
                         -> (prf: state `Elem` fst (combineTransitions d))

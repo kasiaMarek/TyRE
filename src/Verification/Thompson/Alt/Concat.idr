@@ -56,8 +56,7 @@ evidenceTh2 {re2} (Step (CTh2 s) c CEnd prf1 (Accept CEnd Refl)) =
                   (Accept {nfa = (thompson re2).nfa} ans.oldState ans.oldAccepts))
   in MkEvidenceTh2Data
           word acc'
-          rewrite ans.routineEqualityPrf in
-            rewrite (rforEndConcat ans.stateIsElemOfNew) in (eqPrf2ToEnd _)
+          rewrite ans.routineEqualityPrf in rewrite (rforEnd ans.stateIsElemOfNew) in (eqPrf2ToEnd _)
 
 evidenceTh2 {re1, re2} (Step (CTh2 s) c (CTh2 t) prf1 acc) =
   let rest : EvidenceTh2Data {re1,re2} acc
@@ -124,7 +123,7 @@ evidenceTh1 (Step (CTh1 s) c CEnd prf1 (Accept CEnd Refl)) =
         []  (Start {nfa = sm2.nfa} ans2.oldState ans2.oldIsElemOfOld
                     (Accept {nfa = sm2.nfa} ans2.oldState ans2.oldAccepts))
         rewrite ans1.routineEqualityPrf in (rewrite ans2.routineEqualityPrf in
-          (rewrite (rforEndConcat ans2.stateIsElemOfNew) in (cong (Observe c ::) (eqPrf1ToEnd _ _))))
+          (rewrite (rforEnd ans2.stateIsElemOfNew) in (cong (Observe c ::) (eqPrf1ToEnd _ _))))
 
 public export
 record ConcatEvidencePrfData  {word : Word} (re1 : CoreRE) (re2: CoreRE)
@@ -158,7 +157,7 @@ concatEvidencePrf re1 re2 (Start CEnd prf (Accept CEnd Refl)) =
         [] (Start {nfa = (thompson re2).nfa} ans2.oldState ans2.oldIsElemOfOld
               (Accept {nfa = (thompson re2).nfa} ans2.oldState ans2.oldAccepts))
         rewrite ans1.routineEqualityPrf in (rewrite ans2.routineEqualityPrf in
-            (rewrite (rforEndConcat ans2.stateIsElemOfNew) in (eqPrf1ToEnd _ _)))
+            (rewrite (rforEnd ans2.stateIsElemOfNew) in (eqPrf1ToEnd _ _)))
 
 concatEvidencePrf {word=(c::w)} re1 re2 (Start (CTh2 s) prf (Step (CTh2 s) c t prf1 acc)) =
   let sm1 : SM
