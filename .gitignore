@@ -5,3 +5,4 @@
 *\failures
 *\depends
 performance/astest/out.png
+*.html

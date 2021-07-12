@@ -4,6 +4,7 @@ import Codes
 import Data.SnocList
 import Data.SnocList.Elem
 import Data.SnocList.Extra
+import Data.List
 
 %default total
 
@@ -81,11 +82,11 @@ recontextualise prf1 (ARight {ford, ev2, evs} prf prf2 c1) =
 extractResultAuxChar : (ev : Evidence) -> (0 prf : ev `Encodes` (cs :< c))
                     -> (0 prf1 : prf = AChar prf' c')
                     -> Result ev c cs
+
 extractResultAuxChar (evs :< CharMark c') (AChar prf' c') Refl = MkResult c' evs prf'
 
 extractResult : (ev : Evidence) -> (0 prf : ev `Encodes` (cs :< c)) -> Result ev c cs
 
-extractResult (evs :< CharMark x) (AChar prf x) = MkResult x evs prf
 extractResult [<] (APair prf prf1 prf2) impossible
 extractResult [<] (ALeft prf prf1 c2) impossible
 extractResult [<] (ARight prf prf2 c1) impossible
@@ -100,7 +101,7 @@ extractResult (e@(evs ++ (ev1 ++ ev2)) :< PairMark) (APair {cs, c1, c2, ford=Ref
         result1 = extractResult result2.rest (result2.restValid)
   in MkResult (result1.result, result2.result) result1.rest result1.restValid
 
-extractResult (evs :< (GroupMark sx)) (AGroup prf sx) = MkResult (pack $ asList sx) evs prf
+extractResult (evs :< (GroupMark sx)) (AGroup prf sx) = MkResult (pack $ reverse $ asList sx) evs prf
 
 extractResult (e@(evs ++ ev) :< LeftBranchMark) (ALeft {ford = Refl} prf prf1 c2) =
   let result = extractResult e (recontextualise prf prf1)

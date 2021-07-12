@@ -7,7 +7,6 @@ import NFA.Thompson
 import Verification.AcceptingPath
 import Verification
 import Verification.Thompson
--- import StringRE
 import CoreTyRE
 
 %default total
