@@ -10,6 +10,7 @@ import NFA.Thompson
 import Verification.AcceptingPath
 import Extra
 import Verification.Routine
+import Verification.Thompson.Extra
 import Verification.Thompson.Concat.Extra
 import Verification.Thompson.Concat.EqualityPrf
 

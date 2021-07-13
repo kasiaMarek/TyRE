@@ -43,6 +43,7 @@ cTh2InstElemOfNextFromOneAlt sm s t c pos with (sm.prog.next t c)
         cTh2InstElemOfNextFromOneAlt sm s t c pos' | rs | ss
       cTh2InstElemOfNextFromOneAlt sm s t c (There pos') | (r::rs) | (s'::ss) | False =
         cTh2InstElemOfNextFromOneAlt sm s t c pos' | rs | ss
+
 export
 cTh1InstElemOfNextFromTwoAlt : {0 a : Type} -> (sm : SM) -> (s : a)
                             -> (t : sm.nfa.State) -> (c : Char)
@@ -56,3 +57,9 @@ cTh1InstElemOfNextFromTwoAlt sm s t c pos with (sm.prog.next t c)
         cTh1InstElemOfNextFromTwoAlt sm s t c pos' | rs | ss
       cTh1InstElemOfNextFromTwoAlt sm s t c (There pos') | (r::rs) | (s'::ss) | False =
         cTh1InstElemOfNextFromTwoAlt sm s t c pos' | rs | ss
+
+export
+rforEnd : (pos: CEnd `Elem` [CEnd]) -> (r : Routine)
+        -> (extractBasedOnFst {b = Routine} [CEnd] [r] pos = r)
+rforEnd Here _ = Refl
+rforEnd (There _) _ impossible

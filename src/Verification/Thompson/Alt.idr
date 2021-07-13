@@ -10,7 +10,7 @@ import NFA.Thompson
 import Verification.AcceptingPath
 import Extra
 import Verification.Routine
-import Verification.Thompson.Concat.Extra
+import Verification.Thompson.Extra
 import Verification.Thompson.Alt.Extra
 import Verification.Thompson.Alt.EqualityPrf
 
@@ -77,7 +77,7 @@ altEvidencePrfAuxLeft re1 re2 (Step (CTh1 s) c (CTh1 t) prf (Step (CTh1 t) c' s'
       rest := altEvidencePrfAuxLeft re1 re2 (Step {nfa = (thompson $ Alt re1 re2).nfa} (CTh1 t) c' s' prf' acc)
       aos : CombiningTransitionsForOldData (nextFromOneAlt sm1 s c) (CTh1 t) prf t
       aos = aboutCombiningTransitionsForOld (nextFromOneAlt sm1 s c) (CTh1 t)
-                                            prf t (\x,x,Refl => Refl)
+                                            prf t injectionForCTh1
                                             Refl (ch1NotElemOFEnd t)
   in MkAltEvLeftDataAux (c::rest.word1)
       (Step {nfa = sm1.nfa} s c t (aos.oldIsElemOfOld) rest.acc1)
@@ -109,7 +109,7 @@ altEvidencePrfAuxRight re1 re2 (Step (CTh2 s) c (CTh2 t) prf (Step (CTh2 t) c' s
       rest := altEvidencePrfAuxRight re1 re2 (Step {nfa = (thompson $ Alt re1 re2).nfa} (CTh2 t) c' s' prf' acc)
       aos : CombiningTransitionsForOldData (nextFromTwoAlt sm2 s c) (CTh2 t) prf t
       aos = aboutCombiningTransitionsForOld (nextFromTwoAlt sm2 s c) (CTh2 t)
-                                            prf t (\x,x,Refl => Refl)
+                                            prf t injectionForCTh2
                                             Refl (ch2NotElemOFEnd t)
   in MkAltEvRightDataAux (c::rest.word2)
       (Step {nfa = sm2.nfa} s c t (aos.oldIsElemOfOld) rest.acc2)
@@ -168,7 +168,7 @@ altEvidencePrf re1 re2 (Start s prf acc) with (
         rest = altEvidencePrfAuxLeft re1 re2 acc
         aos : CombiningTransitionsForOldData (initOneAlt sm1) (CTh1 s) pos s
         aos = aboutCombiningTransitionsForOld (initOneAlt sm1) (CTh1 s)
-                                              pos s (\x,x,Refl => Refl)
+                                              pos s injectionForCTh1
                                               Refl (ch1NotElemOFEnd _)
     in Left $ MkAltEvidencePrfLeftData
                 rest.word1
@@ -191,7 +191,7 @@ altEvidencePrf re1 re2 (Start s prf acc) with (
         rest = altEvidencePrfAuxRight re1 re2 acc
         aos : CombiningTransitionsForOldData (initTwoAlt sm2) (CTh2 s) pos s
         aos = aboutCombiningTransitionsForOld (initTwoAlt sm2) (CTh2 s)
-                                              pos s (\x,x,Refl => Refl)
+                                              pos s injectionForCTh2
                                               Refl (ch2NotElemOFEnd _)
     in Right $ MkAltEvidencePrfRightData
                 rest.word2
