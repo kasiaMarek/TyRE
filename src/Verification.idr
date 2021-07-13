@@ -10,6 +10,7 @@ import Data.Vect.Elem
 import Extra
 import Extra.Reflects
 import Verification.AcceptingPath
+import Data.Stream
 
 recordPathHelper : {auto nfa : NA} -> {auto prog: Program nfa} -> (c: Char) -> (td : Thread nfa)
               -> (td': Thread nfa ** (td' `Elem` runMapping c td, (acc: AcceptingFrom nfa td'.naState cs ** extractEvidenceFrom td' acc = ev)))
@@ -85,3 +86,27 @@ extractEvidenceEquality nfa prog str ev prf =
       prf = rewrite satQ in rewrite eqToExtractFst in ftd'
 
   in (Start td.naState isElem' acc ** rewrite prf in eq)
+
+
+0 eqForStreamFrom : (nfa : NA)
+                  -> (prog : Program nfa)
+                  -> (stm : Stream Char)
+                  -> (tds : List (Thread nfa))
+                  -> (str : Word ** runFrom str tds = runFromStream stm tds)
+eqForStreamFrom nfa prog stm []   = ([] ** Refl)
+eqForStreamFrom nfa prog (c::cs) (t::tds) with (findR (\td => nfa.accepting td.naState) (t::tds)) proof p
+  eqForStreamFrom nfa prog (c::cs) (t::tds) | ((Just x) `Because` _) = ([] ** rewrite p in Refl)
+  eqForStreamFrom nfa prog (c::cs) (t::tds) | (Nothing `Because` _) =
+    let nextTds : List (Thread nfa)
+        nextTds = runMain c (t::tds)
+        rest : (str : Word ** runFrom str nextTds = runFromStream cs nextTds)
+        rest = eqForStreamFrom nfa prog cs nextTds
+        (wordTail ** eqRest) := rest
+    in (c::wordTail ** eqRest)
+
+public export
+0 eqForStream : (nfa : NA)
+              -> (prog : Program nfa)
+              -> (stm : Stream Char)
+              -> (str : Word ** runAutomaton str = runAutomatonStream stm)
+eqForStream nfa prog stm = eqForStreamFrom nfa prog stm initialise
