@@ -74,10 +74,12 @@ public export
 pairEq : ((a, x) = (b, y)) -> (a = b, x = y)
 pairEq Refl = (Refl, Refl)
 
+public export
 eitherToMaybe : Either a () -> Maybe a
 eitherToMaybe (Left x) = Just x
 eitherToMaybe (Right _) = Nothing
 
+public export
 eitherToMaybeR : Either () a -> Maybe a
 eitherToMaybeR (Left _) = Nothing
 eitherToMaybeR (Right x) = Just x

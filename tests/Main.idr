@@ -26,7 +26,8 @@ stringTests = MkTestPool "stringRE" [] Nothing
 
 fullTyRETests : TestPool
 fullTyRETests = MkTestPool "fulltyre" [] Nothing
-            [ "fulltyre/time"
+            [ "fulltyre/time",
+              "fulltyre/timeNoStr"
             ]
 
 main : IO ()
