@@ -85,12 +85,6 @@ recontextualise prf1 (ARight {ford, ev2, evs} prf prf2 c1) =
 
 recontextualise prf1 (AnEmpty prf) = AnEmpty (recontextualise prf1 prf)
 
-extractResultAuxChar : (ev : Evidence) -> (0 prf : ev `Encodes` (cs :< c))
-                    -> (0 prf1 : prf = AChar prf' c')
-                    -> Result ev c cs
-
-extractResultAuxChar (evs :< CharMark c') (AChar prf' c') Refl = MkResult c' evs prf'
-
 extractResult : (ev : Evidence) -> (0 prf : ev `Encodes` (cs :< c)) -> Result ev c cs
 
 extractResult (evs :< CharMark c') (AChar prf c') = MkResult c' evs prf
