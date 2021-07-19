@@ -1,6 +1,7 @@
 module Core
 
 import public Codes
+import Data.List
 
 %default total
 
@@ -11,7 +12,7 @@ data CoreRE =
     | Group CoreRE
     | Empty
     | Alt CoreRE CoreRE
-    -- | Star CoreRE
+    | Star CoreRE
 
 public export
 ShapeCode: CoreRE -> Code
@@ -20,7 +21,7 @@ ShapeCode (Concat x y)  = PairC (ShapeCode x) (ShapeCode y)
 ShapeCode (Group _)     = StringC
 ShapeCode Empty         = UnitC
 ShapeCode (Alt x y)     = EitherC (ShapeCode x) (ShapeCode y)
--- ShapeCode (Star x)      = ListC (ShapeCode x)
+ShapeCode (Star x)      = ListC (ShapeCode x)
 
 public export
 Shape: CoreRE -> Type
@@ -38,3 +39,4 @@ showAux {re = (Group _)} str = str
 showAux {re = (Alt re1 re2)} (Left x) = "Left " ++ showAux x
 showAux {re = (Alt re1 re2)} (Right x) = "Right " ++ showAux x
 showAux {re = Empty} () = "()"
+showAux {re = (Star re)} xs = show $ map (showAux {re}) xs

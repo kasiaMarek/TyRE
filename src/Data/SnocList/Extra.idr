@@ -11,3 +11,8 @@ public export
 appendNilLeftNeutral  : {a : Type} -> {x : SnocList a} -> [<] ++ x = x
 appendNilLeftNeutral {x = [<]} = Refl
 appendNilLeftNeutral {x = (sx :< x)} = cong (:< x) (appendNilLeftNeutral {x = sx})
+
+public export
+replicateSnoc : Nat -> (elem : a) -> SnocList a
+replicateSnoc 0 elem = [<]
+replicateSnoc (S k) elem = (replicateSnoc k elem) :< elem

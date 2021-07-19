@@ -25,7 +25,7 @@ thompsonRoutinePrf : (re : CoreRE)
                   -> (mcvm  : (Maybe Char, VMState))
                   -> (ev  : Evidence
                         ** (executeRoutineFrom (extractRoutine (thompson re).nfa (thompson re).prog acc) mcvm
-                              = (snd mcvm).evidence ++ ev, ev `Encodes` [< ShapeCode re]))
+                              = (snd mcvm).evidence ++ ev, ev `Encodes` [< Right $ ShapeCode re]))
 
 thompsonRoutinePrf (Pred f) (Start s (There prf) x) mcvm = absurd prf
 thompsonRoutinePrf {word = []} (Pred f) (Start StartState Here (Accept StartState prf)) mcvm = absurd prf
@@ -52,9 +52,9 @@ thompsonRoutinePrf (Concat re1 re2) acc mcvm =
       routineEquality : ((snd $ executeRoutineSteps (exr1 ++ exr2 ++ [Regular EmitPair]) mcvm).evidence
                             = (snd $ executeRoutineSteps exr2 (executeRoutineSteps exr1 mcvm)).evidence :< PairMark)
       routineEquality = concatRoutinePrf exr1 exr2 mcvm
-      encodes : (((ev1 ++ ev2) :< PairMark) `Encodes` ([<] :< PairC (ShapeCode re1) (ShapeCode re2)))
+      encodes : (((ev1 ++ ev2) :< PairMark) `Encodes` ([<] :< (Right $ PairC (ShapeCode re1) (ShapeCode re2))))
       encodes = replace
-                  {p=(`Encodes` ([<] :< PairC (ShapeCode re1) (ShapeCode re2)))}
+                  {p=(`Encodes` ([<] :< (Right $ PairC (ShapeCode re1) (ShapeCode re2))))}
                   (cong (:< PairMark) appendNilLeftNeutral)
                   (APair Lin encodes1 encodes2)
   in rewrite p.routineEq in rewrite routineEquality in (ev1 ++ ev2 ++ [< PairMark]
@@ -72,8 +72,8 @@ thompsonRoutinePrf (Group re) (Start (Left z) initprf (Step (Left z) c t prf acc
 thompsonRoutinePrf (Alt re1 re2) acc mcvm with (altEvidencePrf re1 re2 acc)
   thompsonRoutinePrf (Alt re1 re2) acc mcvm | (Left (MkAltEvidencePrfLeftData word1 acc1 routineEq)) =
     let (ev ** (eq, encodesPrev)) := thompsonRoutinePrf re1 acc1 mcvm
-        encodes : (ev ++ [< LeftBranchMark]) `Encodes` ([<] :< EitherC (ShapeCode re1) (ShapeCode re2))
-        encodes = replace {p=(`Encodes` ([<] :< EitherC (ShapeCode re1) (ShapeCode re2)))}
+        encodes : (ev ++ [< LeftBranchMark]) `Encodes` ([<] :< (Right $ EitherC (ShapeCode re1) (ShapeCode re2)))
+        encodes = replace {p=(`Encodes` ([<] :< (Right $ EitherC (ShapeCode re1) (ShapeCode re2))))}
                       (cong (:< LeftBranchMark) appendNilLeftNeutral)
                       (ALeft Lin encodesPrev (ShapeCode re2))
     in rewrite routineEq in (ev ++ [< LeftBranchMark] **
@@ -83,8 +83,8 @@ thompsonRoutinePrf (Alt re1 re2) acc mcvm with (altEvidencePrf re1 re2 acc)
 
   thompsonRoutinePrf (Alt re1 re2) acc mcvm | (Right (MkAltEvidencePrfRightData word2 acc2 routineEq)) =
     let (ev ** (eq, encodesPrev)) := thompsonRoutinePrf re2 acc2 mcvm
-        encodes : (ev ++ [< RightBranchMark]) `Encodes` ([<] :< EitherC (ShapeCode re1) (ShapeCode re2))
-        encodes = replace {p=(`Encodes` ([<] :< EitherC (ShapeCode re1) (ShapeCode re2)))}
+        encodes : (ev ++ [< RightBranchMark]) `Encodes` ([<] :< (Right $ EitherC (ShapeCode re1) (ShapeCode re2)))
+        encodes = replace {p=(`Encodes` ([<] :< (Right $ EitherC (ShapeCode re1) (ShapeCode re2))))}
                       (cong (:< RightBranchMark) appendNilLeftNeutral)
                       (ARight Lin encodesPrev (ShapeCode re1))
     in rewrite routineEq in (ev ++ [< RightBranchMark] **
@@ -94,11 +94,11 @@ thompsonRoutinePrf (Alt re1 re2) acc mcvm with (altEvidencePrf re1 re2 acc)
 public export
 thompsonPrf : (re : CoreRE)
             -> (acc: Accepting (thompson re).nfa word)
-            -> (extractEvidence {nfa = (thompson re).nfa, prog = (thompson re).prog} acc `Encodes` [< ShapeCode re])
+            -> (extractEvidence {nfa = (thompson re).nfa, prog = (thompson re).prog} acc `Encodes` [< Right $ ShapeCode re])
 
 thompsonPrf re acc =
   let rprf := extractRoutinePrf (thompson re).nfa (thompson re).prog acc
       (ev ** (concat, encodes)) := thompsonRoutinePrf re acc (Nothing, initVM)
       prf : (ev = extractEvidence {nfa = (thompson re).nfa, prog = (thompson re).prog} acc)
       prf = trans (sym $ appendNilLeftNeutral {x = ev}) (trans (sym concat) rprf)
-  in replace {p=(\e => e `Encodes` [< ShapeCode re])} prf encodes
+  in replace {p=(\e => e `Encodes` [< Right $ ShapeCode re])} prf encodes
