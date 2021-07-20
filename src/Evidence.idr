@@ -60,7 +60,7 @@ data Encodes : Evidence -> SnocList (Either () Code) -> Type where
     -> (evs :< UnitMark) `Encodes` cs :< (Right UnitC)
   ARepetiton
     : (prf : evs `Encodes` cs)
-    -> (prf1: evss `Encodes` (replicateSnoc n (Right c)))
+    -> (prf1: evss `Encodes` (replicate n (Right c)))
     -> {auto ford: ev' = evs :< EList ++ evss}
     -> (ev' :< BList) `Encodes` (cs :< (Right (ListC c)))
 
@@ -71,6 +71,7 @@ record Result (ev : Evidence) (c : Code) (cs : SnocList (Either () Code)) where
   rest   : Evidence
   0 restValid : rest `Encodes` cs
 
+export
 recontextualise : (prf1 : evs1 `Encodes` cs1)
               -> (prf2 : evs2 `Encodes` cs2)
               -> (evs1 ++ evs2) `Encodes` (cs1 ++ cs2)
@@ -101,7 +102,7 @@ recontextualise prf1 (ARepetiton {ford} prf prf') =
   ARepetiton (recontextualise prf1 prf) prf'
     {ford = trans (cong (evs1 ++) ford) appendAssociative}
 
-helper : (0 prf : [<] `Encodes` (cs :< (Left ()) ++ (replicateSnoc n (Right c)))) -> Void
+helper : (0 prf : [<] `Encodes` (cs :< (Left ()) ++ (replicate n (Right c)))) -> Void
 helper (AnEndMark prf) impossible
 helper (AChar prf x) impossible
 helper (APair prf prf1 prf2) impossible
@@ -115,17 +116,17 @@ mutual
   extractRepRecSucc : (ev : Evidence)
                     -> (0 n : Nat)
                     -> (0 prff : n = (S k))
-                    -> (0 prf : ev `Encodes` (cs :< (Left ()) ++ (replicateSnoc n (Right c))))
+                    -> (0 prf : ev `Encodes` (cs :< (Left ()) ++ (replicate n (Right c))))
                     -> Result ev (ListC c) cs
   extractRepRecSucc ev {c} (S k) Refl prf =
-    let res : Result ev c (cs :< (Left ()) ++ (replicateSnoc k (Right c)))
+    let res : Result ev c (cs :< (Left ()) ++ (replicate k (Right c)))
         res = extractResult ev prf
         rest : Result res.rest (ListC c) cs
         rest = extractRepRec res.rest res.restValid
     in MkResult (res.result :: rest.result) rest.rest rest.restValid
 
   extractRepRecAux : (ev : Evidence)
-                    -> (0 prf : ev `Encodes` (cs :< (Left ()) ++ (replicateSnoc n (Right c))))
+                    -> (0 prf : ev `Encodes` (cs :< (Left ()) ++ (replicate n (Right c))))
                     -> (0 prf1 : ev = ev' :< e)
                     -> (0 prf2 : e = EList -> Void)
                     -> Result ev (ListC c) cs
@@ -138,7 +139,7 @@ mutual
     in extractRepRecSucc (ev' :< e) n (snd eqPrf) prf
 
   extractRepRec : (ev : Evidence)
-                -> (0 prf : ev `Encodes` (cs :< (Left ()) ++ (replicateSnoc n (Right c))))
+                -> (0 prf : ev `Encodes` (cs :< (Left ()) ++ (replicate n (Right c))))
                 -> Result ev (ListC c) cs
   extractRepRec [<] prf = absurd (helper prf)
   extractRepRec (sx :< PairMark) prf = extractRepRecAux (sx :< PairMark) prf Refl (\case _ impossible)
@@ -149,7 +150,7 @@ mutual
   extractRepRec (sx :< UnitMark) prf = extractRepRecAux (sx :< UnitMark) prf Refl (\case _ impossible)
   extractRepRec (sx :< BList) prf = extractRepRecAux (sx :< BList) prf Refl (\case _ impossible)
   extractRepRec (sx :< EList) {n, c} prf =
-    let 0 eqPrf : (replicateSnoc n (Right c) = [<])
+    let 0 eqPrf : (SnocList.Extra.replicate n (Right c) = [<])
         eqPrf = case n of
                   0 => Refl
                   (S k) => case prf of {_ impossible}

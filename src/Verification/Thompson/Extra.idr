@@ -12,31 +12,31 @@ import Extra
 
 %default total
 
-public export
+export
 CTh1notEqCEnd : (s : a) -> Not (CTh1 s = CEnd)
 CTh1notEqCEnd s prf = absurd prf
 
-public export
+export
 CTh2notEqCEnd : (s : a) -> Not (CTh2 s = CEnd)
 CTh2notEqCEnd s prf = absurd prf
 
-public export
+export
 CTh2notEqCTh1 : (s : a) -> Not (CTh1 s = CTh2 s')
 CTh2notEqCTh1 s prf = absurd prf
 
-public export
+export
 injectionForCTh1 : (x : a) -> (y: a) -> (CTh1 x = CTh1 y) -> (x = y)
 injectionForCTh1 x x Refl = Refl
 
-public export
+export
 injectionForCTh2 : (x : a) -> (y: a) -> (CTh2 x = CTh2 y) -> (x = y)
 injectionForCTh2 x x Refl = Refl
 
-public export
+export
 ch2NotElemOFEnd : (s : a) -> (CTh2 s `Elem` [CEnd]) -> Void
 ch2NotElemOFEnd s (There _) impossible
 
-public export
+export
 ch1NotElemOFEnd : (s : a) -> (CTh1 s `Elem` [CEnd]) -> Void
 ch1NotElemOFEnd s (There _) impossible
 

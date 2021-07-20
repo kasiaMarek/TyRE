@@ -139,3 +139,7 @@ mapFSpec f q p (x1 :: xs) (x2 :: ys) spec y (pos, satP) =
       let (x1' ** (x2' ** (pos' ** (ex', eq', satQ')))) =
             mapFSpec f q p xs ys spec y (pos, satP)
       in (x1' ** (x2' ** (There pos' ** (ex', eq', satQ'))))
+
+export
+bindOnEmptyList : (f : a -> List b) -> ((((the $ List a)[]) >>= f) = (the $ List b)[])
+bindOnEmptyList f = Refl

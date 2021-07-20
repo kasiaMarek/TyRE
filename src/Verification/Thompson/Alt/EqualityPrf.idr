@@ -11,7 +11,7 @@ altLeftEqPrfAux : (mcvm : (Maybe Char, VMState))
                     (snd $ mcvm).evidence :< LeftBranchMark)
 altLeftEqPrfAux (mc, vm) = Refl
 
-public export
+export
 altLeftEqPrf : (exr : ExtendedRoutine) -> (mcvm : (Maybe Char, VMState))
             -> ((snd $ executeRoutineSteps (exr ++ [Regular EmitLeft]) mcvm).evidence
                       = (snd $ executeRoutineSteps exr mcvm).evidence :< LeftBranchMark)
@@ -26,7 +26,7 @@ altRightEqPrfAux : (mcvm : (Maybe Char, VMState))
                    (snd $ mcvm).evidence :< RightBranchMark)
 altRightEqPrfAux (mc, vm) = Refl
 
-public export
+export
 altRightEqPrf : (exr : ExtendedRoutine) -> (mcvm : (Maybe Char, VMState))
            -> ((snd $ executeRoutineSteps (exr ++ [Regular EmitRight]) mcvm).evidence
                      = (snd $ executeRoutineSteps exr mcvm).evidence :< RightBranchMark)

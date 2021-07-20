@@ -57,6 +57,10 @@ data Instruction =
     EmitLeft
   |
     EmitRight
+  |
+    EmitBList
+  |
+    EmitEList
 
 public export
 Routine : Type
@@ -126,6 +130,14 @@ emitUnit          : Step
 emitUnit v        = MkVMState v.recording v.memory (v.evidence :< UnitMark)
 
 public export
+emitBList          : Step
+emitBList v        = MkVMState v.recording v.memory (v.evidence :< BList)
+
+public export
+emitEList          : Step
+emitEList v        = MkVMState v.recording v.memory (v.evidence :< EList)
+
+public export
 stepForInstruction : (mc : Maybe Char) -> Instruction -> Step
 
 stepForInstruction mc       Record      = startRecording
@@ -134,9 +146,10 @@ stepForInstruction mc       EmitPair    = emitPair
 stepForInstruction mc       EmitLeft    = emitLeft
 stepForInstruction mc       EmitRight   = emitRight
 stepForInstruction mc       EmitUnit    = emitUnit
+stepForInstruction mc       EmitBList   = emitBList
+stepForInstruction mc       EmitEList   = emitEList
 stepForInstruction (Just c) EmitLast    = emitChar c
 stepForInstruction Nothing  EmitLast    = (\t => t)
-
 
 public export
 execute : (mc : Maybe Char) -> Routine -> Step

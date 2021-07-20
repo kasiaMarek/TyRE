@@ -18,18 +18,18 @@ stepInGroupToLeftState  : {0 a : Type} -> (c: Char) -> (s : Either a AState) -> 
                         -> (next : a -> Char -> List a) -> (prf: (Left t) `Elem` (fst (nextGroup {a} acc next s c)))
                         -> (extractBasedOnFst (fst (nextGroup acc next s c)) (snd (nextGroup acc next s c)) prf = [])
 
-stepInGroupToLeftState c (Right EndState) t acc next prf = absurd prf
+stepInGroupToLeftState c (Right ASt) t acc next prf = absurd prf
 stepInGroupToLeftState c (Left x) t acc next pos with ((findR acc (next x c)).Holds)
   stepInGroupToLeftState c (Left x) t acc next pos | Nothing = (extractBasedOnFstFromRep _ _ _)
   stepInGroupToLeftState c (Left x) t acc next (There pos) | (Just _) = (extractBasedOnFstFromRep _ _ _)
 
 stepInGroupToRightState : {0 a : Type} -> (c: Char) -> (s : Either a AState) -> (acc : a -> Bool)
-                        -> (next : a -> Char -> List a) -> (prf: (Right EndState) `Elem` (fst (nextGroup {a} acc next s c)))
+                        -> (next : a -> Char -> List a) -> (prf: (Right ASt) `Elem` (fst (nextGroup {a} acc next s c)))
                         -> (extractBasedOnFst (fst (nextGroup acc next s c)) (snd (nextGroup acc next s c)) prf = [EmitString])
 
-stepInGroupToRightState c (Right EndState) acc next prf = absurd prf
+stepInGroupToRightState c (Right ASt) acc next prf = absurd prf
 stepInGroupToRightState c (Left x) acc next pos with ((findR acc (next x c)).Holds)
-  stepInGroupToRightState c (Left x) acc next pos | Nothing = absurd (rightCantBeElemOfLeft EndState (next x c) pos)
+  stepInGroupToRightState c (Left x) acc next pos | Nothing = absurd (rightCantBeElemOfLeft ASt (next x c) pos)
   stepInGroupToRightState c (Left x) acc next Here | (Just _) = Refl
   stepInGroupToRightState c (Left x) acc next (There pos) | (Just _) = absurd (rightCantBeElemOfLeft _ _ pos)
 
@@ -45,7 +45,7 @@ evidenceForGroup  : (re : CoreRE) -> {s : (thompson (Group re)).nfa.State}
 
 evidenceForGroup re (Accept s prf) vm eqPrf = ([<] ** eqPrf)
 
-evidenceForGroup re (Step s c (Right EndState) prf1 (Accept (Right EndState) prf2)) vm eqPrf =
+evidenceForGroup re (Step s c (Right ASt) prf1 (Accept (Right ASt) prf2)) vm eqPrf =
     let routine = stepInGroupToRightState c s (thompson re).nfa.accepting (thompson re).nfa.next prf1
         word: SnocList Char
         word = (step c vm).memory

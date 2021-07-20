@@ -34,7 +34,6 @@ record AltEvidencePrfRightData  {word : Word} (re1 : CoreRE) (re2 : CoreRE)
   routineEq : (extractRoutine (thompson $ Alt re1 re2).nfa (thompson $ Alt re1 re2).prog acc =
                 (extractRoutine (thompson re2).nfa (thompson re2).prog acc2 ++ [Regular EmitRight]))
 
-public export
 record AltEvLeftDataAux  {word : Word} (re1 : CoreRE) (re2 : CoreRE) {s : (thompson re1).nfa.State}
                                   (acc: AcceptingFrom (thompson $ Alt re1 re2).nfa (CTh1 s) word) where
   constructor MkAltEvLeftDataAux
@@ -43,7 +42,6 @@ record AltEvLeftDataAux  {word : Word} (re1 : CoreRE) (re2 : CoreRE) {s : (thomp
   routineEq : (extractRoutineFrom {nfa =(thompson $ Alt re1 re2).nfa, prog=(thompson $ Alt re1 re2).prog} acc =
                 (extractRoutineFrom {nfa = (thompson re1).nfa, prog=(thompson re1).prog} acc1 ++ [Regular EmitLeft]))
 
-public export
 record AltEvRightDataAux  {word : Word} (re1 : CoreRE) (re2 : CoreRE) {s : (thompson re2).nfa.State}
                                   (acc: AcceptingFrom (thompson $ Alt re1 re2).nfa (CTh2 s) word) where
   constructor MkAltEvRightDataAux
@@ -52,7 +50,6 @@ record AltEvRightDataAux  {word : Word} (re1 : CoreRE) (re2 : CoreRE) {s : (thom
   routineEq : (extractRoutineFrom {nfa =(thompson $ Alt re1 re2).nfa, prog=(thompson $ Alt re1 re2).prog} acc =
                 (extractRoutineFrom {nfa = (thompson re2).nfa, prog=(thompson re2).prog} acc2 ++ [Regular EmitRight]))
 
-public export
 altEvidencePrfAuxLeft : (re1 : CoreRE) -> (re2 : CoreRE) -> {s : (thompson re1).nfa.State}
                     -> (acc: AcceptingFrom (thompson $ Alt re1 re2).nfa (CTh1 s) word)
                     -> AltEvLeftDataAux re1 re2 acc
@@ -83,7 +80,6 @@ altEvidencePrfAuxLeft re1 re2 (Step (CTh1 s) c (CTh1 t) prf (Step (CTh1 t) c' s'
       (Step {nfa = sm1.nfa} s c t (aos.oldIsElemOfOld) rest.acc1)
       (rewrite aos.routineEqualityPrf in rewrite rest.routineEq in (cong (Observe c ::) (appendAssociative _ _ _)))
 
-public export
 altEvidencePrfAuxRight : (re1 : CoreRE) -> (re2: CoreRE)
               -> {s : (thompson re2).nfa.State}
               -> (acc: AcceptingFrom (thompson $ Alt re1 re2).nfa (CTh2 s) word)
@@ -115,7 +111,7 @@ altEvidencePrfAuxRight re1 re2 (Step (CTh2 s) c (CTh2 t) prf (Step (CTh2 t) c' s
       (Step {nfa = sm2.nfa} s c t (aos.oldIsElemOfOld) rest.acc2)
       (rewrite aos.routineEqualityPrf in rewrite rest.routineEq in (cong (Observe c ::) (appendAssociative _ _ _)))
 
-public export
+export
 altEvidencePrf : (re1 : CoreRE) -> (re2: CoreRE)
                   -> (acc: Accepting (thompson $ Alt re1 re2).nfa word)
                   -> Either (AltEvidencePrfLeftData re1 re2 acc)

@@ -7,13 +7,13 @@ import Data.List.Elem
 import NFA
 import NFA.Thompson
 
-public export
+export
 rforEndConcat : (pos: CEnd `Elem` [CEnd])
         -> (extractBasedOnFst {b = Routine} [CEnd] [[EmitPair]] pos = [EmitPair])
 rforEndConcat Here = Refl
 rforEndConcat (There _) impossible
 
-public export
+export
 cannotStepFrom2To1 : {0 a : Type} -> (sm2 : SM) -> (s: sm2.nfa.State) -> (c : Char) -> (t: a)
                   -> ((CTh1 t) `Elem` (fst $ combineTransitions $ twoToEndConcat {a} sm2 s c)) -> Void
 cannotStepFrom2To1 sm2 s c t pos with (sm2.prog.next s c)
@@ -25,7 +25,7 @@ cannotStepFrom2To1 sm2 s c t pos with (sm2.prog.next s c)
       cannotStepFrom2To1 sm2 s c t (There pos) | (x :: xs) | (y :: ys) | False =
         cannotStepFrom2To1 sm2 s c t pos | xs | ys
 
-public export
+export
 cTh1NotInStart2Cons : {0 a : Type} -> (sm2 : SM) -> (s : a)
                     -> ((CTh1 s) `Elem` (fst $ start2Cons sm2)) -> Void
 cTh1NotInStart2Cons sm2 s pos with (sm2.prog.init)

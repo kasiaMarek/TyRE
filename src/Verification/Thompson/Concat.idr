@@ -149,7 +149,7 @@ record ConcatEvidencePrfData  {word : Word} (re1 : CoreRE) (re2: CoreRE)
                 extractRoutine (thompson re1).nfa (thompson re1).prog acc1 ++
                 extractRoutine (thompson re2).nfa (thompson re2).prog acc2 ++ [Regular EmitPair]
 
-public export
+export
 concatEvidencePrf : (re1 : CoreRE) -> (re2: CoreRE)
                   -> {0 word : Word}
                   -> (acc: Accepting (thompson $ Concat re1 re2).nfa word)

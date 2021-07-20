@@ -22,7 +22,7 @@ Eq PState where
 
 --When additional end accepting state needed
 public export
-data AState = EndState
+data AState = ASt
 
 Eq AState where
   _ == _ = True
@@ -91,12 +91,12 @@ nextGroup accepting nextNFA (Left st) c =
         -- case `thompson re`.next has no accepting states, we maintain the next states and substitute the routine with an empty one
         Nothing => (map Left mappedNext **
                       replicate (length $ map Left mappedNext) [])
-        -- case `thompson re`.next has an accepting state, we add `Right EndState` to next states
-        Just _ => ((Right EndState)::(map Left mappedNext) **
+        -- case `thompson re`.next has an accepting state, we add `Right ASt` to next states
+        Just _ => ((Right ASt)::(map Left mappedNext) **
                       [EmitString]::(replicate (length $ map Left mappedNext) []))
 
---if the state is `Right EndState` we accept and there is no next for it
-nextGroup accepting nextNFA (Right EndState) _ = ([] ** [])
+--if the state is `Right ASt` we accept and there is no next for it
+nextGroup accepting nextNFA (Right ASt) _ = ([] ** [])
 
 --functions for Concat and Alt
 public export
@@ -228,13 +228,51 @@ nextAlt sm1 sm2 (CTh1 st) c = combineTransitions $ nextFromOneAlt sm1 st c
 nextAlt sm1 sm2 (CTh2 st) c = combineTransitions $ nextFromTwoAlt sm2 st c
 nextAlt sm1 sm2 CEnd      _ = ([] ** [])
 
+--for Kleene Star
+public export
+acceptStar : (CState st AState) -> Bool
+acceptStar (CTh1 x) = False
+acceptStar (CTh2 x) = False
+acceptStar CEnd = True
+
+public export
+startStar : List (CState st AState)
+startStar = [CTh2 ASt, CEnd]
+
+public export
+initStar : Vect (length $ startStar {st}) Routine
+initStar = [[EmitEList], [EmitEList, EmitBList]]
+
+public export
+nextStar : (sm : SM)
+    -> (CState sm.nfa.State AState) -> Char
+    -> (xs: List (CState sm.nfa.State AState) ** Vect (length xs) Routine)
+
+nextStar sm (CTh1 s) c =
+  combineTransitions (MkCTD (sm.nfa.next s c) (sm.prog.next s c) sm.nfa.accepting CTh1 startStar [[], [EmitBList]])
+
+nextStar sm (CTh2 s) c =
+  let mapNext : (xs : List sm.nfa.State) -> Vect (length xs) Routine
+              -> (xs: List sm.nfa.State ** Vect (length xs) Routine)
+      mapNext [] [] = ([] ** [])
+      mapNext (s :: ss) (r :: rs) =
+        let rest : (xs: List sm.nfa.State ** Vect (length xs) Routine)
+            rest = mapNext ss rs
+        in ((sm.nfa.next s c) ++ (fst rest) **
+              replace {p=(\l => Vect l Routine)} (sym $ lengthDistributesOverAppend _ _) ((map (r++) (sm.prog.next s c)) ++ (snd rest)))
+      allNext : (xs: List sm.nfa.State ** Vect (length xs) Routine)
+      allNext = mapNext sm.nfa.start sm.prog.init
+  in combineTransitions (MkCTD (fst allNext) (snd allNext) sm.nfa.accepting CTh1 startStar [[], [EmitBList]])
+
+nextStar sm CEnd c = ([] ** [])
+
 --Thompson construction
 public export
 thompson : CoreRE -> SM
 thompson (Pred f) = MkSM (MkNFA PState acceptingPred [StartState]
                                 (nextNFAPred f)) (MkProgram [[]] (nextPred f))
 
-thompson (Empty) = MkSM (MkNFA AState (\_ => True) [EndState]
+thompson (Empty) = MkSM (MkNFA AState (\_ => True) [ASt]
                                 (\_,_ => [])) (MkProgram [[EmitUnit]] (\_,_ => []))
 thompson (Group re) =
   let prev : SM
@@ -322,5 +360,21 @@ thompson (Alt re1 re2) =
 
       prog : Program nfa
       prog = MkProgram (snd start) (\st => \c => snd (next st c))
+
+  in MkSM nfa prog
+
+thompson (Star re) =
+  let sm : SM
+      sm = thompson re
+      _ := sm.nfa.isEq
+
+      0 state : Type
+      state = CState sm.nfa.State AState
+
+      nfa : NA
+      nfa = MkNFA state acceptStar startStar (\st => \c => fst (nextStar sm st c))
+
+      prog : Program nfa
+      prog = MkProgram (initStar {st = sm.nfa.State}) (\st => \c => snd (nextStar sm st c))
 
   in MkSM nfa prog
