@@ -187,7 +187,7 @@ mutual
   extractResult (evs :< BList) (ARepetiton {ford, n} prf prf1) =
     let res : Result evs c cs
         res = extractRepRec evs (rewrite ford in (recontextualise (AnEndMark prf) prf1))
-    in MkResult res.result res.rest res.restValid
+    in MkResult (reverse res.result) res.rest res.restValid
 
 public export
 extract : (ev : Evidence) -> (0 prf : ev `Encodes` [< Right c]) -> Sem c

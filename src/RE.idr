@@ -113,6 +113,8 @@ mutual
     compile (Concat re1 re2) | (CharC, (EitherC x y)) = concatTyRE re1 re2
     compile (Concat re1 re2) | (CharC, (MaybeC x)) = concatTyRE re1 re2
     compile (Concat re1 re2) | (CharC, BoolC) = concatTyRE re1 re2
+    compile (Concat re1 re2) | (CharC, (ListC z)) = concatTyRE re1 re2
+    compile (Concat re1 re2) | (CharC, NatC) = concatTyRE re1 re2
     compile (Concat re1 re2) | ((PairC x y), CharC) = concatTyRE re1 re2
     compile (Concat re1 re2) | ((PairC x y), (PairC z w)) = concatTyRE re1 re2
     compile (Concat re1 re2) | ((PairC x y), StringC) = concatTyRE re1 re2
@@ -123,6 +125,8 @@ mutual
     compile (Concat re1 re2) | ((PairC x y), (EitherC z w)) = concatTyRE re1 re2
     compile (Concat re1 re2) | ((PairC x y), (MaybeC z)) = concatTyRE re1 re2
     compile (Concat re1 re2) | ((PairC x y), BoolC) = concatTyRE re1 re2
+    compile (Concat re1 re2) | ((PairC x y), (ListC z)) = concatTyRE re1 re2
+    compile (Concat re1 re2) | ((PairC x y), NatC) = concatTyRE re1 re2
     compile (Concat re1 re2) | (StringC, CharC) = concatTyRE re1 re2
     compile (Concat re1 re2) | (StringC, (PairC x y)) = concatTyRE re1 re2
     compile (Concat re1 re2) | (StringC, StringC) = concatTyRE re1 re2
@@ -133,6 +137,8 @@ mutual
     compile (Concat re1 re2) | (StringC, (EitherC x y)) = concatTyRE re1 re2
     compile (Concat re1 re2) | (StringC, (MaybeC x)) = concatTyRE re1 re2
     compile (Concat re1 re2) | (StringC, BoolC) = concatTyRE re1 re2
+    compile (Concat re1 re2) | (StringC, (ListC z)) = concatTyRE re1 re2
+    compile (Concat re1 re2) | (StringC, NatC) = concatTyRE re1 re2
     compile (Concat re1 re2) | (UnitC, CharC) =
       let prf : (SimplifyCode (CodeShapeRE re2) = CharC)
           prf = snd $ pairEq p
@@ -158,6 +164,14 @@ mutual
       let prf : (SimplifyCode (CodeShapeRE re2) = BoolC)
           prf = snd $ pairEq p
       in replace {p = (\s => CoreTyRE (Sem s))} prf $ (\(_,x) => x) `Conv` concatTyRE re1 re2
+    compile (Concat re1 re2) | (UnitC, (ListC z)) =
+      let prf : (SimplifyCode (CodeShapeRE re2) = (ListC z))
+          prf = snd $ pairEq p
+      in replace {p = (\s => CoreTyRE (Sem s))} prf $ (\(_,x) => x) `Conv` concatTyRE re1 re2
+    compile (Concat re1 re2) | (UnitC, NatC) =
+      let prf : (SimplifyCode (CodeShapeRE re2) = NatC)
+          prf = snd $ pairEq p
+      in replace {p = (\s => CoreTyRE (Sem s))} prf $ (\(_,x) => x) `Conv` concatTyRE re1 re2
     compile (Concat re1 re2) | ((EitherC x y), CharC) = concatTyRE re1 re2
     compile (Concat re1 re2) | ((EitherC x y), (PairC z w)) = concatTyRE re1 re2
     compile (Concat re1 re2) | ((EitherC x y), StringC) = concatTyRE re1 re2
@@ -168,6 +182,8 @@ mutual
     compile (Concat re1 re2) | ((EitherC x y), (EitherC z w)) = concatTyRE re1 re2
     compile (Concat re1 re2) | ((EitherC x y), (MaybeC z)) = concatTyRE re1 re2
     compile (Concat re1 re2) | ((EitherC x y), BoolC) = concatTyRE re1 re2
+    compile (Concat re1 re2) | ((EitherC x y), (ListC z)) = concatTyRE re1 re2
+    compile (Concat re1 re2) | ((EitherC x y), NatC) = concatTyRE re1 re2
     compile (Concat re1 re2) | ((MaybeC x), CharC) = concatTyRE re1 re2
     compile (Concat re1 re2) | ((MaybeC x), (PairC y z)) = concatTyRE re1 re2
     compile (Concat re1 re2) | ((MaybeC x), StringC) = concatTyRE re1 re2
@@ -178,6 +194,8 @@ mutual
     compile (Concat re1 re2) | ((MaybeC x), (EitherC y z)) = concatTyRE re1 re2
     compile (Concat re1 re2) | ((MaybeC x), (MaybeC y)) = concatTyRE re1 re2
     compile (Concat re1 re2) | ((MaybeC x), BoolC) = concatTyRE re1 re2
+    compile (Concat re1 re2) | ((MaybeC x), (ListC z)) = concatTyRE re1 re2
+    compile (Concat re1 re2) | ((MaybeC x), NatC) = concatTyRE re1 re2
     compile (Concat re1 re2) | (BoolC, CharC) = concatTyRE re1 re2
     compile (Concat re1 re2) | (BoolC, (PairC x y)) = concatTyRE re1 re2
     compile (Concat re1 re2) | (BoolC, StringC) = concatTyRE re1 re2
@@ -188,6 +206,32 @@ mutual
     compile (Concat re1 re2) | (BoolC, (EitherC x y)) = concatTyRE re1 re2
     compile (Concat re1 re2) | (BoolC, (MaybeC x)) = concatTyRE re1 re2
     compile (Concat re1 re2) | (BoolC, BoolC) = concatTyRE re1 re2
+    compile (Concat re1 re2) | (BoolC, (ListC z)) = concatTyRE re1 re2
+    compile (Concat re1 re2) | (BoolC, NatC) = concatTyRE re1 re2
+    compile (Concat re1 re2) | ((ListC z), CharC) = concatTyRE re1 re2
+    compile (Concat re1 re2) | ((ListC z), (PairC x y)) = concatTyRE re1 re2
+    compile (Concat re1 re2) | ((ListC z), StringC) = concatTyRE re1 re2
+    compile (Concat re1 re2) | ((ListC z), UnitC) =
+      let prf : (SimplifyCode (CodeShapeRE re1) = (ListC z))
+          prf = fst $ pairEq p
+      in replace {p = (\s => CoreTyRE (Sem s))} prf $ (\(x, _) => x) `Conv` concatTyRE re1 re2
+    compile (Concat re1 re2) | ((ListC z), (EitherC x y)) = concatTyRE re1 re2
+    compile (Concat re1 re2) | ((ListC z), (MaybeC x)) = concatTyRE re1 re2
+    compile (Concat re1 re2) | ((ListC z), BoolC) = concatTyRE re1 re2
+    compile (Concat re1 re2) | ((ListC z), (ListC x)) = concatTyRE re1 re2
+    compile (Concat re1 re2) | ((ListC z), NatC) = concatTyRE re1 re2
+    compile (Concat re1 re2) | (NatC, CharC) = concatTyRE re1 re2
+    compile (Concat re1 re2) | (NatC, (PairC x y)) = concatTyRE re1 re2
+    compile (Concat re1 re2) | (NatC, StringC) = concatTyRE re1 re2
+    compile (Concat re1 re2) | (NatC, UnitC) =
+      let prf : (SimplifyCode (CodeShapeRE re1) = NatC)
+          prf = fst $ pairEq p
+      in replace {p = (\s => CoreTyRE (Sem s))} prf $ (\(x, _) => x) `Conv` concatTyRE re1 re2
+    compile (Concat re1 re2) | (NatC, (EitherC x y)) = concatTyRE re1 re2
+    compile (Concat re1 re2) | (NatC, (MaybeC x)) = concatTyRE re1 re2
+    compile (Concat re1 re2) | (NatC, BoolC) = concatTyRE re1 re2
+    compile (Concat re1 re2) | (NatC, (ListC z)) = concatTyRE re1 re2
+    compile (Concat re1 re2) | (NatC, NatC) = concatTyRE re1 re2
 
   compile (Alt re1 re2) with (SimplifyCode (CodeShapeRE re1)) proof p1
     compile (Alt re1 re2) | sc1 with (SimplifyCode (CodeShapeRE re2)) proof p2
@@ -198,6 +242,8 @@ mutual
       compile (Alt re1 re2) | CharC | (EitherC x y) = altTyRE re1 re2 p1 p2
       compile (Alt re1 re2) | CharC | (MaybeC x) = altTyRE re1 re2 p1 p2
       compile (Alt re1 re2) | CharC | BoolC = altTyRE re1 re2 p1 p2
+      compile (Alt re1 re2) | CharC | (ListC x) = altTyRE re1 re2 p1 p2
+      compile (Alt re1 re2) | CharC | NatC = altTyRE re1 re2 p1 p2
       compile (Alt re1 re2) | (PairC x y) | CharC = altTyRE re1 re2 p1 p2
       compile (Alt re1 re2) | (PairC x y) | (PairC z w) = altTyRE re1 re2 p1 p2
       compile (Alt re1 re2) | (PairC x y) | StringC = altTyRE re1 re2 p1 p2
@@ -205,6 +251,8 @@ mutual
       compile (Alt re1 re2) | (PairC x y) | (EitherC z w) = altTyRE re1 re2 p1 p2
       compile (Alt re1 re2) | (PairC x y) | (MaybeC z) = altTyRE re1 re2 p1 p2
       compile (Alt re1 re2) | (PairC x y) | BoolC = altTyRE re1 re2 p1 p2
+      compile (Alt re1 re2) | (PairC x y) | (ListC z) = altTyRE re1 re2 p1 p2
+      compile (Alt re1 re2) | (PairC x y) | NatC = altTyRE re1 re2 p1 p2
       compile (Alt re1 re2) | StringC | CharC = altTyRE re1 re2 p1 p2
       compile (Alt re1 re2) | StringC | (PairC x y) = altTyRE re1 re2 p1 p2
       compile (Alt re1 re2) | StringC | StringC = altTyRE re1 re2 p1 p2
@@ -212,6 +260,8 @@ mutual
       compile (Alt re1 re2) | StringC | (EitherC x y) = altTyRE re1 re2 p1 p2
       compile (Alt re1 re2) | StringC | (MaybeC x) = altTyRE re1 re2 p1 p2
       compile (Alt re1 re2) | StringC | BoolC = altTyRE re1 re2 p1 p2
+      compile (Alt re1 re2) | StringC | (ListC x) = altTyRE re1 re2 p1 p2
+      compile (Alt re1 re2) | StringC | NatC = altTyRE re1 re2 p1 p2
       compile (Alt re1 re2) | UnitC | CharC = eitherToMaybeR `Conv` altTyRE re1 re2 p1 p2
       compile (Alt re1 re2) | UnitC | (PairC x y) = eitherToMaybeR `Conv` altTyRE re1 re2 p1 p2
       compile (Alt re1 re2) | UnitC | StringC = eitherToMaybeR `Conv` altTyRE re1 re2 p1 p2
@@ -223,6 +273,8 @@ mutual
       compile (Alt re1 re2) | UnitC | (EitherC x y) = eitherToMaybeR `Conv` altTyRE re1 re2 p1 p2
       compile (Alt re1 re2) | UnitC | (MaybeC x) = eitherToMaybeR `Conv` altTyRE re1 re2 p1 p2
       compile (Alt re1 re2) | UnitC | BoolC = eitherToMaybeR `Conv` altTyRE re1 re2 p1 p2
+      compile (Alt re1 re2) | UnitC | (ListC x) = eitherToMaybeR `Conv` altTyRE re1 re2 p1 p2
+      compile (Alt re1 re2) | UnitC | NatC = eitherToMaybeR `Conv` altTyRE re1 re2 p1 p2
       compile (Alt re1 re2) | (EitherC x y) | CharC = altTyRE re1 re2 p1 p2
       compile (Alt re1 re2) | (EitherC x y) | (PairC z w) = altTyRE re1 re2 p1 p2
       compile (Alt re1 re2) | (EitherC x y) | StringC = altTyRE re1 re2 p1 p2
@@ -230,6 +282,8 @@ mutual
       compile (Alt re1 re2) | (EitherC x y) | (EitherC z w) = altTyRE re1 re2 p1 p2
       compile (Alt re1 re2) | (EitherC x y) | (MaybeC z) = altTyRE re1 re2 p1 p2
       compile (Alt re1 re2) | (EitherC x y) | BoolC = altTyRE re1 re2 p1 p2
+      compile (Alt re1 re2) | (EitherC x y) | (ListC z) = altTyRE re1 re2 p1 p2
+      compile (Alt re1 re2) | (EitherC x y) | NatC = altTyRE re1 re2 p1 p2
       compile (Alt re1 re2) | (MaybeC x) | CharC = altTyRE re1 re2 p1 p2
       compile (Alt re1 re2) | (MaybeC x) | (PairC y z) = altTyRE re1 re2 p1 p2
       compile (Alt re1 re2) | (MaybeC x) | StringC = altTyRE re1 re2 p1 p2
@@ -237,6 +291,8 @@ mutual
       compile (Alt re1 re2) | (MaybeC x) | (EitherC y z) = altTyRE re1 re2 p1 p2
       compile (Alt re1 re2) | (MaybeC x) | (MaybeC y) = altTyRE re1 re2 p1 p2
       compile (Alt re1 re2) | (MaybeC x) | BoolC = altTyRE re1 re2 p1 p2
+      compile (Alt re1 re2) | (MaybeC x) | (ListC z) = altTyRE re1 re2 p1 p2
+      compile (Alt re1 re2) | (MaybeC x) | NatC = altTyRE re1 re2 p1 p2
       compile (Alt re1 re2) | BoolC | CharC = altTyRE re1 re2 p1 p2
       compile (Alt re1 re2) | BoolC | (PairC x y) = altTyRE re1 re2 p1 p2
       compile (Alt re1 re2) | BoolC | StringC = altTyRE re1 re2 p1 p2
@@ -244,6 +300,26 @@ mutual
       compile (Alt re1 re2) | BoolC | (EitherC x y) = altTyRE re1 re2 p1 p2
       compile (Alt re1 re2) | BoolC | (MaybeC x) = altTyRE re1 re2 p1 p2
       compile (Alt re1 re2) | BoolC | BoolC = altTyRE re1 re2 p1 p2
+      compile (Alt re1 re2) | BoolC | (ListC z) = altTyRE re1 re2 p1 p2
+      compile (Alt re1 re2) | BoolC | NatC = altTyRE re1 re2 p1 p2
+      compile (Alt re1 re2) | (ListC z) | CharC = altTyRE re1 re2 p1 p2
+      compile (Alt re1 re2) | (ListC z) | (PairC x y) = altTyRE re1 re2 p1 p2
+      compile (Alt re1 re2) | (ListC z) | StringC = altTyRE re1 re2 p1 p2
+      compile (Alt re1 re2) | (ListC z) | UnitC = eitherToMaybe `Conv` altTyRE re1 re2 p1 p2
+      compile (Alt re1 re2) | (ListC z) | (EitherC x y) = altTyRE re1 re2 p1 p2
+      compile (Alt re1 re2) | (ListC z) | (MaybeC x) = altTyRE re1 re2 p1 p2
+      compile (Alt re1 re2) | (ListC z) | BoolC = altTyRE re1 re2 p1 p2
+      compile (Alt re1 re2) | (ListC z) | (ListC x) = altTyRE re1 re2 p1 p2
+      compile (Alt re1 re2) | (ListC z) | NatC = altTyRE re1 re2 p1 p2
+      compile (Alt re1 re2) | NatC | CharC = altTyRE re1 re2 p1 p2
+      compile (Alt re1 re2) | NatC | (PairC x y) = altTyRE re1 re2 p1 p2
+      compile (Alt re1 re2) | NatC | StringC = altTyRE re1 re2 p1 p2
+      compile (Alt re1 re2) | NatC | UnitC = eitherToMaybe `Conv` altTyRE re1 re2 p1 p2
+      compile (Alt re1 re2) | NatC | (EitherC x y) = altTyRE re1 re2 p1 p2
+      compile (Alt re1 re2) | NatC | (MaybeC x) = altTyRE re1 re2 p1 p2
+      compile (Alt re1 re2) | NatC | BoolC = altTyRE re1 re2 p1 p2
+      compile (Alt re1 re2) | NatC | (ListC z) = altTyRE re1 re2 p1 p2
+      compile (Alt re1 re2) | NatC | NatC = altTyRE re1 re2 p1 p2
 
   compile (Maybe re) with (SimplifyCode (CodeShapeRE re)) proof p
     compile (Maybe re) | CharC = (rewrite p in eitherToMaybe) `Conv` compile re <|> Untyped Empty
@@ -261,3 +337,5 @@ mutual
           f (Right _) = Nothing
       in (rewrite p in f) `Conv` compile re <|> Untyped Empty
     compile (Maybe re) | BoolC = (rewrite p in eitherToMaybe) `Conv` compile re <|> Untyped Empty
+    compile (Maybe re) | (ListC z) = (rewrite p in eitherToMaybe) `Conv` compile re <|> Untyped Empty
+    compile (Maybe re) | NatC = (rewrite p in eitherToMaybe) `Conv` compile re <|> Untyped Empty

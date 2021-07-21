@@ -230,40 +230,34 @@ nextAlt sm1 sm2 CEnd      _ = ([] ** [])
 
 --for Kleene Star
 public export
-acceptStar : (CState st AState) -> Bool
+acceptStar : (CState a a) -> Bool
 acceptStar (CTh1 x) = False
 acceptStar (CTh2 x) = False
 acceptStar CEnd = True
 
 public export
-startStar : List (CState st AState)
-startStar = [CTh2 ASt, CEnd]
+startStar : (sm : SM) -> List (CState sm.nfa.State sm.nfa.State)
+startStar sm = CEnd::(map CTh2 sm.nfa.start)
 
 public export
-initStar : Vect (length $ startStar {st}) Routine
-initStar = [[EmitEList], [EmitEList, EmitBList]]
+rStartStar : (sm : SM) -> Vect (length $ startStar sm) Routine
+rStartStar sm = [EmitBList]::(replace {p=(\l => Vect l Routine)} (sym $ lengthMap _) sm.prog.init)
+
+public export
+initStar : (sm : SM) -> Vect (length $ startStar sm) Routine
+initStar sm = map (EmitEList::) (rStartStar sm)
+
+public export
+nextStarData : (sm: SM) -> sm.nfa.State -> Char
+            -> (CombineTransitionData sm.nfa.State sm.nfa.State sm.nfa.State)
+nextStarData sm s c = MkCTD (sm.nfa.next s c) (sm.prog.next s c) sm.nfa.accepting CTh1 (startStar sm) (rStartStar sm)
 
 public export
 nextStar : (sm : SM)
-    -> (CState sm.nfa.State AState) -> Char
-    -> (xs: List (CState sm.nfa.State AState) ** Vect (length xs) Routine)
-
-nextStar sm (CTh1 s) c =
-  combineTransitions (MkCTD (sm.nfa.next s c) (sm.prog.next s c) sm.nfa.accepting CTh1 startStar [[], [EmitBList]])
-
-nextStar sm (CTh2 s) c =
-  let mapNext : (xs : List sm.nfa.State) -> Vect (length xs) Routine
-              -> (xs: List sm.nfa.State ** Vect (length xs) Routine)
-      mapNext [] [] = ([] ** [])
-      mapNext (s :: ss) (r :: rs) =
-        let rest : (xs: List sm.nfa.State ** Vect (length xs) Routine)
-            rest = mapNext ss rs
-        in ((sm.nfa.next s c) ++ (fst rest) **
-              replace {p=(\l => Vect l Routine)} (sym $ lengthDistributesOverAppend _ _) ((map (r++) (sm.prog.next s c)) ++ (snd rest)))
-      allNext : (xs: List sm.nfa.State ** Vect (length xs) Routine)
-      allNext = mapNext sm.nfa.start sm.prog.init
-  in combineTransitions (MkCTD (fst allNext) (snd allNext) sm.nfa.accepting CTh1 startStar [[], [EmitBList]])
-
+    -> (CState sm.nfa.State sm.nfa.State) -> Char
+    -> (xs: List (CState sm.nfa.State sm.nfa.State) ** Vect (length xs) Routine)
+nextStar sm (CTh1 s) c = combineTransitions (nextStarData sm s c)
+nextStar sm (CTh2 s) c = combineTransitions (nextStarData sm s c)
 nextStar sm CEnd c = ([] ** [])
 
 --Thompson construction
@@ -369,12 +363,12 @@ thompson (Star re) =
       _ := sm.nfa.isEq
 
       0 state : Type
-      state = CState sm.nfa.State AState
+      state = CState sm.nfa.State sm.nfa.State
 
       nfa : NA
-      nfa = MkNFA state acceptStar startStar (\st => \c => fst (nextStar sm st c))
+      nfa = MkNFA state acceptStar (startStar sm) (\st => \c => fst (nextStar sm st c))
 
       prog : Program nfa
-      prog = MkProgram (initStar {st = sm.nfa.State}) (\st => \c => snd (nextStar sm st c))
+      prog = MkProgram (initStar sm) (\st => \c => snd (nextStar sm st c))
 
   in MkSM nfa prog

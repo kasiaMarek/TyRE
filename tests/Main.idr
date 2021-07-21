@@ -15,7 +15,8 @@ fullTests : TestPool
 fullTests = MkTestPool "fulltests" [] Nothing
             [ "fulltests/time",
               "fulltests/foo",
-              "fulltests/ab"
+              "fulltests/ab",
+              "fulltests/star"
             ]
 
 stringTests : TestPool

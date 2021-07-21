@@ -143,3 +143,10 @@ mapFSpec f q p (x1 :: xs) (x2 :: ys) spec y (pos, satP) =
 export
 bindOnEmptyList : (f : a -> List b) -> ((((the $ List a)[]) >>= f) = (the $ List b)[])
 bindOnEmptyList f = Refl
+
+export
+extractBasedOnFstMapEq : (xs: List a) -> (ys : Vect (length xs) b)
+                      -> (f: b -> c) -> (pos : m `Elem` xs)
+                      -> (extractBasedOnFst xs (map f ys) pos = f (extractBasedOnFst xs ys pos))
+extractBasedOnFstMapEq (x :: xs) (y :: ys) f Here = Refl
+extractBasedOnFstMapEq (x :: xs) (y :: ys) f (There pos) = extractBasedOnFstMapEq xs ys f pos
