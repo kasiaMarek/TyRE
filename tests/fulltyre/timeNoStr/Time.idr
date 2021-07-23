@@ -29,12 +29,11 @@ TimeRE =
 toDig : Char -> Integer
 toDig c = cast c - cast '0'
 
-f : (Either (Char, Char) (Char), (Char, Char)) -> (Integer, Integer)
-f ((Left (h1,h2)), (m1,m2)) = (10 * toDig h1 + toDig h2, 10 * toDig m1 + toDig m2)
-f ((Right h2), (m1,m2)) = (20 + toDig h2, 10 * toDig m1 + toDig m2)
-
 Time : CoreTyRE (Integer, Integer)
-Time = f `Conv` (compile TimeRE)
+Time = f `Conv` (compile TimeRE) where
+  f : (Either (Char, Char) (Char), (Char, Char)) -> (Integer, Integer)
+  f ((Left (h1,h2)), (m1,m2)) = (10 * toDig h1 + toDig h2, 10 * toDig m1 + toDig m2)
+  f ((Right h2), (m1,m2)) = (20 + toDig h2, 10 * toDig m1 + toDig m2)
 
 getTime : String -> Maybe (Integer, Integer)
 getTime str = parse Time str

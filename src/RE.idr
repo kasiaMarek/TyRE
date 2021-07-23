@@ -6,23 +6,29 @@ import Data.List
 
 public export
 data RE =
-    Exactly Char
-  | OneOf (List Char)
-  | To Char Char
-  | Concat RE RE
-  | Alt RE RE
-  | Maybe RE
-  | Group RE
+    Exactly Char -- x
+  | OneOf (List Char) -- [x,y,z]
+  | To Char Char -- [x-y]
+  | Any -- .
+  | Concat RE RE -- AB
+  | Alt RE RE -- A|B
+  | Maybe RE -- A?
+  | Group RE -- `A`
+  | Rep0 RE -- A+
+  | Rep1 RE -- A*
 
 public export
 Eq RE where
   (Exactly x) == (Exactly x')                 = x == x'
   (OneOf xs) == (OneOf ys)                    = xs == ys
   (x `To` y) == (x' `To` y')                  = (x == x') && (y == y')
+  Any        == Any                           = True
   (re1 `Concat` re2) == (re1' `Concat` re2')  = (re1 == re1') && (re2 == re2')
   (Group x) == (Group x')                     = x == x'
   (re1 `Alt` re2) == (re1' `Alt` re2')        = (re1 == re1') && (re2 == re2')
   (Maybe re) == (Maybe re')                   = re == re'
+  (Rep0 re) == (Rep0 re')                     = re == re'
+  (Rep1 re) == (Rep1 re')                     = re == re'
   _ == _                                      = False
 
 public export
@@ -38,6 +44,7 @@ Show RE where
   show (Exactly c) = mapChar c
   show (OneOf xs) = "[" ++ (foldl (++) "" (map mapChar xs)) ++ "]"
   show (x `To` y) = "[" ++ (mapChar x) ++ "-" ++ (mapChar y) ++ "]"
+  show Any = "."
 
   show (Concat (Concat x z) y) = "(" ++ (show (Concat x z)) ++ ")" ++ (show y)
   show (Concat (Alt x z) y) = "(" ++ (show (Alt x z)) ++ ")" ++ (show y)
@@ -53,18 +60,28 @@ Show RE where
 
   show (Maybe (Alt x y)) = "(" ++ show (Alt x y) ++ ")" ++ "?"
   show (Maybe (Concat x z)) = "(" ++ show (Concat x z) ++ ")" ++ "?"
-  show (Maybe (Maybe x)) = "(" ++ show (Maybe x) ++ ")" ++ "?"
   show (Maybe unitX) = show unitX ++ "?"
+
+  show (Rep0 (Alt x y)) = "(" ++ show (Alt x y) ++ ")" ++ "*"
+  show (Rep0 (Concat x z)) = "(" ++ show (Concat x z) ++ ")" ++ "*"
+  show (Rep0 unitX) = show unitX ++ "*"
+
+  show (Rep1 (Alt x y)) = "(" ++ show (Alt x y) ++ ")" ++ "+"
+  show (Rep1 (Concat x z)) = "(" ++ show (Concat x z) ++ ")" ++ "+"
+  show (Rep1 unitX) = show unitX ++ "+"
 
 public export
 CodeShapeRE : RE -> Code
 CodeShapeRE (Exactly _) = UnitC
 CodeShapeRE (OneOf _) = CharC
 CodeShapeRE (To _ _) = CharC
+CodeShapeRE Any = CharC
 CodeShapeRE (Concat re1 re2) = PairC (CodeShapeRE re1) (CodeShapeRE re2)
 CodeShapeRE (Alt re1 re2) = EitherC (CodeShapeRE re1) (CodeShapeRE re2)
 CodeShapeRE (Group _) = StringC
-CodeShapeRE (Maybe re1) = MaybeC (CodeShapeRE re1)
+CodeShapeRE (Maybe re) = MaybeC (CodeShapeRE re)
+CodeShapeRE (Rep0 re) = ListC (CodeShapeRE re)
+CodeShapeRE (Rep1 re) = ListC (CodeShapeRE re)
 
 public export
 TypeRE : RE -> Type
@@ -101,6 +118,7 @@ mutual
   compile (Exactly x)      = (\x => ()) `Conv` Untyped (Pred (\e => e == x))
   compile (OneOf xs)       = Untyped $ Pred (\e => case (find (\x => e == x) xs) of {(Just _) => True ; Nothing => False})
   compile (To x y)         = Untyped $ Pred (\c =>  x <= c && c <= y)
+  compile Any              = Untyped $ Pred (\_ =>  True)
   compile (Group re)       = Untyped $ Group $ compile $ compile re
   compile (Concat re1 re2) with (SimplifyCode (CodeShapeRE re1), SimplifyCode (CodeShapeRE re2)) proof p
     compile (Concat re1 re2) | (CharC, CharC) = concatTyRE re1 re2
@@ -339,3 +357,52 @@ mutual
     compile (Maybe re) | BoolC = (rewrite p in eitherToMaybe) `Conv` compile re <|> Untyped Empty
     compile (Maybe re) | (ListC z) = (rewrite p in eitherToMaybe) `Conv` compile re <|> Untyped Empty
     compile (Maybe re) | NatC = (rewrite p in eitherToMaybe) `Conv` compile re <|> Untyped Empty
+
+  compile (Rep0 re) with (SimplifyCode (CodeShapeRE re)) proof p
+    compile (Rep0 re) | CharC = replace {p=(CoreTyRE . List . Sem)} p (Rep (compile re))
+    compile (Rep0 re) | (PairC x y) = replace {p=(CoreTyRE . List . Sem)} p (Rep (compile re))
+    compile (Rep0 re) | StringC = replace {p=(CoreTyRE . List . Sem)} p (Rep (compile re))
+    compile (Rep0 re) | UnitC = length `Conv` Rep (compile re)
+    compile (Rep0 re) | (EitherC x y) = replace {p=(CoreTyRE . List . Sem)} p (Rep (compile re))
+    compile (Rep0 re) | (ListC x) = replace {p=(CoreTyRE . List . Sem)} p (Rep (compile re))
+    compile (Rep0 re) | (MaybeC x) = replace {p=(CoreTyRE . List . Sem)} p (Rep (compile re))
+    compile (Rep0 re) | BoolC = replace {p=(CoreTyRE . List . Sem)} p (Rep (compile re))
+    compile (Rep0 re) | NatC = replace {p=(CoreTyRE . List . Sem)} p (Rep (compile re))
+
+  compile (Rep1 re) with (SimplifyCode (CodeShapeRE re)) proof p
+    compile (Rep1 re) | CharC =
+      (rewrite p in (\(c,l) => c::l)) `Conv` cre <*> Rep cre where
+        cre : CoreTyRE $ TypeRE re
+        cre = compile re
+    compile (Rep1 re) | (PairC x y) =
+      (rewrite p in (\(c,l) => c::l)) `Conv` cre <*> Rep cre where
+        cre : CoreTyRE $ TypeRE re
+        cre = compile re
+    compile (Rep1 re) | StringC =
+      (rewrite p in (\(c,l) => c::l)) `Conv` cre <*> Rep cre where
+        cre : CoreTyRE $ TypeRE re
+        cre = compile re
+    compile (Rep1 re) | UnitC =
+      (\(_,l) => length l + 1) `Conv` cre <*> Rep cre where
+        cre : CoreTyRE $ TypeRE re
+        cre = compile re
+    compile (Rep1 re) | (EitherC x y) =
+      (rewrite p in (\(c,l) => c::l)) `Conv` cre <*> Rep cre where
+        cre : CoreTyRE $ TypeRE re
+        cre = compile re
+    compile (Rep1 re) | (ListC x) =
+      (rewrite p in (\(c,l) => c::l)) `Conv` cre <*> Rep cre where
+        cre : CoreTyRE $ TypeRE re
+        cre = compile re
+    compile (Rep1 re) | (MaybeC x) =
+      (rewrite p in (\(c,l) => c::l)) `Conv` cre <*> Rep cre where
+        cre : CoreTyRE $ TypeRE re
+        cre = compile re
+    compile (Rep1 re) | BoolC =
+      (rewrite p in (\(c,l) => c::l)) `Conv` cre <*> Rep cre where
+        cre : CoreTyRE $ TypeRE re
+        cre = compile re
+    compile (Rep1 re) | NatC =
+      (rewrite p in (\(c,l) => c::l)) `Conv` cre <*> Rep cre where
+        cre : CoreTyRE $ TypeRE re
+        cre = compile re
