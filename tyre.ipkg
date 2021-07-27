@@ -15,7 +15,7 @@ modules =   Data.SnocList.Elem
           , API
           , Core
           , Codes
-          , CoreTyRE
+          , TyRE
           , Evidence
           , NFA
           , NFA.Thompson

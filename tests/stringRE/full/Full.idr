@@ -1,7 +1,7 @@
 import API
 import Core
 import StringRE
-import CoreTyRE
+import TyRE
 
 main : IO ()
 main = do putStrLn $ show $ parse (r "[0-9]")                     "1"

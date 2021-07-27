@@ -11,25 +11,26 @@ nfa = MkTestPool "nfa" [] Nothing
         "nfa/foo"
       ]
 
-fullTests : TestPool
-fullTests = MkTestPool "fulltests" [] Nothing
-            [ "fulltests/time",
-              "fulltests/foo",
-              "fulltests/ab",
-              "fulltests/star"
+corere : TestPool
+corere = MkTestPool "core re" [] Nothing
+            [ "corere/time",
+              "corere/foo",
+              "corere/ab",
+              "corere/star"
             ]
 
 stringTests : TestPool
-stringTests = MkTestPool "stringRE" [] Nothing
-            [ "stringRE/string",
-              "stringRE/full"
+stringTests = MkTestPool "stringre" [] Nothing
+            [ "stringre/string",
+              "stringre/full"
             ]
 
-fullTyRETests : TestPool
-fullTyRETests = MkTestPool "fulltyre" [] Nothing
-            [ "fulltyre/time",
-              "fulltyre/timeNoStr"
+tyre : TestPool
+tyre = MkTestPool "tyre" [] Nothing
+            [ "tyre/time",
+              "tyre/timeNoStr",
+              "tyre/tyre0"
             ]
 
 main : IO ()
-main = runner [ nfa, fullTests, stringTests, fullTyRETests ]
+main = runner [ nfa, corere, stringTests, tyre]

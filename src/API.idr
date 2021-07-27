@@ -7,7 +7,7 @@ import NFA.Thompson
 import Verification.AcceptingPath
 import Verification
 import Verification.Thompson
-import CoreTyRE
+import TyRE
 import Data.Stream
 
 public export
@@ -35,7 +35,7 @@ run : (re: CoreRE) -> String -> Maybe (Shape re)
 run re str = runWord re (unpack str)
 
 public export
-parse : CoreTyRE a -> String -> Maybe a
+parse : TyRE a -> String -> Maybe a
 parse tyre str = map (extract tyre) $ run (compile tyre) str
 
 public export

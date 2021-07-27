@@ -8,7 +8,7 @@ A : CoreRE
 A = Pred (\c =>  c == 'a')
 
 createRE : Nat -> CoreRE
-createRE 0 = A
+createRE 0 = (A `Alt` Empty)
 createRE (S k) = (A `Alt` Empty) `Concat` (createRE k)
 
 createString : Nat -> List Char

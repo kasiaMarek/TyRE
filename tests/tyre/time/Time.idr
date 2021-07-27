@@ -8,7 +8,7 @@ toDig c = cast c - cast '0'
 f : ((Char, Char), (Char, Char)) -> (Integer, Integer)
 f ((h1,h2), (m1,m2)) = (10 * toDig h1 + toDig h2, 10 * toDig m1 + toDig m2)
 
-Time : CoreTyRE (Integer, Integer)
+Time : TyRE (Integer, Integer)
 Time = f `Conv` r "([0-2][0-9]):([0-5][0-9])"
 
 getTime : String -> Maybe (Integer, Integer)

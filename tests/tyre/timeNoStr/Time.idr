@@ -29,7 +29,7 @@ TimeRE =
 toDig : Char -> Integer
 toDig c = cast c - cast '0'
 
-Time : CoreTyRE (Integer, Integer)
+Time : TyRE (Integer, Integer)
 Time = f `Conv` (compile TimeRE) where
   f : (Either (Char, Char) (Char), (Char, Char)) -> (Integer, Integer)
   f ((Left (h1,h2)), (m1,m2)) = (10 * toDig h1 + toDig h2, 10 * toDig m1 + toDig m2)
