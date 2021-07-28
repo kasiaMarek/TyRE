@@ -10,6 +10,7 @@ import statistics
 IDRIS2 = "idris2"
 SAMPLES = 7
 PATH_TO_CHARTS = "charts/"
+RESULTS_FILE = "results.txt"
 
 NAME = "name"
 ITR = "iterations"
@@ -43,11 +44,13 @@ def buildTimes(name, iterations):
     return {"avg":avg, "stdev":stddev}
 
 def runtest(test):
-    itr = test[ITR]
-    return {
-        "tyretimes": buildTimes(test[TYRE_FILE], itr),
-        "combtimes": buildTimes(test[COMB_FILE], itr)
+    result = {
+        "tyretimes": buildTimes(test[TYRE_FILE], test[ITR]),
+        "combtimes": buildTimes(test[COMB_FILE], test[ITR])
         }
+    with open(RESULTS_FILE, 'a') as f:
+        f.write(test[NAME] + ":" + str(result) + "\n")
+    return result
 
 def plotresult(test, testresult):
     tyretimes = testresult["tyretimes"]
