@@ -1,5 +1,3 @@
-module AsComb
-
 import Text.Lexer
 import public Text.Parser.Core
 import public Text.Parser

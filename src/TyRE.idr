@@ -6,7 +6,7 @@ import Data.List
 infixr 6 <*>
 
 public export
-data TyRE: Type -> Type where
+data TyRE : Type -> Type where
   Untyped : (r : CoreRE) -> TyRE (Shape r)
   (<*>)   : TyRE a -> TyRE b -> TyRE (a, b)
   Conv    : (a -> b) -> TyRE a -> TyRE b
@@ -55,6 +55,10 @@ range : Char -> Char -> TyRE Char
 range x y = predicate (\c =>  x <= c && c <= y)
 
 export
+digit : TyRE Integer
+digit = (\c => cast c - cast '0') `Conv` range '0' '9'
+
+export
 oneOf : List Char -> TyRE Char
 oneOf xs = predicate (\e => case (find (\x => e == x) xs) of {(Just _) => True ; Nothing => False})
 
@@ -72,8 +76,8 @@ option tyre = (\e => case e of {(Left x) => Just x ; (Right _) => Nothing}) `Con
 
 export
 (*>) : TyRE a -> TyRE b -> TyRE b
-(*>) t1 t2 = (\(_,x) => x) `Conv` (t1 <*> t2)
+(*>) t1 t2 = snd `Conv` (t1 <*> t2)
 
 export
 (<*) : TyRE a -> TyRE b -> TyRE a
-(<*) t1 t2 = (\(x,_) => x) `Conv` (t1 <*> t2)
+(<*) t1 t2 = fst `Conv` (t1 <*> t2)

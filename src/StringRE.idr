@@ -1,6 +1,5 @@
 module StringRE
 
--- import Core
 import public Text.Lexer
 import public Text.Parser
 import public Data.Maybe
