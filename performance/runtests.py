@@ -5,8 +5,10 @@ import os
 import subprocess
 import time
 import matplotlib.pyplot as plt
+import statistics
 
 IDRIS2 = "idris2"
+SAMPLES = 7
 PATH_TO_CHARTS = "charts/"
 
 NAME = "name"
@@ -26,12 +28,33 @@ def measuretime(name, iterations):
         times.append(end - start)
     return times
 
+def buildTimes(name, iterations):
+    timesMatrix = []
+    for i in range(SAMPLES):
+        timesMatrix.append(measuretime(name, iterations))
+    avg = []
+    stddev = []
+    for i in range(iterations):
+        current = []
+        for j in range(SAMPLES):
+            current.append(timesMatrix[j][i])
+        avg.append(statistics.mean(current))
+        stddev.append(statistics.stdev(current))
+    return {"avg":avg, "stdev":stddev}
+
 def runtest(test):
     itr = test[ITR]
-    tyretimes = measuretime(test[TYRE_FILE], itr)
-    combtimes = measuretime(test[COMB_FILE], itr)
-    plt.plot(range(1, itr+1), tyretimes, label='TyRE')
-    plt.plot(range(1, itr+1), combtimes, label='Parsers Combinators')
+    return {
+        "tyretimes": buildTimes(test[TYRE_FILE], itr),
+        "combtimes": buildTimes(test[COMB_FILE], itr)
+        }
+
+def plotresult(test, testresult):
+    tyretimes = testresult["tyretimes"]
+    combtimes = testresult["combtimes"]
+    y = range(1, test[ITR]+1)
+    plt.errorbar(y, tyretimes["avg"], tyretimes["stdev"], marker='^', capsize=3, label='TyRE')
+    plt.errorbar(y, combtimes["avg"], combtimes["stdev"], marker='^', capsize=3, label='Parsers Combinators')
     plt.ylabel('time in seconds')
     plt.xlabel(test[XLABEL])
     plt.legend(loc="upper left")
@@ -39,22 +62,30 @@ def runtest(test):
     plt.clf()
 
 tests = [
-    {NAME : "alternation", ITR : 5, TYRE_FILE: "AltTyRE", COMB_FILE: "AltComb", XLABEL: "length of regex"},
-    {NAME : "concat", ITR : 5, TYRE_FILE: "ConcatTyRE", COMB_FILE: "ConcatComb", XLABEL: "length of regex and word"},
-    {NAME : "star", ITR : 5, TYRE_FILE: "StarTyRE", COMB_FILE: "StarComb", XLABEL: "length of word"},
-    {NAME : "star2", ITR : 5, TYRE_FILE: "StarTyRE2", COMB_FILE: "StarComb2", XLABEL: "length of word"}
+    {NAME : "alternation", ITR : 17, TYRE_FILE: "AltTyRE", COMB_FILE: "AltComb", XLABEL: "length of regex"},
+    {NAME : "concat", ITR : 17, TYRE_FILE: "ConcatTyRE", COMB_FILE: "ConcatComb", XLABEL: "length of regex and word"},
+    {NAME : "star", ITR : 17, TYRE_FILE: "StarTyRE", COMB_FILE: "StarComb", XLABEL: "length of word"},
+    {NAME : "star2", ITR : 17, TYRE_FILE: "StarTyRE2", COMB_FILE: "StarComb2", XLABEL: "length of word"}
 ]
 
 def runall():
+    results = []
     for t in tests:
-        runtest(t)
+        results.append(runtest(t))
+    for i in range(len(results)):
+        plotresult(tests[i], results[i])
 
 def setIdris(name):
     global IDRIS2
     IDRIS2 = name
 
+def setSamples(n):
+    global SAMPLES
+    SAMPLES = int(n)
+
 commands = {
-    "--idris2" : setIdris
+    "--idris2" : setIdris,
+    "--samples" : setSamples,
 }
 
 for a in sys.argv[1:]:
