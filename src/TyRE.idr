@@ -2,6 +2,7 @@ module TyRE
 
 import public Core
 import Data.List
+import Data.Either
 
 infixr 6 <*>
 
@@ -81,3 +82,7 @@ export
 export
 (<*) : TyRE a -> TyRE b -> TyRE a
 (<*) t1 t2 = fst `Conv` (t1 <*> t2)
+
+export
+or : TyRE a -> TyRE a -> TyRE a
+or t1 t2 = fromEither `Conv` (t1 <|> t2)

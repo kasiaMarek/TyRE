@@ -29,7 +29,8 @@ tyre : TestPool
 tyre = MkTestPool "tyre" [] Nothing
             [ "tyre/time",
               "tyre/timeNoStr",
-              "tyre/tyre0"
+              "tyre/tyre0",
+              "tyre/appointment"
             ]
 
 main : IO ()
