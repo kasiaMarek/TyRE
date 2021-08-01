@@ -5,7 +5,7 @@ As : TyRE Nat
 As = compile $ Rep0 $ Exactly 'a'
 
 createString : Nat -> String
-createString 0 = ""
+createString 0 = "a"
 createString (S k) = "a" ++ (createString k)
 
 main : IO ()

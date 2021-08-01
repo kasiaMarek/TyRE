@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import statistics
 
 IDRIS2 = "idris2"
-SAMPLES = 7
+SAMPLES = 5
 PATH_TO_CHARTS = "charts/"
 RESULTS_FILE = "results.txt"
 
@@ -32,7 +32,10 @@ def measuretime(name, iterations):
 def buildTimes(name, iterations):
     timesMatrix = []
     for i in range(SAMPLES):
-        timesMatrix.append(measuretime(name, iterations))
+        times = measuretime(name, iterations)
+        with open(RESULTS_FILE, 'a') as f:
+            f.write(name + "-" + str(i) + " : " + str(times) + "\n")
+        timesMatrix.append(times)
     avg = []
     stddev = []
     for i in range(iterations):
@@ -48,8 +51,6 @@ def runtest(test):
         "tyretimes": buildTimes(test[TYRE_FILE], test[ITR]),
         "combtimes": buildTimes(test[COMB_FILE], test[ITR])
         }
-    with open(RESULTS_FILE, 'a') as f:
-        f.write(test[NAME] + ":" + str(result) + "\n")
     return result
 
 def plotresult(test, testresult):
@@ -65,18 +66,15 @@ def plotresult(test, testresult):
     plt.clf()
 
 tests = [
-    {NAME : "alternation", ITR : 17, TYRE_FILE: "AltTyRE", COMB_FILE: "AltComb", XLABEL: "length of regex"},
-    {NAME : "concat", ITR : 17, TYRE_FILE: "ConcatTyRE", COMB_FILE: "ConcatComb", XLABEL: "length of regex and word"},
-    {NAME : "star", ITR : 17, TYRE_FILE: "StarTyRE", COMB_FILE: "StarComb", XLABEL: "length of word"},
-    {NAME : "star2", ITR : 17, TYRE_FILE: "StarTyRE2", COMB_FILE: "StarComb2", XLABEL: "length of word"}
+    {NAME : "star", ITR : 25, TYRE_FILE: "StarTyRE", COMB_FILE: "StarComb", XLABEL: "length of word"},
+    {NAME : "star2", ITR : 25, TYRE_FILE: "StarTyRE2", COMB_FILE: "StarComb2", XLABEL: "length of word"},
+    {NAME : "concat", ITR : 15, TYRE_FILE: "ConcatTyRE", COMB_FILE: "ConcatComb", XLABEL: "length of regex and word"},
+    {NAME : "alternation", ITR : 10, TYRE_FILE: "AltTyRE", COMB_FILE: "AltComb", XLABEL: "length of regex"}
 ]
 
 def runall():
-    results = []
     for t in tests:
-        results.append(runtest(t))
-    for i in range(len(results)):
-        plotresult(tests[i], results[i])
+        plotresult(t, runtest(t))
 
 def setIdris(name):
     global IDRIS2

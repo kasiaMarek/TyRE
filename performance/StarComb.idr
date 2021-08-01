@@ -20,7 +20,7 @@ grammar : Rule (List Char)
 grammar = manyTill eoi a
 
 createString : Nat -> String
-createString 0 = ""
+createString 0 = "a"
 createString (S k) = "a" ++ (createString k)
 
 run : (n : Nat) -> Either (ParseError (TokenData AToken))
