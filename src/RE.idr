@@ -33,42 +33,62 @@ Eq RE where
 
 public export
 specialChars : String
-specialChars = "[]()\\`-|?"
+specialChars = "[]()\\`-|?+.*"
 
 public export
 mapChar : Char -> String
 mapChar c = case (find (\sc => c == sc) (unpack specialChars)) of {Just _ => "\\" ++ (cast c); Nothing => (cast c)}
 
 public export
+isUnit : RE -> Bool
+isUnit (Exactly x) = True
+isUnit (OneOf xs) = True
+isUnit (To x y) = True
+isUnit Any = True
+isUnit (Concat x y) = False
+isUnit (Alt x y) = False
+isUnit (Maybe x) = False
+isUnit (Group x) = True
+isUnit (Rep0 x) = False
+isUnit (Rep1 x) = False
+
+public export
+isSemiUnit : RE -> Bool
+isSemiUnit (Exactly x) = True
+isSemiUnit (OneOf xs) = True
+isSemiUnit (To x y) = True
+isSemiUnit Any = True
+isSemiUnit (Concat x y) = False
+isSemiUnit (Alt x y) = False
+isSemiUnit (Maybe x) = True
+isSemiUnit (Group x) = True
+isSemiUnit (Rep0 x) = True
+isSemiUnit (Rep1 x) = True
+
+mutual
+  ||| If condintion is satisfied show in parentheses
+  public export
+  pshow : (RE -> Bool) -> RE -> String
+  pshow condition re = if (condition re)
+                then showAux re
+                else "(" ++ showAux re ++ ")"
+
+  public export
+  showAux : RE -> String
+  showAux (Exactly c) = mapChar c
+  showAux (OneOf xs) = "[" ++ (foldl (++) "" (map mapChar xs)) ++ "]"
+  showAux (To x y) = "[" ++ (mapChar x) ++ "-" ++ (mapChar y) ++ "]"
+  showAux Any = "."
+  showAux (Concat x y) = pshow isSemiUnit x ++ showAux y
+  showAux (Alt x y) = pshow isSemiUnit x ++ "|" ++ pshow isSemiUnit y
+  showAux (Maybe x) = pshow isUnit x ++ "?"
+  showAux (Group x) = "`" ++ showAux x ++ "`"
+  showAux (Rep0 x) = pshow isUnit x ++ "*"
+  showAux (Rep1 x) = pshow isUnit x ++ "+"
+
+public export
 Show RE where
-  show (Exactly c) = mapChar c
-  show (OneOf xs) = "[" ++ (foldl (++) "" (map mapChar xs)) ++ "]"
-  show (x `To` y) = "[" ++ (mapChar x) ++ "-" ++ (mapChar y) ++ "]"
-  show Any = "."
-
-  show (Concat (Concat x z) y) = "(" ++ (show (Concat x z)) ++ ")" ++ (show y)
-  show (Concat (Alt x z) y) = "(" ++ (show (Alt x z)) ++ ")" ++ (show y)
-  show (Concat (Maybe x) y) = "(" ++ (show (Maybe x)) ++ ")" ++ (show y)
-  show (Concat atomX y) = show atomX ++ show y
-
-  show (Alt (Alt x y) (Alt z w)) = "(" ++ show (Alt x y) ++ ")" ++ "|" ++  "(" ++ show (Alt z w) ++ ")"
-  show (Alt (Alt x y) z) =  "(" ++ show (Alt x y) ++ ")" ++ "|" ++ show z
-  show (Alt z (Alt x y)) =  show z ++ "|" ++  "(" ++ show (Alt x y) ++ ")"
-  show (Alt x y) =  show x ++ "|" ++  show y
-
-  show (Group x) = "`" ++ show x ++ "`"
-
-  show (Maybe (Alt x y)) = "(" ++ show (Alt x y) ++ ")" ++ "?"
-  show (Maybe (Concat x z)) = "(" ++ show (Concat x z) ++ ")" ++ "?"
-  show (Maybe unitX) = show unitX ++ "?"
-
-  show (Rep0 (Alt x y)) = "(" ++ show (Alt x y) ++ ")" ++ "*"
-  show (Rep0 (Concat x z)) = "(" ++ show (Concat x z) ++ ")" ++ "*"
-  show (Rep0 unitX) = show unitX ++ "*"
-
-  show (Rep1 (Alt x y)) = "(" ++ show (Alt x y) ++ ")" ++ "+"
-  show (Rep1 (Concat x z)) = "(" ++ show (Concat x z) ++ ")" ++ "+"
-  show (Rep1 unitX) = show unitX ++ "+"
+  show = showAux
 
 public export
 CodeShapeRE : RE -> Code
@@ -87,33 +107,33 @@ public export
 TypeRE : RE -> Type
 TypeRE = (Sem . SimplifyCode . CodeShapeRE)
 
-public export
+export
 pairEq : ((a, x) = (b, y)) -> (a = b, x = y)
 pairEq Refl = (Refl, Refl)
 
-public export
+export
 eitherToMaybe : Either a () -> Maybe a
 eitherToMaybe (Left x) = Just x
 eitherToMaybe (Right _) = Nothing
 
-public export
+export
 eitherToMaybeR : Either () a -> Maybe a
 eitherToMaybeR (Left _) = Nothing
 eitherToMaybeR (Right x) = Just x
 
 mutual
-  public export
+  export
   altTyRE : (re1 : RE) -> (re2 : RE)
           -> ((SimplifyCode (CodeShapeRE re1)) = a)
           -> ((SimplifyCode (CodeShapeRE re2)) = b)
           -> TyRE $ Either (Sem a) (Sem b)
   altTyRE re1 re2 Refl Refl = compile re1 <|> compile re2
 
-  public export
+  export
   concatTyRE : (re1 : RE) -> (re2 : RE) -> TyRE (TypeRE re1, TypeRE re2)
   concatTyRE re1 re2 = compile re1 <*> compile re2
 
-  public export
+  export
   compile                  : (re : RE) -> TyRE $ TypeRE re
   compile (Exactly x)      = match x
   compile (OneOf xs)       = oneOf xs
