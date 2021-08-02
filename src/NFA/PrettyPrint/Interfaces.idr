@@ -19,7 +19,7 @@ Ordered AState where
 
 public export
 Ordered a => Ordered b => Ordered (CState a b) where
-  all = CEnd::(map CTh1 all) ++ (map CTh2 all)
+  all = (map CTh1 all) ++ (map CTh2 all) ++ [CEnd]
 
 public export
 Show PState where
