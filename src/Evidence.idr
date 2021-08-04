@@ -123,79 +123,83 @@ helper (ARight prf prf2 c1) impossible
 helper (AnEmpty prf) impossible
 helper (ARepetiton prf prf1) impossible
 
-mutual
-  extractRepRecSucc : (ev : Evidence)
-                    -> (0 n : Nat)
-                    -> (0 prff : n = (S k))
-                    -> (0 prf : ev `Encodes` (cs :< (Left ()) ++ (replicate n (Right c))))
-                    -> Result ev (ListC c) cs
-  extractRepRecSucc ev {c} (S k) Refl prf =
-    let res  = extractResult ev prf
-        rest = extractRepRec res.rest res.restValid
-    in MkResult (res.result :: rest.result) rest.rest rest.restValid
+{- We'll use these mutually-recursive definitions -}
+extractRepRecSucc : (ev : Evidence)
+                  -> (0 n : Nat)
+                  -> (0 prff : n = (S k))
+                  -> (0 prf : ev `Encodes` (cs :< (Left ()) ++ (replicate n (Right c))))
+                  -> Result ev (ListC c) cs
+extractRepRecAux : (ev : Evidence)
+                  -> (0 prf : ev `Encodes` (cs :< (Left ()) ++ (replicate n (Right c))))
+                  -> (0 prf1 : ev = ev' :< e)
+                  -> (0 prf2 : e = EList -> Void)
+                  -> Result ev (ListC c) cs
+extractRepRec : (ev : Evidence)
+              -> (0 prf : ev `Encodes` (cs :< (Left ()) ++ (replicate n (Right c))))
+              -> Result ev (ListC c) cs
+extractResult : (ev : Evidence) -> (0 prf : ev `Encodes` (cs :< (Right c))) -> Result ev c cs
 
-  extractRepRecAux : (ev : Evidence)
-                    -> (0 prf : ev `Encodes` (cs :< (Left ()) ++ (replicate n (Right c))))
-                    -> (0 prf1 : ev = ev' :< e)
-                    -> (0 prf2 : e = EList -> Void)
-                    -> Result ev (ListC c) cs
-  extractRepRecAux (ev' :< e) {n} prf Refl prf2 =
-    let 0 eqPrf : (k ** n = (S k))
-        eqPrf = case n of
-                      0 => case prf of
-                            (AnEndMark x) => absurd (prf2 Refl)
-                      (S k) => (k ** Refl)
-    in extractRepRecSucc (ev' :< e) n (snd eqPrf) prf
+-- Implementations --
 
-  extractRepRec : (ev : Evidence)
-                -> (0 prf : ev `Encodes` (cs :< (Left ()) ++ (replicate n (Right c))))
-                -> Result ev (ListC c) cs
-  extractRepRec [<] prf = absurd (helper prf)
-  extractRepRec (sx :< PairMark) prf = extractRepRecAux (sx :< PairMark) prf Refl (\case _ impossible)
-  extractRepRec (sx :< (CharMark x)) prf = extractRepRecAux (sx :< (CharMark x)) prf Refl (\case _ impossible)
-  extractRepRec (sx :< (GroupMark sy)) prf = extractRepRecAux (sx :< (GroupMark sy)) prf Refl (\case _ impossible)
-  extractRepRec (sx :< LeftBranchMark) prf = extractRepRecAux (sx :< LeftBranchMark) prf Refl (\case _ impossible)
-  extractRepRec (sx :< RightBranchMark) prf = extractRepRecAux (sx :< RightBranchMark) prf Refl (\case _ impossible)
-  extractRepRec (sx :< UnitMark) prf = extractRepRecAux (sx :< UnitMark) prf Refl (\case _ impossible)
-  extractRepRec (sx :< BList) prf = extractRepRecAux (sx :< BList) prf Refl (\case _ impossible)
-  extractRepRec (sx :< EList) {n, c} prf =
-    let 0 eqPrf : (SnocList.Extra.replicate n (Right c) = [<])
-        eqPrf = case n of
-                  0 => Refl
-                  (S k) => case prf of {_ impossible}
-    in MkResult [] sx
-                (case (replace
-                          {p=(\r => (sx :< EList) `Encodes` (cs :< (Left ()) ++ r))}
-                            eqPrf prf) of
-                        (AnEndMark prf') => prf')
+extractRepRecSucc ev {c} (S k) Refl prf =
+  let res  = extractResult ev prf
+      rest = extractRepRec res.rest res.restValid
+  in MkResult (res.result :: rest.result) rest.rest rest.restValid
 
-  extractResult : (ev : Evidence) -> (0 prf : ev `Encodes` (cs :< (Right c))) -> Result ev c cs
+extractRepRecAux (ev' :< e) {n} prf Refl prf2 =
+  let 0 eqPrf : (k ** n = (S k))
+      eqPrf = case n of
+                    0 => case prf of
+                          (AnEndMark x) => absurd (prf2 Refl)
+                    (S k) => (k ** Refl)
+  in extractRepRecSucc (ev' :< e) n (snd eqPrf) prf
 
-  extractResult (evs :< CharMark c') (AChar prf c') = MkResult c' evs prf
+extractRepRec [<] prf = absurd (helper prf)
+extractRepRec (sx :< PairMark) prf = extractRepRecAux (sx :< PairMark) prf Refl (\case _ impossible)
+extractRepRec (sx :< (CharMark x)) prf = extractRepRecAux (sx :< (CharMark x)) prf Refl (\case _ impossible)
+extractRepRec (sx :< (GroupMark sy)) prf = extractRepRecAux (sx :< (GroupMark sy)) prf Refl (\case _ impossible)
+extractRepRec (sx :< LeftBranchMark) prf = extractRepRecAux (sx :< LeftBranchMark) prf Refl (\case _ impossible)
+extractRepRec (sx :< RightBranchMark) prf = extractRepRecAux (sx :< RightBranchMark) prf Refl (\case _ impossible)
+extractRepRec (sx :< UnitMark) prf = extractRepRecAux (sx :< UnitMark) prf Refl (\case _ impossible)
+extractRepRec (sx :< BList) prf = extractRepRecAux (sx :< BList) prf Refl (\case _ impossible)
+extractRepRec (sx :< EList) {n, c} prf =
+  let 0 eqPrf : (SnocList.Extra.replicate n (Right c) = [<])
+      eqPrf = case n of
+                0 => Refl
+                (S k) => case prf of {_ impossible}
+  in MkResult [] sx
+              (case (replace
+                        {p=(\r => (sx :< EList) `Encodes` (cs :< (Left ()) ++ r))}
+                          eqPrf prf) of
+                      (AnEndMark prf') => prf')
 
-  extractResult (e@(evs ++ (ev1 ++ ev2)) :< PairMark) (APair {cs, c1, c2, ford=Refl} prf prf1 prf2) =
-    let   0 prf1' = recontextualise (recontextualise prf prf1) prf2
-          0 eqprf = sym (trans Refl appendAssociative)
-          0 prf'  = replace {p=(\x => x `Encodes` (cs :< (Right c1) :< (Right  c2)))} eqprf prf1'
-          result2 = extractResult e prf'
-          result1 = extractResult result2.rest (result2.restValid)
-    in MkResult (result1.result, result2.result) result1.rest result1.restValid
+extractResult (evs :< CharMark c') (AChar prf c') = MkResult c' evs prf
 
-  extractResult (evs :< (GroupMark sx)) (AGroup prf sx) = MkResult (pack $ reverse $ asList sx) evs prf
+extractResult (e@(evs ++ (ev1 ++ ev2)) :< PairMark) (APair {cs, c1, c2, ford=Refl} prf prf1 prf2) =
+  let   0 prf1' = recontextualise (recontextualise prf prf1) prf2
+        0 eqprf = sym (trans Refl appendAssociative)
+        0 prf'  = replace {p=(\x => x `Encodes` (cs :< (Right c1) :< (Right  c2)))} eqprf prf1'
+        result2 = extractResult e prf'
+        result1 = extractResult result2.rest (result2.restValid)
+  in MkResult (result1.result, result2.result) result1.rest result1.restValid
 
-  extractResult (e@(evs ++ ev) :< LeftBranchMark) (ALeft {ford = Refl} prf prf1 c2) =
-    let result = extractResult e (recontextualise prf prf1)
-    in MkResult (Left result.result) result.rest result.restValid
+extractResult (evs :< (GroupMark sx)) (AGroup prf sx) = MkResult (pack $ reverse $ asList sx) evs prf
 
-  extractResult (e@(evs ++ ev) :< RightBranchMark) (ARight {ford = Refl} prf prf2 c1) =
-    let result = extractResult e (recontextualise prf prf2)
-    in MkResult (Right result.result) result.rest result.restValid
+extractResult (e@(evs ++ ev) :< LeftBranchMark) (ALeft {ford = Refl} prf prf1 c2) =
+  let result = extractResult e (recontextualise prf prf1)
+  in MkResult (Left result.result) result.rest result.restValid
 
-  extractResult (evs :< UnitMark) (AnEmpty prf) = MkResult () evs prf
+extractResult (e@(evs ++ ev) :< RightBranchMark) (ARight {ford = Refl} prf prf2 c1) =
+  let result = extractResult e (recontextualise prf prf2)
+  in MkResult (Right result.result) result.rest result.restValid
 
-  extractResult (evs :< BList) (ARepetiton {ford, n} prf prf1) =
-    let res = extractRepRec evs (rewrite ford in (recontextualise (AnEndMark prf) prf1))
-    in MkResult (reverse res.result) res.rest res.restValid
+extractResult (evs :< UnitMark) (AnEmpty prf) = MkResult () evs prf
+
+extractResult (evs :< BList) (ARepetiton {ford, n} prf prf1) =
+  let res = extractRepRec evs (rewrite ford in (recontextualise (AnEndMark prf) prf1))
+  in MkResult (reverse res.result) res.rest res.restValid
+
+----------------------------------------------------
 
 public export
 extract : (ev : Evidence) -> (0 prf : ev `Encodes` [< Right c]) -> Sem c
