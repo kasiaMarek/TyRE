@@ -20,6 +20,17 @@ data EvidenceMarker =
  | EList
 
 public export
+Show EvidenceMarker where
+  show PairMark = "PairMark"
+  show (CharMark c) = "CharMark " ++ cast c
+  show (GroupMark sx) = "GroupMark " ++ show sx
+  show LeftBranchMark = "LeftBranchMark"
+  show RightBranchMark = "RightBranchMark"
+  show UnitMark = "UnitMark"
+  show BList = "BList"
+  show EList = "EList"
+
+public export
 Evidence : Type
 Evidence = SnocList EvidenceMarker
 

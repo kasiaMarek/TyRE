@@ -19,6 +19,8 @@ modules =   Data.SnocList.Elem
           , Evidence
           , NFA
           , NFA.Thompson
+          , NFA.PrettyPrint
+          , NFA.PrettyPrint.Interfaces
           , Verification
           , Verification.Thompson
           , Verification.Thompson.Concat
