@@ -6,7 +6,7 @@ import Data.SnocList.Elem
 import Data.SnocList.Extra
 import Data.List
 
-%default total
+-- %default total
 
 public export
 data EvidenceMarker =
@@ -130,9 +130,7 @@ mutual
                     -> (0 prf : ev `Encodes` (cs :< (Left ()) ++ (replicate n (Right c))))
                     -> Result ev (ListC c) cs
   extractRepRecSucc ev {c} (S k) Refl prf =
-    let res : Result ev c (cs :< (Left ()) ++ (replicate k (Right c)))
-        res = extractResult ev prf
-        rest : Result res.rest (ListC c) cs
+    let res  = extractResult ev prf
         rest = extractRepRec res.rest res.restValid
     in MkResult (res.result :: rest.result) rest.rest rest.restValid
 
@@ -196,8 +194,7 @@ mutual
   extractResult (evs :< UnitMark) (AnEmpty prf) = MkResult () evs prf
 
   extractResult (evs :< BList) (ARepetiton {ford, n} prf prf1) =
-    let res : Result evs c cs
-        res = extractRepRec evs (rewrite ford in (recontextualise (AnEndMark prf) prf1))
+    let res = extractRepRec evs (rewrite ford in (recontextualise (AnEndMark prf) prf1))
     in MkResult (reverse res.result) res.rest res.restValid
 
 public export
