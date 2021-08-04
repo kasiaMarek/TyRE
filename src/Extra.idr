@@ -6,7 +6,7 @@ import Data.Vect
 import Data.Vect.Elem
 import Data.Maybe
 import Pred
-import Data.List.Equalities
+import public Data.List.Equalities
 
 %default total
 
@@ -139,3 +139,14 @@ mapFSpec f q p (x1 :: xs) (x2 :: ys) spec y (pos, satP) =
       let (x1' ** (x2' ** (pos' ** (ex', eq', satQ')))) =
             mapFSpec f q p xs ys spec y (pos, satP)
       in (x1' ** (x2' ** (There pos' ** (ex', eq', satQ'))))
+
+export
+bindOnEmptyList : (f : a -> List b) -> ((((the $ List a)[]) >>= f) = (the $ List b)[])
+bindOnEmptyList f = Refl
+
+export
+extractBasedOnFstMapEq : (xs: List a) -> (ys : Vect (length xs) b)
+                      -> (f: b -> c) -> (pos : m `Elem` xs)
+                      -> (extractBasedOnFst xs (map f ys) pos = f (extractBasedOnFst xs ys pos))
+extractBasedOnFstMapEq (x :: xs) (y :: ys) f Here = Refl
+extractBasedOnFstMapEq (x :: xs) (y :: ys) f (There pos) = extractBasedOnFstMapEq xs ys f pos

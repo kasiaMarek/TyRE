@@ -1,0 +1,6 @@
+package tyretests
+
+main = Main
+executable = tyretests
+
+depends = contrib, test

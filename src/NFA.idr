@@ -9,6 +9,7 @@ import Evidence
 import Pred
 import Extra.Reflects
 import Extra
+import Data.Stream
 
 ||| A non-deterministic automaton
 public export
@@ -48,10 +49,18 @@ data Instruction =
     EmitString
   | ||| Emit the last character
     EmitLast
-  -- | ||| Emit a unit
-  --   EmitUnit
+  | ||| Emit a unit
+    EmitUnit
   | ||| Emit that the tape currently stores a pair
     EmitPair
+  |
+    EmitLeft
+  |
+    EmitRight
+  |
+    EmitBList
+  |
+    EmitEList
 
 public export
 Routine : Type
@@ -109,11 +118,36 @@ emitPair          : Step
 emitPair v        = MkVMState v.recording v.memory (v.evidence :< PairMark)
 
 public export
+emitLeft          : Step
+emitLeft v        = MkVMState v.recording v.memory (v.evidence :< LeftBranchMark)
+
+public export
+emitRight          : Step
+emitRight v        = MkVMState v.recording v.memory (v.evidence :< RightBranchMark)
+
+public export
+emitUnit          : Step
+emitUnit v        = MkVMState v.recording v.memory (v.evidence :< UnitMark)
+
+public export
+emitBList          : Step
+emitBList v        = MkVMState v.recording v.memory (v.evidence :< BList)
+
+public export
+emitEList          : Step
+emitEList v        = MkVMState v.recording v.memory (v.evidence :< EList)
+
+public export
 stepForInstruction : (mc : Maybe Char) -> Instruction -> Step
 
 stepForInstruction mc       Record      = startRecording
 stepForInstruction mc       EmitString  = emitString
 stepForInstruction mc       EmitPair    = emitPair
+stepForInstruction mc       EmitLeft    = emitLeft
+stepForInstruction mc       EmitRight   = emitRight
+stepForInstruction mc       EmitUnit    = emitUnit
+stepForInstruction mc       EmitBList   = emitBList
+stepForInstruction mc       EmitEList   = emitEList
 stepForInstruction (Just c) EmitLast    = emitChar c
 stepForInstruction Nothing  EmitLast    = (\t => t)
 
@@ -168,5 +202,16 @@ runFrom [] tds =  map (\td => td.vmState.evidence)
 runFrom (c::cs) tds = runFrom cs $ runMain c tds
 
 public export
+runFromStream : (Stream Char) -> (tds : List $ Thread N) -> Maybe Evidence
+runFromStream cs      []  = Nothing
+runFromStream (c::cs) tds = case (findR (\td => N .accepting td.naState) tds).Holds of
+                                    (Just td) => Just td.vmState.evidence
+                                    Nothing   => runFromStream cs $ runMain c tds
+
+public export
 runAutomaton : Word -> Maybe Evidence
 runAutomaton word = runFrom word initialise
+
+public export
+runAutomatonStream : (Stream Char) -> Maybe Evidence
+runAutomatonStream stream = runFromStream stream initialise

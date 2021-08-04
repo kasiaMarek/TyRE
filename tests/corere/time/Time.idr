@@ -1,9 +1,6 @@
-module Examples.TimeExample
-
 import API
 import Core
 import Codes
-import System.REPL
 import NFA.Thompson
 
 Exactly: Char -> CoreRE
@@ -12,6 +9,7 @@ Exactly x = Pred (\c =>  c == x)
 Range: Char -> Char -> CoreRE
 Range x y = Pred (\c =>  x <= c && c <= y)
 
+-- this is similar to time regex but allows ONLY SOME valid times
 Time: CoreRE
 Time =
     (
@@ -24,10 +22,17 @@ Time =
         (Exactly ':')
     ) `Concat`
     (
-        ('1' `Range` '5')
+        ('0' `Range` '5')
         `Concat`
         ('0' `Range` '9')
     )
 
+printResult : String -> IO ()
+printResult str = putStrLn $ show $ run Time str
+
 main : IO ()
-main = repl "Enter a string: " (\x => (show (run Time x)) ++ "\n")
+main = do printResult "10:30"
+          printResult "00:00"
+          printResult "03:02"
+          printResult "45:33"
+          printResult "o5:33"

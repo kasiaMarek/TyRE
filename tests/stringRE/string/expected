@@ -1,0 +1,15 @@
+ab
+\-
+d[a-z]
+[nhj]
+d[nhj\-]o
+`kl[0-9]`df
+(`kl[0-9]`d)fhh
+((`kl([0-9]nn)k[jkl]`d)fh)h
+((`kl([0-9]nn)k[jkl]`d)fh)h
+((`kl([0-9][\`]nn)k[jkl]`d)fh)h
+a|b
+(a|b)m
+[0-9]*oi(ss)|m
+uuu(u+)?
+ab?c

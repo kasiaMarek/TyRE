@@ -6,23 +6,35 @@ sourcedir = "src"
 
 modules =   Data.SnocList.Elem
           , Data.SnocList.Extra
+          , Text.Lexer
+          , Text.Lexer.Core
+          , Text.Parser
+          , Text.Parser.Core
+          , Text.Quantity
+          , Text.Token
           , API
           , Core
           , Codes
-          , CoreTyRE
+          , TyRE
           , Evidence
           , NFA
           , NFA.Thompson
+          , NFA.PrettyPrint
+          , NFA.PrettyPrint.Interfaces
           , Verification
           , Verification.Thompson
           , Verification.Thompson.Concat
           , Verification.Thompson.Concat.Extra
           , Verification.Thompson.Concat.EqualityPrf
+          , Verification.Thompson.Alt
+          , Verification.Thompson.Alt.Extra
+          , Verification.Thompson.Alt.EqualityPrf
           , Verification.Thompson.Group
+          , Verification.Thompson.Extra
           , Verification.Routine
           , Verification.AcceptingPath
           , Extra
           , Extra.Reflects
           , Pred
-          , Examples.NFAExample
-          , Examples.TimeExample
+          , RE
+          , StringRE
