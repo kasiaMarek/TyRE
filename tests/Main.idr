@@ -12,7 +12,7 @@ nfa = MkTestPool "nfa" [] Nothing
       ]
 
 corere : TestPool
-corere = MkTestPool "core re" [] Nothing
+corere = MkTestPool "core RE" [] Nothing
             [ "corere/time",
               "corere/foo",
               "corere/ab",
@@ -20,9 +20,9 @@ corere = MkTestPool "core re" [] Nothing
             ]
 
 stringTests : TestPool
-stringTests = MkTestPool "stringre" [] Nothing
-            [ "stringre/string",
-              "stringre/full"
+stringTests = MkTestPool "string syntax" [] Nothing
+            [ "string-syntax/string",
+              "string-syntax/full"
             ]
 
 tyre : TestPool
