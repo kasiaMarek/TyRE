@@ -9,7 +9,7 @@ import Data.Nat
 import Control.Order
 import Syntax.PreorderReasoning.Generic
 
--- %default total
+%default total
 
 public export
 data EvidenceMarker =
@@ -116,8 +116,10 @@ recontextualise prf1 (AnEndMark prf) = AnEndMark (recontextualise prf1 prf)
 recontextualise prf1 (ARepetiton {ford} prf prf') =
   ARepetiton (recontextualise prf1 prf) prf'
     {ford = trans (cong (evs1 ++) ford) appendAssociative}
+
 total
-helper : (0 prf : [<] `Encodes` (cs :< (Left ()) ++ (replicate n (Right c)))) -> Void
+helper : (0 prf : [<] `Encodes` (cs :< (Left ()) ++ (replicate n (Right c))))
+      -> Void
 helper (AnEndMark prf) impossible
 helper (AChar prf x) impossible
 helper (APair prf prf1 prf2) impossible
@@ -129,25 +131,31 @@ helper (ARepetiton prf prf1) impossible
 
 {- We'll use these mutually-recursive definitions -}
 total
-extractRepRecSucc : (ev : Evidence)
-                  -> (0 n : Nat)
-                  -> (0 prff : n = (S k))
-                  -> (0 prf : ev `Encodes` (cs :< (Left ()) ++ (replicate n (Right c))))
-                  -> (0 fuel : Nat) -> (0 enough : length ev `LTE` fuel)
-                  -> (0 fuelIsSucc : IsSucc fuel)
-                  -> Result ev (ListC c) cs
+extractRepRecSucc
+  : (ev : Evidence)
+  -> (0 n : Nat)
+  -> (0 prff : n = (S k))
+  -> (0 prf : ev `Encodes` (cs :< (Left ()) ++ (replicate n (Right c))))
+  -> (0 fuel : Nat) -> (0 enough : length ev `LTE` fuel)
+  -> (0 fuelIsSucc : IsSucc fuel)
+  -> Result ev (ListC c) cs
+
 total
-extractRepRecAux : (ev : Evidence)
-                  -> (0 prf : ev `Encodes` (cs :< (Left ()) ++ (replicate n (Right c))))
-                  -> (0 prf1 : ev = ev' :< e)
-                  -> (0 prf2 : e = EList -> Void)
-                  -> (0 fuel : Nat) -> (0 enough : length ev `LTE` fuel)
-                  -> Result ev (ListC c) cs
+extractRepRecAux
+  : (ev : Evidence)
+  -> (0 prf : ev `Encodes` (cs :< (Left ()) ++ (replicate n (Right c))))
+  -> (0 prf1 : ev = ev' :< e)
+  -> (0 prf2 : e = EList -> Void)
+  -> (0 fuel : Nat) -> (0 enough : length ev `LTE` fuel)
+  -> Result ev (ListC c) cs
+
 total
-extractRepRec : (ev : Evidence)
-              -> (0 prf : ev `Encodes` (cs :< (Left ()) ++ (replicate n (Right c))))
-              -> (0 fuel : Nat) -> (0 enough : length ev `LTE` fuel)
-              -> Result ev (ListC c) cs
+extractRepRec
+  : (ev : Evidence)
+  -> (0 prf : ev `Encodes` (cs :< (Left ()) ++ (replicate n (Right c))))
+  -> (0 fuel : Nat) -> (0 enough : length ev `LTE` fuel)
+  -> Result ev (ListC c) cs
+
 total
 extractResult : (ev : Evidence) -> (0 prf : ev `Encodes` (cs :< (Right c)))
               -> (0 fuel : Nat) -> (0 enough : length ev `LTE` fuel)
@@ -161,7 +169,6 @@ extractRepRecAux x@(ev' :< e) {n} prf Refl prf2 (S fuel) (LTESucc enough) =
                     0 => case prf of
                           (AnEndMark x) => absurd (prf2 Refl)
                     (S k) => (k ** Refl)
-      bar := ?h1810
   in extractRepRecSucc x n (snd eqPrf) prf (S fuel) (LTESucc enough) ItIsSucc
 
 extractRepRec [<] prf fuel enough = absurd (helper prf)
@@ -179,8 +186,8 @@ extractRepRec sx'@(sx :< EList          ) {n, c} prf fuel enough =
                 (S k) => case prf of {_ impossible}
   in MkResult [] sx
               (case (replace
-                        {p=(\r => (sx :< EList) `Encodes` (cs :< (Left ()) ++ r))}
-                          eqPrf prf) of
+                      {p=(\r => (sx :< EList) `Encodes` (cs :< (Left ()) ++ r))}
+                        eqPrf prf) of
                       (AnEndMark prf') => prf')
               (reflexive {rel = LTE})
 
@@ -200,39 +207,69 @@ extractRepRecSucc ev {c} (S k) Refl prf (S fuel) enough ItIsSucc =
      <~ 1 + (length res.rest) ...(plusLteMonotoneLeft 1 _ _ rest.bound)
      <~ length ev ...(res.bound)
 
-extractResult (evs :< CharMark c') (AChar prf c') (S fuel) (LTESucc enough) = MkResult c' evs prf (reflexive {rel = LTE})
+extractResult (evs :< CharMark c') (AChar prf c') (S fuel) (LTESucc enough) =
+  MkResult c' evs prf (reflexive {rel = LTE})
 
-extractResult (e@(evs ++ (ev1 ++ ev2)) :< PairMark) (APair {cs, c1, c2, ford=Refl} prf prf1 prf2)
-  (S fuel) (LTESucc enough) =
+extractResult (e@(evs ++ (ev1 ++ ev2)) :< PairMark)
+              (APair {cs, c1, c2, ford=Refl} prf prf1 prf2)
+              (S fuel) (LTESucc enough) =
   let   0 prf1' = recontextualise (recontextualise prf prf1) prf2
         0 eqprf = sym (trans Refl appendAssociative)
-        0 prf'  = replace {p=(\x => x `Encodes` (cs :< (Right c1) :< (Right  c2)))} eqprf prf1'
+        0 prf'  = replace
+                  {p=(\x => x `Encodes` (cs :< (Right c1) :< (Right  c2)))}
+                  eqprf prf1'
         result2 = extractResult e prf' fuel enough
         result1 = extractResult result2.rest (result2.restValid) fuel
-          let u = result2.bound in ?enough13
+                   $ fromLteSucc
+                   $ CalcWith {leq = LTE} $
+                    |~ 1 + length result2.rest
+                    <~ length (evs ++ (ev1 ++ ev2)) ...(result2.bound)
+                    <~ fuel ...(enough)
+                    <~ 1 + fuel ...(lteSuccRight (reflexive {rel = LTE}))
   in MkResult (result1.result, result2.result) result1.rest result1.restValid
-     ?h1
+    $ CalcWith {leq = LTE} $
+      |~ 1 + length result1.rest
+      <~ length result2.rest ...(result1.bound)
+      <~ length e ...(lteSuccLeft result2.bound)
+      <~ 1 + length e ...(lteSuccRight (reflexive {rel = LTE}))
 
-extractResult (evs :< (GroupMark sx)) (AGroup prf sx) (S fuel) (LTESucc enough) = MkResult (pack $ reverse $ asList sx) evs prf
-  ?h2
+extractResult (evs :< (GroupMark sx)) (AGroup prf sx) (S fuel) (LTESucc enough) =
+  MkResult (pack $ reverse $ asList sx) evs prf (reflexive {rel = LTE})
 
-extractResult (e@(evs ++ ev) :< LeftBranchMark) (ALeft {ford = Refl} prf prf1 c2) (S fuel) (LTESucc enough) =
-  let result = extractResult e (recontextualise prf prf1) fuel ?enough14
+extractResult (e@(evs ++ ev) :< LeftBranchMark)
+              (ALeft {ford = Refl} prf prf1 c2) (S fuel) (LTESucc enough) =
+  let result = extractResult e (recontextualise prf prf1) fuel enough
   in MkResult (Left result.result) result.rest result.restValid
-  ?h3
+    $ CalcWith {leq = LTE} $
+      |~ 1 + length result.rest
+      <~ length (evs ++ ev) ...(result.bound)
+      <~ 1 + length (evs ++ ev) ...(lteSuccRight (reflexive {rel = LTE}))
 
-extractResult (e@(evs ++ ev) :< RightBranchMark) (ARight {ford = Refl} prf prf2 c1)
-  (S fuel) (LTESucc enough) =
-  let result = extractResult e (recontextualise prf prf2) fuel ?enough15
+extractResult (e@(evs ++ ev) :< RightBranchMark)
+              (ARight {ford = Refl} prf prf2 c1) (S fuel) (LTESucc enough) =
+  let result = extractResult e (recontextualise prf prf2) fuel enough
   in MkResult (Right result.result) result.rest result.restValid
-  ?h4
-extractResult (evs :< UnitMark) (AnEmpty prf) (S fuel) (LTESucc enough) = MkResult () evs prf ?h5
-extractResult (evs :< BList) (ARepetiton {ford, n} prf prf1) (S fuel) (LTESucc enough) =
-  let res = extractRepRec evs (rewrite ford in (recontextualise (AnEndMark prf) prf1)) fuel ?enough17
-  in MkResult (reverse res.result) res.rest res.restValid ?h6
+    $ CalcWith {leq = LTE} $
+      |~ 1 + length result.rest
+      <~ length (evs ++ ev) ...(result.bound)
+      <~ 1 + length (evs ++ ev) ...(lteSuccRight (reflexive {rel = LTE}))
+
+extractResult (evs :< UnitMark) (AnEmpty prf) (S fuel) (LTESucc enough) =
+  MkResult () evs prf (reflexive {rel = LTE})
+
+extractResult (evs :< BList)
+              (ARepetiton {ford, n} prf prf1) (S fuel) (LTESucc enough) =
+  let res = extractRepRec evs
+        (rewrite ford in (recontextualise (AnEndMark prf) prf1)) fuel enough
+  in MkResult (reverse res.result) res.rest res.restValid
+  $ CalcWith {leq = LTE} $
+    |~ 1 + length res.rest
+    <~ length evs ...(res.bound)
+    <~ 1 + length evs ...(lteSuccRight (reflexive {rel = LTE}))
 
 ----------------------------------------------------
 
 public export
 extract : (ev : Evidence) -> (0 prf : ev `Encodes` [< Right c]) -> Sem c
-extract ev prf = (extractResult ev prf (length ev) (reflexive {rel = LTE})).result
+extract ev prf =
+  (extractResult ev prf (length ev) (reflexive {rel = LTE})).result
