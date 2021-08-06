@@ -186,7 +186,12 @@ extractRepRec sx'@(sx :< EList          ) {n, c} prf fuel enough =
 
 extractRepRecSucc ev {c} (S k) Refl prf (S fuel) enough ItIsSucc =
   let res  = extractResult ev prf (S fuel) enough
-      rest = extractRepRec res.rest res.restValid fuel ?enough10
+      rest = extractRepRec res.rest res.restValid fuel
+             $ fromLteSucc
+             $ CalcWith {leq = LTE} $
+             |~ 1 + length res.rest
+             <~ length ev ...(res.bound)
+             <~ 1 + fuel  ...(enough)
   in MkResult (res.result :: rest.result) rest.rest rest.restValid
      $ CalcWith {leq = LTE} $
      |~ 1 + (length rest.rest)
@@ -195,7 +200,7 @@ extractRepRecSucc ev {c} (S k) Refl prf (S fuel) enough ItIsSucc =
      <~ 1 + (length res.rest) ...(plusLteMonotoneLeft 1 _ _ rest.bound)
      <~ length ev ...(res.bound)
 
-extractResult (evs :< CharMark c') (AChar prf c') (S fuel) (LTESucc enough) = MkResult c' evs prf ?h0
+extractResult (evs :< CharMark c') (AChar prf c') (S fuel) (LTESucc enough) = MkResult c' evs prf (reflexive {rel = LTE})
 
 extractResult (e@(evs ++ (ev1 ++ ev2)) :< PairMark) (APair {cs, c1, c2, ford=Refl} prf prf1 prf2)
   (S fuel) (LTESucc enough) =
@@ -203,7 +208,8 @@ extractResult (e@(evs ++ (ev1 ++ ev2)) :< PairMark) (APair {cs, c1, c2, ford=Ref
         0 eqprf = sym (trans Refl appendAssociative)
         0 prf'  = replace {p=(\x => x `Encodes` (cs :< (Right c1) :< (Right  c2)))} eqprf prf1'
         result2 = extractResult e prf' fuel enough
-        result1 = extractResult result2.rest (result2.restValid) fuel ?enough13
+        result1 = extractResult result2.rest (result2.restValid) fuel
+          let u = result2.bound in ?enough13
   in MkResult (result1.result, result2.result) result1.rest result1.restValid
      ?h1
 
