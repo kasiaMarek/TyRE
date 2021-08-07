@@ -18,15 +18,35 @@ TYRE_FILE = "tyreFile"
 COMB_FILE = "combFile"
 XLABEL = "xlabel"
 
+def add(x, y):
+    return x + y
+
+def subtract(x, y):
+    return x - y
+
+def listOpByIndex(l1, l2, f):
+    zipped = zip(l1, l2)
+    diff = []
+    for e1, e2 in zipped:
+        diff.append(f(e1, e2))
+    return diff
+
+def exec(name, i):
+    ssh = subprocess.Popen(["./build/exec/" + name],
+                            stdin=subprocess.PIPE,
+                            universal_newlines=True,
+                            stdout=subprocess.PIPE)
+    start = time.time()
+    out = ssh.communicate(input=str(i))[0]
+    end = time.time()
+    return (end - start)
+
 def measuretime(name, iterations):
     os.system(IDRIS2 + " -p contrib -p tyre " + name + ".idr -o " + name.lower())
     times = []
+    exec(name.lower(), 0)
     for i in range(iterations):
-        ssh = subprocess.Popen(["./build/exec/" + name.lower()], stdin=subprocess.PIPE, universal_newlines=True, stdout=subprocess.PIPE)
-        start = time.time()
-        out = ssh.communicate(input=str(i))[0]
-        end = time.time()
-        times.append(end - start)
+        times.append(exec(name.lower(), i))
     return times
 
 def buildTimes(name, iterations):
@@ -56,9 +76,17 @@ def runtest(test):
 def plotresult(test, testresult):
     tyretimes = testresult["tyretimes"]
     combtimes = testresult["combtimes"]
-    y = range(1, test[ITR]+1)
-    plt.errorbar(y, tyretimes["avg"], tyretimes["stdev"], marker='^', capsize=3, label='TyRE')
-    plt.errorbar(y, combtimes["avg"], combtimes["stdev"], marker='^', capsize=3, label='Parsers Combinators')
+    x = range(1, test[ITR]+1)
+    plt.plot(x, tyretimes["avg"], color='blue', label='TyRE')
+    plt.fill_between(x,
+        listOpByIndex(tyretimes["avg"], tyretimes["stdev"], subtract),
+        listOpByIndex(tyretimes["avg"], tyretimes["stdev"], add),
+        color='blue', alpha=0.2)
+    plt.plot(x, combtimes["avg"], color='orange', label='Parsers Combinators')
+    plt.fill_between(x,
+        listOpByIndex(combtimes["avg"], combtimes["stdev"], subtract),
+        listOpByIndex(combtimes["avg"], combtimes["stdev"], add),
+        color='orange', alpha=0.3)
     plt.ylabel('time in seconds')
     plt.xlabel(test[XLABEL])
     plt.legend(loc="upper left")
@@ -66,10 +94,14 @@ def plotresult(test, testresult):
     plt.clf()
 
 tests = [
-    {NAME : "star", ITR : 25, TYRE_FILE: "StarTyRE", COMB_FILE: "StarComb", XLABEL: "length of word"},
-    {NAME : "star2", ITR : 25, TYRE_FILE: "StarTyRE2", COMB_FILE: "StarComb2", XLABEL: "length of word"},
-    {NAME : "concat", ITR : 15, TYRE_FILE: "ConcatTyRE", COMB_FILE: "ConcatComb", XLABEL: "length of regex and word"},
-    {NAME : "alternation", ITR : 10, TYRE_FILE: "AltTyRE", COMB_FILE: "AltComb", XLABEL: "length of regex"}
+    {NAME : "star", ITR : 100, TYRE_FILE: "StarTyRE",
+        COMB_FILE: "StarComb", XLABEL: "length of word"},
+    {NAME : "star2", ITR : 100, TYRE_FILE: "StarTyRE2",
+        COMB_FILE: "StarComb2", XLABEL: "length of word"},
+    {NAME : "concat", ITR : 15, TYRE_FILE: "ConcatTyRE",
+        COMB_FILE: "ConcatComb", XLABEL: "length of regex and word"},
+    {NAME : "alternation", ITR : 10, TYRE_FILE: "AltTyRE",
+        COMB_FILE: "AltComb", XLABEL: "length of regex"}
 ]
 
 def runall():
