@@ -4,27 +4,28 @@ import Data.List
 import Data.SnocList
 import public NFA.PrettyPrint.Interfaces
 
+transitionString : String -> String -> String -> String
+transitionString from label to =
+  from ++ " -> " ++ to ++ "[label = \"" ++ label ++ "\"];\n"
 
-transitionString : {auto nfa : NA} -> {auto s: Show nfa.State}
+makeTransitionString : {auto nfa : NA} -> {auto s: Show nfa.State}
                 -> nfa.State -> Char -> nfa.State -> String
-transitionString s c t =
-  (show s) ++ " -> " ++ (show t) ++ "[label = \"" ++ cast c ++ "\"];\n"
+makeTransitionString s c t = transitionString (show s) (cast c) (show t)
+  --(show s) ++ " -> " ++ (show t) ++ "[label = \"" ++ cast c ++ "\"];\n"
+
+nodeStyleString : String -> String -> String
+nodeStyleString shape name =
+  "node [shape = " ++ shape ++ "]; "
+      ++ name ++ ";\n"
 
 printNodeStyleString : {auto nfa : NA} -> {auto s: Show nfa.State}
                   -> nfa.State -> String
 printNodeStyleString s =
-  let _ := nfa.isEq
-      color : String
-      color = case (find (==s) nfa.start) of
-                Nothing => "black"
-                (Just _) => "red"
-      circle : String
+  let circle : String
       circle = if (nfa.accepting s)
                then "doublecircle"
                else "circle"
-  in "node [shape = " ++ circle ++
-        ", color = " ++ color ++"]; "
-        ++ (show s) ++ ";\n"
+  in nodeStyleString circle (show s)
 
 record PrinterState (nfa : NA) where
   constructor MkPState
@@ -32,20 +33,28 @@ record PrinterState (nfa : NA) where
   acc : SnocList String
 
 printNodeStyle : {auto nfa : NA}
-            -> {auto show: Show nfa.State}
+            -> {auto sh: Show nfa.State}
             -> nfa.State
             -> (PrinterState nfa)
             -> (PrinterState nfa)
 printNodeStyle s (MkPState seenStates acc) =
-  MkPState (s::seenStates) (acc :< (printNodeStyleString s))
+  let _ := nfa.isEq
+      currentAcc :=
+        case find (== s) nfa.start of
+          Nothing => acc :< (printNodeStyleString s)
+          Just _ =>
+            acc :< (nodeStyleString "point" ("St" ++ show s))
+                :< (printNodeStyleString s)
+                :< (transitionString ("St" ++ show s) "start" (show s))
+  in MkPState (s::seenStates) currentAcc
 
 printTransition : {auto nfa : NA}
-                -> {auto show: Show nfa.State}
+                -> {auto sh: Show nfa.State}
                 -> nfa.State
                 -> Char -> nfa.State
                 -> (PrinterState nfa) -> (PrinterState nfa)
 printTransition s c t (MkPState seenStates acc) =
-  MkPState seenStates (acc :< transitionString s c t)
+  MkPState seenStates (acc :< makeTransitionString s c t)
 
 printTransitionsFrom : {auto nfa : NA}
                     -> {auto show: Show nfa.State}
