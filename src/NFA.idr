@@ -192,8 +192,17 @@ runMapping c td = mapF  (runFunction c td)
                         (P .next td.naState c)
 
 public export
-runMain: Char -> List (Thread N) -> List (Thread N)
-runMain c tds = tds >>= runMapping c
+distinct : List (Thread N) -> List (Thread N)
+distinct [] = []
+distinct (td::tds) =
+  let _ := N .isEq
+  in case find (\t => t.naState == td.naState) tds of
+      Nothing => td::(distinct tds)
+      (Just _) => distinct tds
+
+public export
+runMain : Char -> List (Thread N) -> List (Thread N)
+runMain c tds = distinct (tds >>= runMapping c)
 
 public export
 runFrom : Word -> (tds : List $ Thread N) -> Maybe Evidence

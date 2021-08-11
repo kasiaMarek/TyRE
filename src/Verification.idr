@@ -36,6 +36,20 @@ recordPathHelper c td (td' ** (isElemOfF, (accepts ** isEq))) =
       prf = rewrite satQ in rewrite eqToExtractFst in ftd'
   in (acc ** rewrite prf in isEq)
 
+isElemDistinct : {auto nfa : NA} -> {auto prog : Program nfa}
+              -> (tds : List (Thread nfa)) -> (td : Thread nfa)
+              -> (prf : td `Elem` distinct tds)
+              -> (td `Elem` tds)
+
+isElemDistinct [] td prf = absurd prf
+isElemDistinct (t :: tds) td prf with (nfa .isEq)
+  isElemDistinct (t :: tds) td prf | _
+    with (find (\e => e.naState == t.naState) tds)
+    isElemDistinct (t :: tds) t Here | _ | Nothing = Here
+    isElemDistinct (t :: tds) td (There pos) | _ | Nothing =
+      There (isElemDistinct tds td pos)
+    isElemDistinct (t :: tds) td pos | _ | (Just _) =
+      There (isElemDistinct tds td pos)
 
 0 recordPath : {auto nfa : NA} -> {auto prog : Program nfa} -> (tds : List (Thread nfa)) -> (str : Word)
           -> (prf : runFrom str tds = Just ev)
@@ -54,7 +68,7 @@ recordPath {nfa} tds (c :: cs) prf =
           (\e => (acc: AcceptingFrom nfa e.naState (c :: cs) ** extractEvidenceFrom e acc = ev))
           (recordPathHelper c)
           tds
-          (td' ** (pos', (acc' ** isEq')))
+          (td' ** (isElemDistinct _ _ pos', (acc' ** isEq')))
   in (x ** (isElem, satQ))
 
 public export

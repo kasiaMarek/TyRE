@@ -85,8 +85,8 @@ nextGroup : (a -> Bool) -> (nextNFA: a -> Char -> List a)
     -> (xs: List (Either a AState) ** Vect (length xs) Routine)
 
 nextGroup accepting nextNFA (Left st) c =
-  let mappedNext : List a
-      mappedNext = nextNFA st c
+  let mappedNext  : List a
+                  := nextNFA st c
   in case (findR accepting mappedNext).Holds of
         -- case `thompson re`.next has no accepting states, we maintain the next states and substitute the routine with an empty one
         Nothing => (map Left mappedNext **
@@ -126,8 +126,8 @@ combineTransitionsAux  :
                       ->  (states: List (CState a b) ** Vect (length states) Routine)
 combineTransitionsAux [] []  _  _  _  _  = ([] ** [])
 combineTransitionsAux (x :: xs) (y :: ys) accepting conv newStart newRoutines =
-  let next : (states: List (CState a b) ** Vect (length states) Routine)
-      next = combineTransitionsAux xs ys accepting conv newStart newRoutines
+  let next  : (states: List (CState a b) ** Vect (length states) Routine)
+            := combineTransitionsAux xs ys accepting conv newStart newRoutines
   in  if (accepting x)
       then ((conv x)::newStart ++ (fst next) **
               y::(replace
@@ -269,8 +269,7 @@ thompson (Pred f) = MkSM (MkNFA PState acceptingPred [StartState]
 thompson (Empty) = MkSM (MkNFA AState (\_ => True) [ASt]
                                 (\_,_ => [])) (MkProgram [[EmitUnit]] (\_,_ => []))
 thompson (Group re) =
-  let prev : SM
-      prev = thompson re
+  let prev : SM := thompson re
       _ := prev.nfa.isEq
 
       0 state : Type
@@ -281,13 +280,13 @@ thompson (Group re) =
       accepting (Right _)            = True
 
       start : List state
-      start = map Left prev.nfa.start
+            := map Left prev.nfa.start
 
-      init: Vect (length start) Routine
-      init = replicate (length start) [Record]
+      init  : Vect (length start) Routine
+            := replicate (length start) [Record]
 
-      next : state -> Char -> (xs: List state ** Vect (length xs) Routine)
-      next st c = nextGroup prev.nfa.accepting prev.nfa.next st c
+      next  : state -> Char -> (xs: List state ** Vect (length xs) Routine)
+            := nextGroup prev.nfa.accepting prev.nfa.next
 
       nfa : NA
       nfa = MkNFA state accepting start (\st => \c => fst $ next st c)
@@ -298,25 +297,24 @@ thompson (Group re) =
   in MkSM nfa prog
 
 thompson (Concat re1 re2) =
-  let sm1 : SM
-      sm1 = thompson re1
-      sm2 : SM
-      sm2 = thompson re2
+  let sm1 : SM := thompson re1
+      sm2 : SM := thompson re2
 
       0 state : Type
       state = CState sm1.nfa.State sm2.nfa.State
 
       start : (xs: List state ** Vect (length xs) Routine)
-      start = combineTransitions $ concatInit sm1 sm2
+            := combineTransitions $ concatInit sm1 sm2
 
-      next : state -> Char -> (xs: List state ** Vect (length xs) Routine)
-      next = nextConcat sm1 sm2
+      next  : state -> Char -> (xs: List state ** Vect (length xs) Routine)
+            := nextConcat sm1 sm2
 
       _ := sm1.nfa.isEq
       _ := sm2.nfa.isEq
 
       nfa : NA
-      nfa = MkNFA state acceptingConcat (fst start) (\st => \c => fst (next st c))
+      nfa = MkNFA state acceptingConcat (fst start)
+                  (\st => \c => fst (next st c))
 
       prog : Program nfa
       prog = MkProgram (snd start) (\st => \c => snd (next st c))
@@ -324,10 +322,8 @@ thompson (Concat re1 re2) =
   in MkSM nfa prog
 
 thompson (Alt re1 re2) =
-  let sm1 : SM
-      sm1 = thompson re1
-      sm2 : SM
-      sm2 = thompson re2
+  let sm1 : SM := thompson re1
+      sm2 : SM := thompson re2
 
       0 state : Type
       state = CState sm1.nfa.State sm2.nfa.State
@@ -335,22 +331,24 @@ thompson (Alt re1 re2) =
       _ := sm1.nfa.isEq
       _ := sm2.nfa.isEq
 
-      start1 : (xs: List state ** Vect (length xs) Routine)
-      start1 = combineTransitions $ initOneAlt sm1
+      start1  : (xs: List state ** Vect (length xs) Routine)
+              := combineTransitions $ initOneAlt sm1
 
-      start2 : (xs: List state ** Vect (length xs) Routine)
-      start2 = combineTransitions $ initTwoAlt sm2
+      start2  : (xs: List state ** Vect (length xs) Routine)
+              := combineTransitions $ initTwoAlt sm2
 
       start : (xs: List state ** Vect (length xs) Routine)
-      start = (fst start1 ++ fst start2 **
-                replace {p=(\l => Vect l Routine)} (sym $ lengthDistributesOverAppend _ _)
+            := (fst start1 ++ fst start2 **
+                replace {p=(\l => Vect l Routine)}
+                  (sym $ lengthDistributesOverAppend _ _)
                   (snd start1 ++ snd start2))
 
-      next : state -> Char -> (xs: List state ** Vect (length xs) Routine)
-      next = nextAlt sm1 sm2
+      next  : state -> Char -> (xs: List state ** Vect (length xs) Routine)
+            := nextAlt sm1 sm2
 
       nfa : NA
-      nfa = MkNFA state  acceptingConcat (fst start) (\st => \c => fst (next st c))
+      nfa = MkNFA state acceptingConcat (fst start)
+                  (\st => \c => fst (next st c))
 
       prog : Program nfa
       prog = MkProgram (snd start) (\st => \c => snd (next st c))
@@ -358,15 +356,15 @@ thompson (Alt re1 re2) =
   in MkSM nfa prog
 
 thompson (Star re) =
-  let sm : SM
-      sm = thompson re
+  let sm : SM := thompson re
       _ := sm.nfa.isEq
 
       0 state : Type
       state = CState sm.nfa.State sm.nfa.State
 
       nfa : NA
-      nfa = MkNFA state acceptStar (startStar sm) (\st => \c => fst (nextStar sm st c))
+      nfa = MkNFA state acceptStar (startStar sm)
+                  (\st => \c => fst (nextStar sm st c))
 
       prog : Program nfa
       prog = MkProgram (initStar sm) (\st => \c => snd (nextStar sm st c))
