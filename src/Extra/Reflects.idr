@@ -23,7 +23,7 @@ public export
 findR : {0 a : Type} -> (pred : a -> Bool) -> (xs : List a) ->
   RMaybe (\x => (x `Elem` xs, pred x = True))
 
-findR pred [] = Nothing `Because` Otherwise \x => \case (_, _) impossible
+findR pred [] = Nothing `Because` Otherwise (\x => \case (_, _) impossible)
 
 findR pred (x :: xs) with (pred x) proof p
   findR pred (x :: xs) | True = (Just x) `Because` (Indeed (Here, p))

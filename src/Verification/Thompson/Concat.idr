@@ -58,8 +58,8 @@ evidenceTh2 {re2} (Step (CTh2 s) c CEnd prf1 (Accept CEnd Refl)) =
                   (Accept {nfa = (thompson re2).nfa} ans.oldState ans.oldAccepts))
   in MkEvidenceTh2Data
           word acc'
-          rewrite ans.routineEqualityPrf in
-            rewrite (rforEndConcat ans.stateIsElemOfNew) in (eqPrf2ToEnd _)
+          (rewrite ans.routineEqualityPrf in
+            rewrite (rforEndConcat ans.stateIsElemOfNew) in (eqPrf2ToEnd _))
 
 evidenceTh2 {re1, re2} (Step (CTh2 s) c (CTh2 t) prf1 acc) =
   let rest : EvidenceTh2Data {re1,re2} acc
@@ -70,8 +70,8 @@ evidenceTh2 {re1, re2} (Step (CTh2 s) c (CTh2 t) prf1 acc) =
                                             Refl (ch2NotElemOFEnd _)
   in MkEvidenceTh2Data
           (c::rest.word) (Step {nfa = (thompson re2).nfa} s c t aos.oldIsElemOfOld rest.acc)
-          rewrite aos.routineEqualityPrf in (rewrite rest.routineEq in
-                      (cong (Observe c ::) (appendAssociative _ _ _)))
+          (rewrite aos.routineEqualityPrf in (rewrite rest.routineEq in
+                      (cong (Observe c ::) (appendAssociative _ _ _))))
 
 
 -- |||Function for a transitions from state in the first automaton
@@ -95,8 +95,8 @@ evidenceTh1 {re1, re2} (Step (CTh1 s) c (CTh1 t) prf1 acc) =
   in MkEvidenceTh1Data
           (c::(rest.word1)) (Step {nfa = (thompson re1).nfa} s c t aos.oldIsElemOfOld rest.acc1)
           rest.word2        rest.acc2
-          rewrite aos.routineEqualityPrf in (rewrite (rest.routineEq) in
-            (cong (Observe c ::) (appendAssociative _ _ _)))
+          (rewrite aos.routineEqualityPrf in (rewrite (rest.routineEq) in
+            (cong (Observe c ::) (appendAssociative _ _ _))))
 
 evidenceTh1 (Step (CTh1 s) c (CTh2 t) prf1 acc) =
   let sm1 : SM
@@ -116,8 +116,8 @@ evidenceTh1 (Step (CTh1 s) c (CTh2 t) prf1 acc) =
         [c]         (Step {nfa = sm1.nfa} s c ans.oldState ans.oldIsElemOfOld
                         (Accept {nfa = sm1.nfa} ans.oldState ans.oldAccepts))
         rest.word   (Start {nfa = sm2.nfa} t aos.oldIsElemOfOld rest.acc)
-        rewrite ans.routineEqualityPrf in rewrite aos.routineEqualityPrf in
-          rewrite rest.routineEq in (cong (Observe c ::) (eqPrf1To2 _ _ _))
+        (rewrite ans.routineEqualityPrf in rewrite aos.routineEqualityPrf in
+          rewrite rest.routineEq in (cong (Observe c ::) (eqPrf1To2 _ _ _)))
 
 
 evidenceTh1 (Step (CTh1 s) c CEnd prf1 (Accept CEnd Refl)) =
@@ -134,8 +134,8 @@ evidenceTh1 (Step (CTh1 s) c CEnd prf1 (Accept CEnd Refl)) =
                     (Accept {nfa = sm1.nfa} ans1.oldState ans1.oldAccepts))
         []  (Start {nfa = sm2.nfa} ans2.oldState ans2.oldIsElemOfOld
                     (Accept {nfa = sm2.nfa} ans2.oldState ans2.oldAccepts))
-        rewrite ans1.routineEqualityPrf in (rewrite ans2.routineEqualityPrf in
-          (rewrite (rforEndConcat ans2.stateIsElemOfNew) in (cong (Observe c ::) (eqPrf1ToEnd _ _))))
+        (rewrite ans1.routineEqualityPrf in (rewrite ans2.routineEqualityPrf in
+          (rewrite (rforEndConcat ans2.stateIsElemOfNew) in (cong (Observe c ::) (eqPrf1ToEnd _ _)))))
 
 public export
 record ConcatEvidencePrfData  {word : Word} (re1 : CoreRE) (re2: CoreRE)
@@ -170,8 +170,8 @@ concatEvidencePrf re1 re2 (Start CEnd prf (Accept CEnd Refl)) =
               (Accept {nfa = (thompson re1).nfa} ans1.oldState ans1.oldAccepts))
         [] (Start {nfa = (thompson re2).nfa} ans2.oldState ans2.oldIsElemOfOld
               (Accept {nfa = (thompson re2).nfa} ans2.oldState ans2.oldAccepts))
-        rewrite ans1.routineEqualityPrf in (rewrite ans2.routineEqualityPrf in
-            (rewrite (rforEndConcat ans2.stateIsElemOfNew) in (eqPrf1ToEnd _ _)))
+        (rewrite ans1.routineEqualityPrf in (rewrite ans2.routineEqualityPrf in
+            (rewrite (rforEndConcat ans2.stateIsElemOfNew) in (eqPrf1ToEnd _ _))))
 
 concatEvidencePrf {word=(c::w)} re1 re2 (Start (CTh2 s) prf (Step (CTh2 s) c t prf1 acc)) =
   let sm1 : SM
@@ -210,4 +210,4 @@ concatEvidencePrf re1 re2 (Start (CTh1 s) prfInit (Step (CTh1 s) c t prf1 acc)) 
   in MkConcatEvidencePrfData
         allNext.word1   (Start {nfa = (thompson re1).nfa} s aos.oldIsElemOfOld allNext.acc1)
         allNext.word2   allNext.acc2
-        rewrite aos.routineEqualityPrf in rewrite allNext.routineEq in (appendAssociative _ _ _)
+        (rewrite aos.routineEqualityPrf in rewrite allNext.routineEq in (appendAssociative _ _ _))

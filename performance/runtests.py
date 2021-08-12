@@ -42,7 +42,7 @@ def exec(name, i):
     return (end - start)
 
 def measuretime(name, iterations):
-    os.system(IDRIS2 + " -p contrib -p tyre " + name + ".idr -o " + name.lower())
+    os.system(IDRIS2 + " -p tyre -p contrib " + name + ".idr -o " + name.lower())
     times = []
     exec(name.lower(), 0)
     for i in range(iterations):

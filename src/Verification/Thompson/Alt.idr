@@ -62,9 +62,9 @@ altEvidencePrfAuxLeft re1 re2 (Step (CTh1 s) c CEnd prf (Accept CEnd Refl)) =
   in MkAltEvLeftDataAux
       [c]
       (Step {nfa = sm1.nfa} s c ans.oldState ans.oldIsElemOfOld (Accept {nfa = sm1.nfa} ans.oldState ans.oldAccepts))
-        rewrite ans.routineEqualityPrf in
+        (rewrite ans.routineEqualityPrf in
           rewrite (rforEnd ans.stateIsElemOfNew [EmitLeft]) in
-              (cong (Observe c ::) $ endEqPrf _ _)
+              (cong (Observe c ::) $ endEqPrf _ _))
 
 altEvidencePrfAuxLeft re1 re2 (Step (CTh1 s) c (CTh2 t) prf (Step (CTh2 t) c' s' prf' acc)) =
   absurd $ cTh2InstElemOfNextFromOneAlt (thompson re1) t s c prf
@@ -93,9 +93,9 @@ altEvidencePrfAuxRight re1 re2 (Step (CTh2 s) c CEnd prf (Accept CEnd Refl)) =
   in MkAltEvRightDataAux
       [c]
       (Step {nfa = sm2.nfa} s c ans.oldState ans.oldIsElemOfOld (Accept {nfa = sm2.nfa} ans.oldState ans.oldAccepts))
-        rewrite ans.routineEqualityPrf in
+        (rewrite ans.routineEqualityPrf in
           rewrite (rforEnd ans.stateIsElemOfNew [EmitRight]) in
-              (cong (Observe c ::) $ endEqPrf _ _)
+              (cong (Observe c ::) $ endEqPrf _ _))
 
 altEvidencePrfAuxRight re1 re2 (Step (CTh2 s) c (CTh1 t) prf (Step (CTh1 t) c' s' prf' acc)) =
   absurd $ cTh1InstElemOfNextFromTwoAlt (thompson re2) t s c prf
