@@ -23,7 +23,7 @@ compile (x <|> y)     = Alt (compile x) (compile y)
 compile (Rep re)      = Star (compile re)
 
 export
-extract : (tyre: TyRE a) -> (Shape $ compile tyre -> a)
+extract : (tyre: TyRE a) -> (Shape (compile tyre) -> a)
 extract (Untyped r) x             = x
 extract (re1 <*> re2) (x, y)      = (extract re1 x, extract re2 y)
 extract (Conv f re) y             = f $ extract re y
