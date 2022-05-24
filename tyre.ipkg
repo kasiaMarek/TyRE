@@ -29,6 +29,9 @@ modules =   Data.SnocList.Elem
           , Verification.Thompson.Alt
           , Verification.Thompson.Alt.Extra
           , Verification.Thompson.Alt.EqualityPrf
+          , Verification.Thompson.Star
+          , Verification.Thompson.Star.Extra
+          , Verification.Thompson.Star.EqualityPrf
           , Verification.Thompson.Group
           , Verification.Thompson.Extra
           , Verification.Routine

@@ -162,65 +162,65 @@ initVM = MkVMState False [<] [<]
 
 parameters {auto N : NA}
 
-public export
-run: Word -> List (N .State) -> Bool
-run [] ys = case (find (N .accepting) ys) of
-              (Just _)  => True
-              Nothing   => False
-run (c :: cs) ys = run cs (ys >>= (\s => N .next s c))
+  public export
+  run: Word -> List (N .State) -> Bool
+  run [] ys = case (find (N .accepting) ys) of
+                (Just _)  => True
+                Nothing   => False
+  run (c :: cs) ys = run cs (ys >>= (\s => N .next s c))
 
-parameters  {auto P : Program N}
+  parameters  {auto P : Program N}
 
-||| Main body of `initialise`
-public export
-initFuction : (N .State, Routine) -> Thread N
-initFuction (s,r) = MkThread s (execute Nothing r initVM)
+    ||| Main body of `initialise`
+    public export
+    initFuction : (N .State, Routine) -> Thread N
+    initFuction (s,r) = MkThread s (execute Nothing r initVM)
 
-public export
-initialise : List (Thread N)
-initialise = mapF initFuction (N .start) (P .init)
+    public export
+    initialise : List (Thread N)
+    initialise = mapF initFuction (N .start) (P .init)
 
-||| Main body of `runFrom`
-public export
-runFunction : Char -> Thread N -> (N .State, Routine) -> Thread N
-runFunction c td (st, r) = MkThread st (execute (Just c) r (step c td.vmState))
+    ||| Main body of `runFrom`
+    public export
+    runFunction : Char -> Thread N -> (N .State, Routine) -> Thread N
+    runFunction c td (st, r) = MkThread st (execute (Just c) r (step c td.vmState))
 
-public export
-runMapping: Char -> Thread N -> List (Thread N)
-runMapping c td = mapF  (runFunction c td)
-                        (N .next td.naState c)
-                        (P .next td.naState c)
+    public export
+    runMapping: Char -> Thread N -> List (Thread N)
+    runMapping c td = mapF  (runFunction c td)
+                            (N .next td.naState c)
+                            (P .next td.naState c)
 
-public export
-distinct : List (Thread N) -> List (Thread N)
-distinct [] = []
-distinct (td::tds) =
-  let _ := N .isEq
-  in case find (\t => t.naState == td.naState) tds of
-      Nothing => td::(distinct tds)
-      (Just _) => distinct tds
+    public export
+    distinct : List (Thread N) -> List (Thread N)
+    distinct [] = []
+    distinct (td::tds) =
+      let _ := N .isEq
+      in case find (\t => t.naState == td.naState) tds of
+          Nothing => td::(distinct tds)
+          (Just _) => distinct tds
 
-public export
-runMain : Char -> List (Thread N) -> List (Thread N)
-runMain c tds = distinct (tds >>= runMapping c)
+    public export
+    runMain : Char -> List (Thread N) -> List (Thread N)
+    runMain c tds = distinct (tds >>= runMapping c)
 
-public export
-runFrom : Word -> (tds : List $ Thread N) -> Maybe Evidence
-runFrom [] tds =  map (\td => td.vmState.evidence)
-                      (findR (\td => N .accepting td.naState) tds).Holds
-runFrom (c::cs) tds = runFrom cs $ runMain c tds
+    public export
+    runFrom : Word -> (tds : List $ Thread N) -> Maybe Evidence
+    runFrom [] tds =  map (\td => td.vmState.evidence)
+                          (findR (\td => N .accepting td.naState) tds).Holds
+    runFrom (c::cs) tds = runFrom cs $ runMain c tds
 
-public export
-runFromStream : (Stream Char) -> (tds : List $ Thread N) -> Maybe Evidence
-runFromStream cs      []  = Nothing
-runFromStream (c::cs) tds = case (findR (\td => N .accepting td.naState) tds).Holds of
-                                    (Just td) => Just td.vmState.evidence
-                                    Nothing   => runFromStream cs $ runMain c tds
+    public export
+    runFromStream : (Stream Char) -> (tds : List $ Thread N) -> Maybe Evidence
+    runFromStream cs      []  = Nothing
+    runFromStream (c::cs) tds = case (findR (\td => N .accepting td.naState) tds).Holds of
+                                        (Just td) => Just td.vmState.evidence
+                                        Nothing   => runFromStream cs $ runMain c tds
 
-public export
-runAutomaton : Word -> Maybe Evidence
-runAutomaton word = runFrom word initialise
+    public export
+    runAutomaton : Word -> Maybe Evidence
+    runAutomaton word = runFrom word initialise
 
-public export
-runAutomatonStream : (Stream Char) -> Maybe Evidence
-runAutomatonStream stream = runFromStream stream initialise
+    public export
+    runAutomatonStream : (Stream Char) -> Maybe Evidence
+    runAutomatonStream stream = runFromStream stream initialise

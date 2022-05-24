@@ -6,6 +6,7 @@ import Evidence
 import Verification.AcceptingPath
 import Extra
 import Data.List
+import Data.List.Equalities
 import Core
 import Codes
 import Data.SnocList
@@ -35,12 +36,9 @@ mutual
                             ev `Encodes` (replicate (length accs) (Right $ ShapeCode re))))
 
   evidenceForRepetition re (mc, vm) [] r ford =
-    case (trans ford
-            (bindOnEmptyList {a = (w : Word ** Accepting (thompson re).nfa w)}
-                (\ac => extractRoutine (thompson re).nfa (thompson re).prog (snd ac)))) of
-                      Refl => ([<] ** (Refl, [<]))
+    case ford of Refl => ([<] ** (Refl, [<]))
 
-  evidenceForRepetition re mcvm (acc :: accs) r ford with (trans ford (foldLeftIsConcatPrf accs acc _))
+  evidenceForRepetition re mcvm (acc :: accs) r ford with (trans ford (bindConcatPrf accs acc _))
     evidenceForRepetition re mcvm (acc :: accs)
                             (extractRoutine (thompson re).nfa (thompson re).prog (snd acc) ++
                               (accs >>= (\ac => extractRoutine ((thompson re) .nfa) ((thompson re) .prog) (snd ac)))) ford | Refl =

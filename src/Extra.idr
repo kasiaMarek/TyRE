@@ -2,11 +2,14 @@ module Extra
 
 import Data.List
 import Data.List.Elem
+import Data.List.Elem.Extra
 import Data.Vect
 import Data.Vect.Elem
 import Data.Maybe
 import Pred
 import public Data.List.Equalities
+import Data.List.Reverse
+import Syntax.PreorderReasoning
 
 %default total
 
@@ -28,35 +31,8 @@ mapJust f (Just x) Refl = (x ** (Refl, Refl))
 
 ||| Extract value from Just
 public export
-fromJust: (m: Maybe a) -> (prf: m = Just x) -> a
+fromJust : (m: Maybe a) -> (prf: m = Just x) -> a
 fromJust (Just x) Refl = x
-
-||| Proof that if an element belongs to concatenetion of lists xs ++ ys it belongs either to xs of ys
-public export
-hereOrThereConcat: (xs: List a) -> (ys: List a) -> (e `Elem` (xs ++ ys)) -> Either (e `Elem` xs) (e `Elem` ys)
-hereOrThereConcat [] ys pos = Right pos
-hereOrThereConcat (e :: xs) ys Here = Left Here
-hereOrThereConcat (x :: xs) ys (There pos) = case hereOrThereConcat xs ys pos of
-                                              (Left pos) => Left $ There pos
-                                              (Right pos) => Right pos
-
----bind proofs
-foldLeftIsConcatPrfAux  : (xs: List a) -> (ys: List b) -> (zs: List b) -> (f: a -> List b)
-                        -> (foldl (\acc, elem => acc ++ f elem) (ys ++ zs) xs = ys ++ foldl (\acc, elem => acc ++ f elem) (zs) xs)
-foldLeftIsConcatPrfAux [] ys zs f = Refl
-foldLeftIsConcatPrfAux (x :: xs) ys zs f =
-  replace
-    {p = \m => foldl (\acc, elem => acc ++ f elem) m xs = ys ++ foldl (\acc, elem => acc ++ f elem) (zs ++ f x) xs}
-    (appendAssociative _ _ _)
-    (foldLeftIsConcatPrfAux xs ys (zs ++ f x) f)
-
-public export
-foldLeftIsConcatPrf: (xs: List a) -> (x: a) -> (f: a -> List b) -> ((x::xs >>= f) = (f x) ++ (xs >>= f))
-foldLeftIsConcatPrf xs x f =
-  replace
-    {p = \m => foldl (\acc, elem => acc ++ f elem) m xs = f x ++ foldl (\acc, elem => acc ++ f elem) [] xs}
-    (appendNilRightNeutral _)
-    (foldLeftIsConcatPrfAux xs (f x) [] f)
 
 public export
 bindSpec : (f : a -> List b) -> (p : Pred b) -> (q : Pred a) ->
@@ -67,7 +43,7 @@ bindSpec : (f : a -> List b) -> (p : Pred b) -> (q : Pred a) ->
 
 bindSpec f p q spec [] prf = absurd $ fst $ snd prf
 bindSpec f p q spec (x :: xs) (y ** (isElemF, satP)) =
-  let hereOrThere = hereOrThereConcat (f x) (xs >>= f) (replace {p=(y `Elem`)} (foldLeftIsConcatPrf _ _ _) isElemF)
+  let hereOrThere = hereOrThereConcat (f x) (xs >>= f) (replace {p=(y `Elem`)} (bindConcatPrf _ _ _) isElemF)
   in case hereOrThere of
     (Left prf1) => (x ** (Here, spec x (y ** (prf1, satP)), (y ** (prf1, satP))))
     (Right prf1) =>
@@ -139,10 +115,6 @@ mapFSpec f q p (x1 :: xs) (x2 :: ys) spec y (pos, satP) =
       let (x1' ** (x2' ** (pos' ** (ex', eq', satQ')))) =
             mapFSpec f q p xs ys spec y (pos, satP)
       in (x1' ** (x2' ** (There pos' ** (ex', eq', satQ'))))
-
-export
-bindOnEmptyList : (f : a -> List b) -> ((((the $ List a)[]) >>= f) = (the $ List b)[])
-bindOnEmptyList f = Refl
 
 export
 extractBasedOnFstMapEq : (xs: List a) -> (ys : Vect (length xs) b)

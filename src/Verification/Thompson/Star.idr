@@ -3,6 +3,7 @@ module Verification.Thompson.Star
 import Data.Vect
 import Data.List
 import Data.List.Elem
+import Data.List.Equalities
 import Data.SnocList
 import Data.SnocList.Extra
 
@@ -55,7 +56,7 @@ startEvidencePrfAux {s' = (CTh1 s)} re s (Step (CTh1 s) c (CTh2 t) prf acc) (Lef
       newAcc = (currWord ** Start {nfa = sm.nfa} t tInStart currAcc)
   in ([c] ** (Step {nfa = sm.nfa} s c u uInNext (Accept {nfa = sm.nfa} u uAccepts) **
         (newAcc::accs **
-          rewrite foldLeftIsConcatPrf accs newAcc ((\ac => extractRoutine sm.nfa sm.prog (snd ac))) in
+          rewrite bindConcatPrf accs newAcc ((\ac => extractRoutine sm.nfa sm.prog (snd ac))) in
             rewrite eqPrf in rewrite rEqPrf in rewrite rEq in
               cong (Observe c ::) (starEq1 _ _ _ _ _))))
 
@@ -97,7 +98,7 @@ startEvidencePrfAux {word} re s acc (Right prf) with (prf)
         newAcc = (currWord ** Start {nfa = sm.nfa} t tInStart currAcc)
     in ([c] ** (Step {nfa = sm.nfa} s c u uInNext (Accept {nfa = sm.nfa} u uAccepts) **
           (newAcc::accs **
-            rewrite foldLeftIsConcatPrf accs newAcc ((\ac => extractRoutine sm.nfa sm.prog (snd ac))) in
+            rewrite bindConcatPrf accs newAcc ((\ac => extractRoutine sm.nfa sm.prog (snd ac))) in
               rewrite eqPrf in rewrite rEqPrf in rewrite rEq in
                 cong (Observe c ::) (starEq1 _ _ _ _ _))))
 
@@ -134,6 +135,6 @@ starEvidencePrf re (Start (CTh2 s)  pos          acc)                 =
       newAcc : (w : Word ** Accepting sm.nfa w)
       newAcc = (currWord ** Start {nfa = sm.nfa} s sInStart currAcc)
   in (newAcc::accs **
-          rewrite foldLeftIsConcatPrf accs newAcc ((\ac => extractRoutine sm.nfa sm.prog (snd ac))) in
+          rewrite bindConcatPrf accs newAcc ((\ac => extractRoutine sm.nfa sm.prog (snd ac))) in
             rewrite eqPrf in rewrite rEq in
               cong (Regular EmitEList ::) (appendAssociative4 _ _ _ _))
