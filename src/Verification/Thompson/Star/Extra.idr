@@ -29,7 +29,7 @@ routineForStartRep sm (There pos) with (sm.prog.init)
   routineForStartRep sm (There pos) | init with (sm.nfa.start)
     routineForStartRep sm (There Here) | [] | [] impossible
     routineForStartRep sm (There (There _)) | [] | [] impossible
-    routineForStartRep sm (There Here) | (y :: ys) | (s :: xs) = (Here ** Refl)
+    routineForStartRep sm (There Here) | (y :: ys) | (x :: xs) = (Here ** Refl)
     routineForStartRep sm (There (There z)) | (y :: ys) | (x :: xs) =
       let (rPos ** prf) := (routineForStartRep sm (There z) | ys | xs)
       in (There rPos ** prf)

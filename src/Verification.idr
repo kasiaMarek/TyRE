@@ -57,7 +57,7 @@ isElemDistinct (t :: tds) td prf with (nfa .isEq)
 
 recordPath tds [] prf with (findR (\td => nfa.accepting td.naState) tds)
   recordPath tds [] prf | (Nothing `Because` (Otherwise f)) = absurd prf
-  recordPath tds [] prf | ((Just x) `Because` (Indeed (pos, isEq))) = (x ** (pos, (Accept x.naState isEq ** justInjective prf)))
+  recordPath tds [] prf | ((Just x) `Because` (Indeed (pos, isEq))) = (x ** (pos, (Accept x.naState isEq ** injective prf)))
 
 recordPath {nfa} tds (c :: cs) prf =
   let (td' ** (pos', (acc' ** isEq'))) = recordPath _ cs prf
