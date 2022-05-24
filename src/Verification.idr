@@ -11,6 +11,7 @@ import Extra
 import Extra.Reflects
 import Verification.AcceptingPath
 import Data.Stream
+import Profiling.NFA
 
 recordPathHelper : {auto nfa : NA} -> {auto prog: Program nfa} -> (c: Char) -> (td : Thread nfa)
               -> (td': Thread nfa ** (td' `Elem` runMapping c td, (acc: AcceptingFrom nfa td'.naState cs ** extractEvidenceFrom td' acc = ev)))
@@ -101,7 +102,7 @@ extractEvidenceEquality nfa prog str ev prf =
 
   in (Start td.naState isElem' acc ** rewrite prf in eq)
 
-
+--- stream
 0 eqForStreamFrom : (nfa : NA)
                   -> (prog : Program nfa)
                   -> (stm : Stream Char)
@@ -124,3 +125,20 @@ public export
               -> (stm : Stream Char)
               -> (str : Word ** runAutomaton str = runAutomatonStream stm)
 eqForStream nfa prog stm = eqForStreamFrom nfa prog stm initialise
+
+--- profiling
+0 eqForProfilingFrom : (nfa : NA)
+                    -> (prog : Program nfa)
+                    -> (str : Word)
+                    -> (tds : List (Thread nfa))
+                    -> runFrom str tds = fst (runFromProfile nfa prog str tds)
+eqForProfilingFrom nfa prog [] tds = Refl
+eqForProfilingFrom nfa prog (c :: cs) tds = eqForProfilingFrom nfa prog cs _
+
+
+export
+0 eqForProfiling : (nfa : NA)
+                -> (prog : Program nfa)
+                -> (str : Word)
+                -> runAutomaton str = fst (runAutomatonProfile nfa prog str)
+eqForProfiling nfa prog str = eqForProfilingFrom nfa prog str initialise

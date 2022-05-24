@@ -41,3 +41,5 @@ modules =   Data.SnocList.Elem
           , Pred
           , RE
           , StringRE
+          , Profiling
+          , Profiling.NFA
