@@ -6,6 +6,8 @@ import subprocess
 import time
 import matplotlib.pyplot as plt
 import statistics
+from scipy.optimize import curve_fit
+import numpy as np
 
 IDRIS2 = "idris2"
 SAMPLES = 5
@@ -17,6 +19,15 @@ ITR = "iterations"
 TYRE_FILE = "tyreFile"
 COMB_FILE = "combFile"
 XLABEL = "xlabel"
+FUNCTION = "function"
+FUNCTION_PARAMS = "function_params"
+
+
+def exponential(x, a, b, c):
+    return a*np.exp(b*x) + c
+
+def poly(x, a, b, c):
+    return a*np.power(x, b) + c
 
 def add(x, y):
     return x + y
@@ -77,6 +88,17 @@ def plotresult(test, testresult):
     tyretimes = testresult["tyretimes"]
     combtimes = testresult["combtimes"]
     x = range(1, test[ITR]+1)
+    if FUNCTION in test:
+        pars, cov = curve_fit(
+                f=test[FUNCTION], 
+                xdata=x, 
+                ydata=tyretimes["avg"], 
+                p0=test[FUNCTION_PARAMS], 
+                bounds=(-np.inf, np.inf)
+            )
+        approx_y = [test[FUNCTION](i, *pars) for i in x]
+        plt.plot(x, approx_y, color='black', label='approx')
+        print(pars)
     plt.plot(x, tyretimes["avg"], color='blue', label='TyRE')
     plt.fill_between(x,
         listOpByIndex(tyretimes["avg"], tyretimes["stdev"], subtract),
@@ -98,9 +120,10 @@ tests = [
         COMB_FILE: "StarComb", XLABEL: "length of word"},
     {NAME : "star2", ITR : 100, TYRE_FILE: "StarTyRE2",
         COMB_FILE: "StarComb2", XLABEL: "length of word"},
-    {NAME : "concat", ITR : 15, TYRE_FILE: "ConcatTyRE",
-        COMB_FILE: "ConcatComb", XLABEL: "length of regex and word"},
-    {NAME : "alternation", ITR : 10, TYRE_FILE: "AltTyRE",
+    {NAME : "concat", ITR : 25, TYRE_FILE: "ConcatTyRE",
+        COMB_FILE: "ConcatComb", XLABEL: "length of regex and word",
+        FUNCTION : exponential, FUNCTION_PARAMS : [0,0,0]},
+    {NAME : "alternation", ITR : 25, TYRE_FILE: "AltTyRE",
         COMB_FILE: "AltComb", XLABEL: "length of regex"}
 ]
 
