@@ -9,6 +9,8 @@ import Verification
 import Verification.Thompson
 import TyRE
 import Data.Stream
+import NewThompson
+import NewThompson.NewToOld
 
 public export
 runAutomatonSM : SM -> Word -> Maybe Evidence
@@ -18,7 +20,7 @@ runAutomatonSMStream : SM -> Stream Char -> Maybe Evidence
 runAutomatonSMStream sm stream = runAutomatonStream {N = sm.nfa, P = sm.prog} stream
 
 public export
-match : {re : CoreRE} -> (sm : SM) -> {auto prf : thompson re = sm}
+match : {re : CoreRE} -> (sm : SM) -> {0 prf : thompson re = sm}
       -> Word -> Maybe (Shape re)
 match {re} sm {prf} str with (runAutomatonSM sm str) proof p
   match {re} sm {prf} str | Nothing = Nothing
@@ -30,7 +32,7 @@ match {re} sm {prf} str with (runAutomatonSM sm str) proof p
 
 public export
 runWord : (re: CoreRE) -> List Char -> Maybe (Shape re)
-runWord re str = match (thompson re) str
+runWord re str = match (newToOld (newThompson re)) {prf = thompsonEqProof re} str
 
 public export
 run : (re: CoreRE) -> String -> Maybe (Shape re)
@@ -41,7 +43,7 @@ parse : TyRE a -> String -> Maybe a
 parse tyre str = map (extract tyre) $ run (compile tyre) str
 
 public export
-matchStream : {re : CoreRE} -> (sm : SM) -> {auto prf : thompson re = sm}
+matchStream : {re : CoreRE} -> (sm : SM) -> {0 prf : thompson re = sm}
             -> Stream Char -> Maybe (Shape re)
 matchStream {re} sm {prf} stm with (runAutomatonSMStream sm stm) proof p
   matchStream {re} sm {prf} stm | Nothing = Nothing
@@ -54,4 +56,4 @@ matchStream {re} sm {prf} stm with (runAutomatonSMStream sm stm) proof p
 
 public export
 getToken : (re: CoreRE) -> Stream Char -> Maybe (Shape re)
-getToken re stm = matchStream (thompson re) stm
+getToken re stm = matchStream (newToOld (newThompson re)) {prf = thompsonEqProof re} stm

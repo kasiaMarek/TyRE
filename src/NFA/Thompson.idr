@@ -15,6 +15,7 @@ import Data.List.Equalities
 public export
 data PState = StartState | AcceptState
 
+public export
 Eq PState where
   StartState  == StartState   = True
   AcceptState == AcceptState  = True
@@ -24,6 +25,7 @@ Eq PState where
 public export
 data AState = ASt
 
+public export
 Eq AState where
   _ == _ = True
 
