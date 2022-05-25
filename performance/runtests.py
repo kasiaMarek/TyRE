@@ -98,10 +98,14 @@ tests = [
         COMB_FILE: "StarComb", XLABEL: "length of word"},
     {NAME : "star2", ITR : 100, TYRE_FILE: "StarTyRE2",
         COMB_FILE: "StarComb2", XLABEL: "length of word"},
-    {NAME : "concat", ITR : 15, TYRE_FILE: "ConcatTyRE",
-        COMB_FILE: "ConcatComb", XLABEL: "length of regex and word"},
-    {NAME : "alternation", ITR : 10, TYRE_FILE: "AltTyRE",
-        COMB_FILE: "AltComb", XLABEL: "length of regex"}
+    {NAME : "concat", ITR : 25, TYRE_FILE: "ConcatTyRE",
+        COMB_FILE: "ConcatComb", XLABEL: "length of regex and word",
+        FUNCTION : exponential, FUNCTION_PARAMS : [0,0,0]} ,
+    {NAME : "alternation", ITR : 25, TYRE_FILE: "AltTyRE",
+        COMB_FILE: "AltComb", XLABEL: "length of regex"},
+    {NAME : "concatLast", ITR : 25, TYRE_FILE: "ConcatLastStep",
+        COMB_FILE: "ConcatComb", XLABEL: "length of regex and word",
+        FUNCTION : exponential, FUNCTION_PARAMS : [0,0,0]}
 ]
 
 def runall():
