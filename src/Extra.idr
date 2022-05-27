@@ -43,7 +43,7 @@ bindSpec : (f : a -> List b) -> (p : Pred b) -> (q : Pred a) ->
 
 bindSpec f p q spec [] prf = absurd $ fst $ snd prf
 bindSpec f p q spec (x :: xs) (y ** (isElemF, satP)) =
-  let hereOrThere = hereOrThereConcat (f x) (xs >>= f) (replace {p=(y `Elem`)} (bindConcatPrf _ _ _) isElemF)
+  let hereOrThere = elemAppLorR (f x) (xs >>= f) (replace {p=(y `Elem`)} (bindConcatPrf _ _ _) isElemF)
   in case hereOrThere of
     (Left prf1) => (x ** (Here, spec x (y ** (prf1, satP)), (y ** (prf1, satP))))
     (Right prf1) =>
