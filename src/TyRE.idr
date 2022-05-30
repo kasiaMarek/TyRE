@@ -60,8 +60,16 @@ digit : TyRE Integer
 digit = (\c => cast c - cast '0') `Conv` range '0' '9'
 
 export
-oneOf : List Char -> TyRE Char
-oneOf xs = predicate (\e => case (find (\x => e == x) xs) of {(Just _) => True ; Nothing => False})
+digitChar : TyRE Char
+digitChar = range '0' '9'
+
+export
+oneOfList : List Char -> TyRE Char
+oneOfList xs = predicate (\e => case (find (\x => e == x) xs) of {(Just _) => True ; Nothing => False})
+
+export
+oneOf : String -> TyRE Char
+oneOf xs = oneOfList (unpack xs)
 
 export
 rep0 : TyRE a -> TyRE (List a)
@@ -86,3 +94,42 @@ export
 export
 or : TyRE a -> TyRE a -> TyRE a
 or t1 t2 = fromEither `Conv` (t1 <|> t2)
+
+export
+letter : TyRE Char
+letter = range 'a' 'z' `or` range 'A' 'Z'
+
+-- TODO:: can we do it better ?
+export
+repFrom : Nat -> TyRE a -> TyRE (List a)
+repFrom 0 re = rep0 re
+repFrom (S k) re = (\(e,l) => e::l) `Conv` (re <*> repFrom k re)
+
+export
+repTo : Nat -> TyRE a -> TyRE (List a)
+repTo 0 re = const [] `Conv` empty
+repTo (S k) re = 
+  optionalAdd `Conv` (option re <*> repTo k re) where
+    optionalAdd : (Maybe a, List a) -> List a
+    optionalAdd (Nothing, xs) = xs
+    optionalAdd ((Just x), xs) = x::xs
+
+export
+repFromTo : (from : Nat) -> (to : Nat) -> {auto prf : from <= to = true} -> TyRE a -> TyRE (List a)
+repFromTo 0 0 _ = const [] `Conv` empty
+repFromTo 0 (S from) re = repTo from re
+repFromTo (S from) to re = (\(e,l) => e::l) `Conv` (re <*> repFromTo from to re)
+
+public export
+repTimesType : (n : Nat) -> (reType : Type) -> Type
+repTimesType 0 reType = Unit
+repTimesType 1 reType = reType
+repTimesType (S (S k)) reType = (reType, (repTimesType (S k) reType))
+
+export
+repTimes : (n : Nat)-> (re : TyRE a) -> TyRE (repTimesType n a)
+repTimes 0 re = empty
+repTimes 1 re = re
+repTimes (S (S k)) re = re <*> repTimes (S k) re
+
+

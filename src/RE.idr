@@ -136,7 +136,7 @@ mutual
   export
   compile                  : (re : RE) -> TyRE $ TypeRE re
   compile (Exactly x)      = match x
-  compile (OneOf xs)       = oneOf xs
+  compile (OneOf xs)       = oneOfList xs
   compile (To x y)         = range x y
   compile Any              = any
   compile (Group re)       = Untyped $ Group $ compile $ compile re
