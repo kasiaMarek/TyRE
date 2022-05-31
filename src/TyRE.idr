@@ -31,81 +31,80 @@ extract (re1 <|> re2)  (Left x)   = Left $ extract re1 x
 extract (re1 <|> re2)  (Right x)  = Right $ extract re2 x
 extract (Rep re) xs               = map (extract re) xs
 
-export
+public export
 predicate : (Char -> Bool) -> TyRE Char
 predicate f = Untyped (Pred f)
 
-export
+public export
 empty : TyRE ()
 empty = Untyped Empty
 
-export
+public export
 any : TyRE Char
 any = predicate (\_ => True)
 
-export
+public export
 ignore : TyRE a -> TyRE ()
 ignore tyre = (\_ => ()) `Conv` tyre
 
-export
+public export
 match : Char -> TyRE ()
 match c = ignore $ predicate (\e => e == c)
 
-export
+public export
 range : Char -> Char -> TyRE Char
 range x y = predicate (\c =>  x <= c && c <= y)
 
-export
+public export
 digit : TyRE Integer
 digit = (\c => cast c - cast '0') `Conv` range '0' '9'
 
-export
+public export
 digitChar : TyRE Char
 digitChar = range '0' '9'
 
-export
+public export
 oneOfList : List Char -> TyRE Char
 oneOfList xs = predicate (\e => case (find (\x => e == x) xs) of {(Just _) => True ; Nothing => False})
 
-export
+public export
 oneOf : String -> TyRE Char
 oneOf xs = oneOfList (unpack xs)
 
-export
+public export
 rep0 : TyRE a -> TyRE (List a)
 rep0 tyre = Rep tyre
 
-export
+public export
 rep1 : TyRE a -> TyRE (List a)
 rep1 tyre = (\(e,l) => e::l) `Conv` (tyre <*> Rep tyre)
 
-export
+public export
 option : TyRE a -> TyRE (Maybe a)
 option tyre = (\e => case e of {(Left x) => Just x ; (Right _) => Nothing}) `Conv` tyre <|> empty
 
-export
+public export
 (*>) : TyRE a -> TyRE b -> TyRE b
 (*>) t1 t2 = snd `Conv` (t1 <*> t2)
 
-export
+public export
 (<*) : TyRE a -> TyRE b -> TyRE a
 (<*) t1 t2 = fst `Conv` (t1 <*> t2)
 
-export
+public export
 or : TyRE a -> TyRE a -> TyRE a
 or t1 t2 = fromEither `Conv` (t1 <|> t2)
 
-export
+public export
 letter : TyRE Char
 letter = range 'a' 'z' `or` range 'A' 'Z'
 
--- TODO:: can we do it better ?
-export
+public export
 repFrom : Nat -> TyRE a -> TyRE (List a)
 repFrom 0 re = rep0 re
 repFrom (S k) re = (\(e,l) => e::l) `Conv` (re <*> repFrom k re)
 
-export
+public export
 repTo : Nat -> TyRE a -> TyRE (List a)
 repTo 0 re = const [] `Conv` empty
 repTo (S k) re = 
@@ -114,11 +113,12 @@ repTo (S k) re =
     optionalAdd (Nothing, xs) = xs
     optionalAdd ((Just x), xs) = x::xs
 
-export
-repFromTo : (from : Nat) -> (to : Nat) -> {auto prf : from <= to = true} -> TyRE a -> TyRE (List a)
+public export
+repFromTo : (from : Nat) -> (to : Nat) -> {auto prf : from <= to = True} -> TyRE a -> TyRE (List a)
 repFromTo 0 0 _ = const [] `Conv` empty
-repFromTo 0 (S from) re = repTo from re
-repFromTo (S from) to re = (\(e,l) => e::l) `Conv` (re <*> repFromTo from to re)
+repFromTo 0 (S from) re = repTo (S from) re
+repFromTo (S from) 0 re {prf} = absurd prf
+repFromTo (S from) (S to) re = (\(e,l) => e::l) `Conv` (re <*> repFromTo from to re)
 
 public export
 repTimesType : (n : Nat) -> (reType : Type) -> Type
@@ -126,7 +126,7 @@ repTimesType 0 reType = Unit
 repTimesType 1 reType = reType
 repTimesType (S (S k)) reType = (reType, (repTimesType (S k) reType))
 
-export
+public export
 repTimes : (n : Nat)-> (re : TyRE a) -> TyRE (repTimesType n a)
 repTimes 0 re = empty
 repTimes 1 re = re

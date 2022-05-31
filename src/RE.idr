@@ -122,18 +122,18 @@ eitherToMaybeR (Left _) = Nothing
 eitherToMaybeR (Right x) = Just x
 
 mutual
-  export
+  public export
   altTyRE : (re1 : RE) -> (re2 : RE)
           -> ((SimplifyCode (CodeShapeRE re1)) = a)
           -> ((SimplifyCode (CodeShapeRE re2)) = b)
           -> TyRE $ Either (Sem a) (Sem b)
   altTyRE re1 re2 Refl Refl = compile re1 <|> compile re2
 
-  export
+  public export
   concatTyRE : (re1 : RE) -> (re2 : RE) -> TyRE (TypeRE re1, TypeRE re2)
   concatTyRE re1 re2 = compile re1 <*> compile re2
 
-  export
+  public export
   compile                  : (re : RE) -> TyRE $ TypeRE re
   compile (Exactly x)      = match x
   compile (OneOf xs)       = oneOfList xs

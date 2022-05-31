@@ -185,6 +185,113 @@ public export
 toRE : (str: String) -> {auto isJust : IsJust (rAux str)} -> RE
 toRE str {isJust} = fromJust (rAux str) @{isJust}
 
-export
+public export
 r : (str: String) -> {auto isJust : IsJust (rAux str)} -> TyRE (TypeRE $ toRE str {isJust})
 r str {isJust} = compile (toRE str {isJust})
+
+--- to string sytax
+public export
+zipperShapeCore : CoreRE -> Nat
+zipperShapeCore (Pred f) = 1
+zipperShapeCore (Concat x y) = zipperShapeCore x + zipperShapeCore y
+zipperShapeCore (Group x) = zipperShapeCore x
+zipperShapeCore Empty = 0
+zipperShapeCore (Alt x y) = zipperShapeCore x + zipperShapeCore y
+zipperShapeCore (Star x) = zipperShapeCore x
+
+public export
+zipperShape : TyRE a -> Nat
+zipperShape (Untyped re) = zipperShapeCore re
+zipperShape (x <*> y) = zipperShape x + zipperShape y
+zipperShape (Conv f x) = zipperShape x
+zipperShape (x <|> y) = zipperShape x + zipperShape y
+zipperShape (Rep x) = zipperShape x
+
+translateCore : (r : CoreRE) -> Vect (zipperShapeCore r + k) String -> (String, Vect k String)
+translateCore (Pred f) (x::xs) = (x, xs)
+translateCore (Concat x Empty) xs = 
+  translateCore x 
+    $ replace { p = (\n => Vect n String) } 
+              ( sym $ plusAssociative (zipperShapeCore x) (zipperShapeCore Empty) k ) 
+                xs
+translateCore (Concat x y) xs = 
+  let (str1, rest1) := 
+        translateCore x 
+          $ replace { p = (\n => Vect n String) } 
+                    ( sym $ plusAssociative (zipperShapeCore x) (zipperShapeCore y) k ) 
+                      xs
+      (str2, rest2) := translateCore y rest1
+  in ("(" ++ str1 ++ str2 ++ ")", rest2)
+translateCore (Group x) xs = translateCore x xs
+translateCore Empty xs = ("", xs)
+translateCore (Alt x Empty) xs = 
+  let (str1, rest1) := 
+        translateCore x 
+          $ replace { p = (\n => Vect n String) } 
+                    ( sym $ plusAssociative (zipperShapeCore x) (zipperShapeCore Empty) k ) 
+                      xs
+  in (str1 ++ "?", rest1)
+translateCore (Alt x y) xs = 
+  let (str1, rest1) := 
+        translateCore x 
+          $ replace { p = (\n => Vect n String) } 
+                    ( sym $ plusAssociative (zipperShapeCore x) (zipperShapeCore y) k ) 
+                      xs
+      (str2, rest2) := translateCore y rest1
+  in ("(" ++ str1 ++ "|" ++ str2 ++ ")", rest2)
+translateCore (Star x) xs = 
+  let (re, rest) := translateCore x xs
+  in (re ++ "*", rest)
+
+export
+translate : (r : TyRE a) -> Vect (zipperShape r + k) String -> (String, Vect k String)
+translate (Untyped re) xs = translateCore re xs
+translate (x <*> Untyped Empty) xs = 
+  translate x 
+    $ replace { p = (\n => Vect n String) } 
+              ( sym $ plusAssociative (zipperShape x) (zipperShape (Untyped Empty)) k ) 
+                xs
+translate (x <*> y) xs = 
+  let (str1, rest1) := 
+        translate x 
+          $ replace { p = (\n => Vect n String) } 
+                    ( sym $ plusAssociative (zipperShape x) (zipperShape y) k ) 
+                      xs
+      (str2, rest2) := translate y rest1
+  in ("(" ++ str1 ++ str2 ++ ")", rest2)
+translate (Conv f x) xs = translate x xs
+translate (x <|> Untyped Empty) xs = 
+  let (str1, rest1) := 
+        translate x 
+          $ replace { p = (\n => Vect n String) } 
+                    ( sym $ plusAssociative (zipperShape x) (zipperShape (Untyped Empty)) k ) 
+                      xs
+  in (str1 ++ "?", rest1)
+translate (x <|> y) xs = 
+  let (str1, rest1) := 
+        translate x 
+          $ replace { p = (\n => Vect n String) } 
+                    ( sym $ plusAssociative (zipperShape x) (zipperShape y) k ) 
+                      xs
+      (str2, rest2) := translate y rest1
+  in ("(" ++ str1 ++ "|" ++ str2 ++ ")", rest2)
+translate (Rep x) xs = 
+  let (re, rest) := translate x xs
+  in (re ++ "*", rest)
+
+export
+emptyZipperCore : (re : CoreRE) -> Vect (zipperShapeCore re) String
+emptyZipperCore (Pred f) = ["_"]
+emptyZipperCore (Concat x y) = emptyZipperCore x ++ emptyZipperCore y
+emptyZipperCore (Group x) = emptyZipperCore x
+emptyZipperCore Empty = []
+emptyZipperCore (Alt x y) = emptyZipperCore x ++ emptyZipperCore y
+emptyZipperCore (Star x) = emptyZipperCore x
+
+export
+emptyZipper : (tyre : TyRE a) -> Vect (zipperShape tyre) String
+emptyZipper (Untyped re) = emptyZipperCore re
+emptyZipper (x <*> y) = emptyZipper x ++ emptyZipper y
+emptyZipper (Conv f x) = emptyZipper x
+emptyZipper (x <|> y) = emptyZipper x ++ emptyZipper y
+emptyZipper (Rep x) = emptyZipper x
