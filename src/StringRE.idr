@@ -207,77 +207,80 @@ zipperShape (Conv f x) = zipperShape x
 zipperShape (x <|> y) = zipperShape x + zipperShape y
 zipperShape (Rep x) = zipperShape x
 
-translateCore : (r : CoreRE) -> Vect (zipperShapeCore r + k) String -> (String, Vect k String)
-translateCore (Pred f) (x::xs) = (x, xs)
-translateCore (Concat x Empty) xs = 
-  translateCore x 
+translateAuxCore : (r : CoreRE) -> Vect (zipperShapeCore r + k) String -> (String, Vect k String)
+translateAuxCore (Pred f) (x::xs) = (x, xs)
+translateAuxCore (Concat x Empty) xs = 
+  translateAuxCore x 
     $ replace { p = (\n => Vect n String) } 
               ( sym $ plusAssociative (zipperShapeCore x) (zipperShapeCore Empty) k ) 
                 xs
-translateCore (Concat x y) xs = 
+translateAuxCore (Concat x y) xs = 
   let (str1, rest1) := 
-        translateCore x 
+        translateAuxCore x 
           $ replace { p = (\n => Vect n String) } 
                     ( sym $ plusAssociative (zipperShapeCore x) (zipperShapeCore y) k ) 
                       xs
-      (str2, rest2) := translateCore y rest1
+      (str2, rest2) := translateAuxCore y rest1
   in ("(" ++ str1 ++ str2 ++ ")", rest2)
-translateCore (Group x) xs = translateCore x xs
-translateCore Empty xs = ("", xs)
-translateCore (Alt x Empty) xs = 
+translateAuxCore (Group x) xs = translateAuxCore x xs
+translateAuxCore Empty xs = ("", xs)
+translateAuxCore (Alt x Empty) xs = 
   let (str1, rest1) := 
-        translateCore x 
+        translateAuxCore x 
           $ replace { p = (\n => Vect n String) } 
                     ( sym $ plusAssociative (zipperShapeCore x) (zipperShapeCore Empty) k ) 
                       xs
   in (str1 ++ "?", rest1)
-translateCore (Alt x y) xs = 
+translateAuxCore (Alt x y) xs = 
   let (str1, rest1) := 
-        translateCore x 
+        translateAuxCore x 
           $ replace { p = (\n => Vect n String) } 
                     ( sym $ plusAssociative (zipperShapeCore x) (zipperShapeCore y) k ) 
                       xs
-      (str2, rest2) := translateCore y rest1
+      (str2, rest2) := translateAuxCore y rest1
   in ("(" ++ str1 ++ "|" ++ str2 ++ ")", rest2)
-translateCore (Star x) xs = 
-  let (re, rest) := translateCore x xs
+translateAuxCore (Star x) xs = 
+  let (re, rest) := translateAuxCore x xs
   in (re ++ "*", rest)
 
-export
-translate : (r : TyRE a) -> Vect (zipperShape r + k) String -> (String, Vect k String)
-translate (Untyped re) xs = translateCore re xs
-translate (x <*> Untyped Empty) xs = 
-  translate x 
+translateAux : (r : TyRE a) -> Vect (zipperShape r + k) String -> (String, Vect k String)
+translateAux (Untyped re) xs = translateAuxCore re xs
+translateAux (x <*> Untyped Empty) xs = 
+  translateAux x 
     $ replace { p = (\n => Vect n String) } 
               ( sym $ plusAssociative (zipperShape x) (zipperShape (Untyped Empty)) k ) 
                 xs
-translate (x <*> y) xs = 
+translateAux (x <*> y) xs = 
   let (str1, rest1) := 
-        translate x 
+        translateAux x 
           $ replace { p = (\n => Vect n String) } 
                     ( sym $ plusAssociative (zipperShape x) (zipperShape y) k ) 
                       xs
-      (str2, rest2) := translate y rest1
+      (str2, rest2) := translateAux y rest1
   in ("(" ++ str1 ++ str2 ++ ")", rest2)
-translate (Conv f x) xs = translate x xs
-translate (x <|> Untyped Empty) xs = 
+translateAux (Conv f x) xs = translateAux x xs
+translateAux (x <|> Untyped Empty) xs = 
   let (str1, rest1) := 
-        translate x 
+        translateAux x 
           $ replace { p = (\n => Vect n String) } 
                     ( sym $ plusAssociative (zipperShape x) (zipperShape (Untyped Empty)) k ) 
                       xs
   in (str1 ++ "?", rest1)
-translate (x <|> y) xs = 
+translateAux (x <|> y) xs = 
   let (str1, rest1) := 
-        translate x 
+        translateAux x 
           $ replace { p = (\n => Vect n String) } 
                     ( sym $ plusAssociative (zipperShape x) (zipperShape y) k ) 
                       xs
-      (str2, rest2) := translate y rest1
+      (str2, rest2) := translateAux y rest1
   in ("(" ++ str1 ++ "|" ++ str2 ++ ")", rest2)
-translate (Rep x) xs = 
-  let (re, rest) := translate x xs
+translateAux (Rep x) xs = 
+  let (re, rest) := translateAux x xs
   in (re ++ "*", rest)
+
+export
+translate : (r : TyRE a) -> Vect (zipperShape r) String -> String
+translate tyre xs = fst (translateAux {k = 0} tyre (rewrite (plusZeroRightNeutral (zipperShape tyre)) in xs))
 
 export
 emptyZipperCore : (re : CoreRE) -> Vect (zipperShapeCore re) String

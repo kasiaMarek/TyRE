@@ -11,6 +11,10 @@ record Date where
     day : Integer
 
 export
+Show Date where
+    show (D y m d) = show y ++ "-" ++ show m ++ "-" ++ show d
+
+export
 record Time where
     constructor T
     hours : Integer
@@ -19,10 +23,18 @@ record Time where
     milis : Integer
 
 export
+Show Time where
+    show (T h m s ms) = show h ++ ":" ++ show m ++ ":" ++ show s ++ "." ++ show ms
+
+export
 record DateTime where
     constructor DT
     date : Date
     time : Time
+
+export
+Show DateTime where
+    show (DT d t) = show d ++ "T" ++ show t
 
 int : Char -> Integer
 int c = cast c - cast '0'
@@ -73,7 +85,7 @@ date =
                             (r "30/((0?[13456789])|(1[012]))")
         thirtyfirst := Conv ((withSnd 31) . monthConv)
                             (r "31/((0?[13578])|(1[02]))")
-    in Conv (\case ((d, m), y) => D d m y) $ 
+    in Conv (\case ((d, m), y) => D y m d) $ 
             ((((day <* match '/') <*> month) `or` thirtieth) `or` thirtyfirst) 
                 <*> (match '/' *> year) where
     withSnd : Integer -> (Integer -> (Integer, Integer))
@@ -101,7 +113,7 @@ iso : TyRE DateTime
 iso =
     let thirtieth := ((withFst 30) . monthConv) `Conv` r "((0?[13456789])|(1[012]))\\-30"
         thirtyfirst := ((withFst 31) . monthConv) `Conv` r "((0?[13578])|(1[02]))\\-31"
-        date := Conv (\case (y, m, d) => D d m y) $
+        date := Conv (\case (y, m, d) => D y m d) $
                     (year <* match '-') <*> 
                     ((((month <* match '-') <*> day) `or` thirtieth) `or` thirtyfirst)
         time := convTime `Conv` hour <*> (mOrS <*> option (mOrS <*> option milis))
@@ -166,7 +178,7 @@ hourZipper : Vect (zipperShape DateAndTime.hour) String
 hourZipper = ["[01]", "[0-9]", "2", "[0-4]"]
 
 mOrSZipper : Vect (zipperShape DateAndTime.mOrS) String
-mOrSZipper = ["\\:", "[0-5]", "[0-9]"]
+mOrSZipper = [":", "[0-5]", "[0-9]"]
 
 milisZipper : Vect (zipperShape DateAndTime.milis) String
 milisZipper = ["\\.", "[0-9]", "[0-9]", "[0-9]"]
@@ -182,10 +194,10 @@ monthZipper = ["0", "[1-9]", "1", "[0-2]"]
 
 export
 dateZipper : Vect (zipperShape DateAndTime.date) String
-dateZipper = dayZipper ++ ["\\/"] ++ monthZipper 
-    ++  ["3", "0", "\\/", "0", "[13456789]", "1", "[012]"]
-    ++  ["3", "1", "\\/", "0", "[13578]", "1", "[02]"]
-    ++  ["\\/"] ++ yearZipper
+dateZipper = dayZipper ++ ["/"] ++ monthZipper 
+    ++  ["3", "0", "/", "0", "[13456789]", "1", "[012]"]
+    ++  ["3", "1", "/", "0", "[13578]", "1", "[02]"]
+    ++  ["/"] ++ yearZipper
 
 export
 timeZipper : Vect (zipperShape DateAndTime.time) String

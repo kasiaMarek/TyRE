@@ -17,12 +17,12 @@ email =
         secondPart = (joinBy ".") `Conv` rep1 (pack `Conv` rep1 (letter `or` digitChar) <* match '.')
         domain : TyRE String
         domain = pack `Conv` repFromTo 2 6 letter
-    in firstPart <* match '@' <*> (secondPart <*> domain)
+    in firstPart <*> (match '@' *> secondPart <*> domain)
 
 ---- zipper for transforming
 export
 emailZipper : Vect (zipperShape CommonRegexes.email) String
-emailZipper = ["[a-z]", "[A-Z]", "[0-9]", "[%+_.-]", "[a-z]", "[A-Z]", "[0-9]", "[%+_.-]", "@", "[a-z]", "[A-Z]", "[0-9]", "[a-z]", "[A-Z]", "[0-9]", "\\.", "[a-z]", "[A-Z]", "[0-9]", "[a-z]", "[A-Z]", "[0-9]", "[.]", "[a-z]", "[A-Z]", "[a-z]", "[A-Z]", "[a-z]", "[A-Z]", "[a-z]", "[A-Z]", "[a-z]", "[A-Z]", "[a-z]", "[A-Z]"]
+emailZipper = ["[a-z]", "[A-Z]", "[0-9]", "[%+_.-]", "[a-z]", "[A-Z]", "[0-9]", "[%+_.-]", "@", "[a-z]", "[A-Z]", "[0-9]", "[a-z]", "[A-Z]", "[0-9]", "\\.", "[a-z]", "[A-Z]", "[0-9]", "[a-z]", "[A-Z]", "[0-9]", "\\.", "[a-z]", "[A-Z]", "[a-z]", "[A-Z]", "[a-z]", "[A-Z]", "[a-z]", "[A-Z]", "[a-z]", "[A-Z]", "[a-z]", "[A-Z]"]
 
 ---password validation
 data PasswordValidationError    = NoDigit 
@@ -59,10 +59,22 @@ namespace UrlRegex
     record URL where
         constructor HTTP
         isSSL : Maybe Bool
-        host : String
+        host : (String, String)
         path : List String
         query : Maybe (List (String, String))
-        fargment : Maybe String
+        fragment : Maybe String
+        
+    export
+    Show URL where
+        show (HTTP isSSL (host, domain) path query fragment) = 
+            let protocol := 
+                    case isSSL of
+                        Nothing => ""
+                        (Just True) => "https://"
+                        (Just False) => "http://"
+                pathPart := joinBy "/" path
+                queryPart := map ((joinBy "&") . (map (\case (p, v) => p ++ "=" ++ v))) query
+            in protocol ++ host ++ "." ++ domain ++ pathPart ++ fromMaybe "" queryPart ++ fromMaybe "" fragment
 
     digitLetterOr : String -> TyRE Char
     digitLetterOr str = (digitChar `or` letter) `or` oneOf str
@@ -70,12 +82,10 @@ namespace UrlRegex
     protocol : TyRE (Maybe Bool)
     protocol = (map fst) `Conv` r "(https?://(www)?)?"
 
-    host : TyRE String
-    host = (\case(fst, snd) => pack (fst ++ snd)) 
-            `Conv` 
-                rep1 (digitLetterOr "@:%_~#=.+-\\")
-                <* match '.' 
-                <*> repFromTo 1 6 (digitLetterOr "()")
+    host : TyRE (String, String)
+    host =  (pack `Conv` rep1 (digitLetterOr "@:%_~#=.+-\\"))
+            <* match '.' 
+            <*> (pack `Conv` repFromTo 1 6 (digitLetterOr "()"))
 
     path : TyRE (List String)
     path = rep0 (match '/' *> (pack `Conv` rep1 (digitLetterOr "_-")))
@@ -101,7 +111,7 @@ namespace UrlRegex
     digitLetterOrZipper str = ["[a-z]", "[A-Z]", "[0-9]", "[" ++ str ++ "]"]
 
     protocolZipper : Vect (zipperShape UrlRegex.protocol) String
-    protocolZipper = ["h","t", "t", "p", "s", "\\:", "\\/", "\\/", "w", "w", "w"]
+    protocolZipper = ["h","t", "t", "p", "s", ":", "/", "/", "w", "w", "w"]
 
     hostZipper : Vect (zipperShape UrlRegex.host) String
     hostZipper = digitLetterOrZipper "@:%_~#=.+-\\" ++ digitLetterOrZipper "@:%_~#=.+-\\" ++ ["\\."] 
@@ -115,10 +125,10 @@ namespace UrlRegex
     queryZipper : Vect (zipperShape UrlRegex.query) String
     queryZipper = ["\\?"] 
         ++ digitLetterOrZipper "_-" ++ digitLetterOrZipper "_-"
-        ++ ["\\="]
+        ++ ["="]
         ++ digitLetterOrZipper "_-" ++ digitLetterOrZipper "_-"
         ++ digitLetterOrZipper "_-" ++ digitLetterOrZipper "_-"
-        ++ ["\\="]
+        ++ ["="]
         ++ digitLetterOrZipper "_-" ++ digitLetterOrZipper "_-"
 
     fragmentZipper : Vect (zipperShape UrlRegex.fragment) String
