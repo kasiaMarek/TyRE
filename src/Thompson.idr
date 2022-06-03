@@ -1,4 +1,4 @@
-module NewThompson
+module Thompson
 
 import Core
 import NFA
@@ -14,15 +14,6 @@ Eq BaseStates where
   StartState  == StartState   = True
   AcceptState == AcceptState  = True
   _           == _            = False
-
-public export
-record SM where
-  constructor MkSM
-  0 State : Type
-  {auto isEq : Eq State}
-  accepting : State -> Bool
-  start : List (State, Routine)
-  next : State -> Char -> List (State, Routine)
 
 --- helper functions
 public export
@@ -149,20 +140,20 @@ nextStar sm (Right ()) c = []
 
 --- Thompson construction
 public export
-newThompson : CoreRE -> SM
-newThompson (Pred f) = MkSM BaseStates acceptingPred [(StartState, [])] (nextPred f)
-newThompson (Empty) = MkSM Unit (\st => True) [((), [EmitUnit])] (\_,_ => [])
-newThompson (Group re) =
-  let sm : SM := newThompson re
+thompson : CoreRE -> SM
+thompson (Pred f) = MkSM BaseStates acceptingPred [(StartState, [])] (nextPred f)
+thompson (Empty) = MkSM Unit (\st => True) [((), [EmitUnit])] (\_,_ => [])
+thompson (Group re) =
+  let sm : SM := thompson re
       _ := sm.isEq
   in MkSM sm.State 
           sm.accepting 
           (groupTransform sm sm.start) 
           (\st,c => groupTransform sm (sm.next st c))
 
-newThompson (Concat re1 re2) =
-  let sm1 : SM := newThompson re1
-      sm2 : SM := newThompson re2
+thompson (Concat re1 re2) =
+  let sm1 : SM := thompson re1
+      sm2 : SM := thompson re2
       _ := sm1.isEq
       _ := sm2.isEq
   in MkSM (Either sm1.State sm2.State) 
@@ -170,9 +161,9 @@ newThompson (Concat re1 re2) =
           (startConcat sm1 sm2) 
           (nextConcat sm1 sm2)
 
-newThompson (Alt re1 re2) =
-  let sm1 : SM := newThompson re1
-      sm2 : SM := newThompson re2
+thompson (Alt re1 re2) =
+  let sm1 : SM := thompson re1
+      sm2 : SM := thompson re2
       _ := sm1.isEq
       _ := sm2.isEq
   in MkSM (Either sm1.State sm2.State) 
@@ -180,8 +171,8 @@ newThompson (Alt re1 re2) =
           (startAlt sm1 sm2) 
           (nextAlt sm1 sm2)
 
-newThompson (Star re) =
-  let sm : SM := newThompson re
+thompson (Star re) =
+  let sm : SM := thompson re
       _ := sm.isEq
   in MkSM (Either sm.State ()) 
           acceptingStar 
