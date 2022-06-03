@@ -13,14 +13,14 @@ import NewThompson
 import NewThompson.NewToOld
 
 public export
-runAutomatonSM : SM -> Word -> Maybe Evidence
+runAutomatonSM : NFA.Thompson.SM -> Word -> Maybe Evidence
 runAutomatonSM sm word = runAutomaton {N = sm.nfa, P = sm.prog} word
 
-runAutomatonSMStream : SM -> Stream Char -> Maybe Evidence
+runAutomatonSMStream : NFA.Thompson.SM -> Stream Char -> Maybe Evidence
 runAutomatonSMStream sm stream = runAutomatonStream {N = sm.nfa, P = sm.prog} stream
 
 public export
-match : {re : CoreRE} -> (sm : SM) -> {0 prf : thompson re = sm}
+match : {re : CoreRE} -> (sm : NFA.Thompson.SM) -> {0 prf : thompson re = sm}
       -> Word -> Maybe (Shape re)
 match {re} sm {prf} str with (runAutomatonSM sm str) proof p
   match {re} sm {prf} str | Nothing = Nothing
@@ -43,7 +43,7 @@ parse : TyRE a -> String -> Maybe a
 parse tyre str = map (extract tyre) $ run (compile tyre) str
 
 public export
-matchStream : {re : CoreRE} -> (sm : SM) -> {0 prf : thompson re = sm}
+matchStream : {re : CoreRE} -> (sm : NFA.Thompson.SM) -> {0 prf : thompson re = sm}
             -> Stream Char -> Maybe (Shape re)
 matchStream {re} sm {prf} stm with (runAutomatonSMStream sm stm) proof p
   matchStream {re} sm {prf} stm | Nothing = Nothing

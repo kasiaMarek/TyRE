@@ -3,230 +3,187 @@ module NewThompson
 import Core
 import NFA
 import Data.List
-import Data.Vect
-import public Extra
-import Extra.Reflects
-import Data.List.Elem
-import Data.List.Equalities
-import NFA.Thompson
 
 %default total
 
 public export
-record NewSM where
-  constructor MkNewSM
+data BaseStates = StartState | AcceptState
+
+public export
+Eq BaseStates where
+  StartState  == StartState   = True
+  AcceptState == AcceptState  = True
+  _           == _            = False
+
+public export
+record SM where
+  constructor MkSM
   0 State : Type
   {auto isEq : Eq State}
   accepting : State -> Bool
   start : List (State, Routine)
   next : State -> Char -> List (State, Routine)
 
----functions for predicate
+--- helper functions
 public export
-newNextPred  : (f : Char -> Bool) -> (st: PState) -> (c: Char)
-          -> List (PState, Routine)
-newNextPred f StartState c = if (f c) then [(AcceptState, [EmitLast])] else []
-newNextPred _ AcceptState _ = []
-
---functions for Group
-public export
-newNextGroup : (sm : NewSM) -> (Either sm.State AState) -> Char
-    -> List (Either sm.State AState, Routine)
-
-newNextGroup sm (Left st) c =
-  let mappedNext  : List sm.State
-                  := map fst (sm.next st c)
-  in case (findR sm.accepting mappedNext).Holds of
-        -- case `newThompson re`.next has no accepting states, we maintain the next states and substitute the routine with an empty one
-        Nothing => map (\st => (Left st, [])) mappedNext
-        -- case `newThompson re`.next has an accepting state, we add `Right ASt` to next states
-        Just _ => (Right ASt, [EmitString]) :: map (\st => (Left st, [])) mappedNext
-
---if the state is `Right ASt` we accept and there is no next for it
-newNextGroup _ (Right ASt) _ = []
-
---functions for Concat and Alt
-public export
-record NewCombineTransitionData a b c where
-  constructor MkNewCTD
-  oldStates : List (c, Routine)
-  accept : c -> Bool
-  conv : c -> (CState a b)
-  newStart : List ((CState a b), Routine)
+mapStates : (s -> s') -> List (s, Routine) -> List (s', Routine)
+mapStates f states = map (\case (st, r) => (f st, r)) states
 
 public export
-newCombineTransitionsAux  : (oldStates : List (c, Routine))
-                      ->  (c -> Bool)
-                      ->  (c -> (CState a b))
-                      ->  (newStates : List (CState a b, Routine))
-                      ->  List ((CState a b), Routine)
-newCombineTransitionsAux [] _  _  _  = []
-newCombineTransitionsAux ((x,y) :: xs) accepting conv newStart =
-    if (accepting x)
-    then (conv x, y) :: ((map (\case(st, r) => (st, y ++ r)) newStart) ++ (newCombineTransitionsAux xs accepting conv newStart))
-    else (conv x, y) :: (newCombineTransitionsAux xs accepting conv newStart)
+mapRoutine : (Routine -> Routine) -> List (s, Routine) -> List (s, Routine)
+mapRoutine f xs = map (\case (st, r) => (st, f r)) xs
 
 public export
-newCombineTransitions  : NewCombineTransitionData a b c
-                    -> List ((CState a b), Routine)
-newCombineTransitions (MkNewCTD oldStates accept conv newStart) =
-  newCombineTransitionsAux oldStates accept conv newStart
+addEndRoutine : (isEnd : state -> Bool) -> Routine -> List (state, Routine) -> List (state, Routine)
+addEndRoutine isEnd routine [] = []
+addEndRoutine isEnd routine ((st, r) :: xs) =
+  if (isEnd st)
+  then (st, r ++ routine) :: (addEndRoutine isEnd routine xs)
+  else (st, r) :: (addEndRoutine isEnd routine xs)
 
 public export
-newInitTwo : (r : Routine) -> (sm2 : NewSM)
-        -> (NewCombineTransitionData state1 sm2.State sm2.State)
-newInitTwo r sm2 =
-  MkNewCTD sm2.start sm2.accepting CTh2 [(CEnd, r)]
+addEndTransition  : (state -> Bool) 
+                  -> List (state', Routine) 
+                  -> (state -> state') 
+                  -> List (state, Routine) 
+                  -> List (state', Routine)
+
+addEndTransition isEnd newTrans conv [] = []
+addEndTransition isEnd newTrans conv ((st, r) :: xs) =
+  if (isEnd st)
+  then (mapRoutine (r ++) newTrans) ++ (addEndTransition isEnd newTrans conv xs)
+  else (conv st, r) :: (addEndTransition isEnd newTrans conv xs)
+
+--- functions for predicate
+public export
+acceptingPred : BaseStates -> Bool
+acceptingPred AcceptState = True
+acceptingPred StartState  = False
 
 public export
-newTwoToEnd : (r : Routine) -> (sm2: NewSM) -> sm2.State -> Char
-            -> (NewCombineTransitionData a sm2.State sm2.State)
-newTwoToEnd r sm2 st c =
-  MkNewCTD (sm2.next st c) sm2.accepting CTh2 [(CEnd, r)]
+nextPred  : (f : Char -> Bool) -> (st: BaseStates) -> (c: Char)
+          -> List (BaseStates, Routine)
+nextPred f StartState c = if (f c) then [(AcceptState, [EmitLast])] else []
+nextPred _ AcceptState _ = []
+
+--- functions for Group
+public export
+groupTransform : (sm : SM) -> List (sm.State, Routine) -> List (sm.State, Routine)
+groupTransform sm states = 
+  addEndRoutine sm.accepting [EmitString] (map (\(st, r) => (st, [])) states)
+
+--- functions for Alternation
+public export
+acceptingAlt : (sm1, sm2 : SM) -> Either sm1.State sm2.State -> Bool
+acceptingAlt sm1 sm2 (Left s) = sm1.accepting s
+acceptingAlt sm1 sm2 (Right s) = sm2.accepting s
 
 public export
-newOneToEnd : (r : Routine) -> (sm1: NewSM) -> sm1.State -> Char
-            -> (NewCombineTransitionData sm1.State a sm1.State)
-newOneToEnd r sm1 st c =
-  MkNewCTD (sm1.next st c) sm1.accepting CTh1 [(CEnd, r)]
-
---functions for Concat
-public export
-newInitTwoConcat : (sm2 : NewSM)
-        -> (NewCombineTransitionData state1 sm2.State sm2.State)
-newInitTwoConcat = newInitTwo [EmitPair]
+startAlt : (sm1, sm2 : SM) -> List(Either sm1.State sm2.State, Routine)
+startAlt sm1 sm2 = mapStates Left (addEndRoutine sm1.accepting [EmitLeft] sm1.start) 
+                ++ mapStates Right (addEndRoutine sm2.accepting [EmitRight] sm2.start)
 
 public export
-newStart2Cons : (sm2 : NewSM) -> List (CState state1 sm2.State, Routine)
-newStart2Cons sm2 = newCombineTransitions (newInitTwoConcat sm2)
+nextAlt   : (sm1, sm2 : SM) 
+          -> Either sm1.State sm2.State 
+          -> Char 
+          -> List(Either sm1.State sm2.State, Routine)
+
+nextAlt sm1 sm2 (Left st) c = 
+  mapStates Left (addEndRoutine sm1.accepting [EmitLeft] (sm1.next st c))
+nextAlt sm1 sm2 (Right st) c = 
+  mapStates Right (addEndRoutine sm2.accepting [EmitRight] (sm2.next st c))
+
+--- functions for Concatenation
+public export
+acceptingConcat : (sm1, sm2 : SM) -> Either sm1.State sm2.State -> Bool
+acceptingConcat sm1 sm2 (Left _) = False
+acceptingConcat sm1 sm2 (Right st) = sm2.accepting st
 
 public export
-newConcatInit : (sm1: NewSM) -> (sm2 : NewSM)
-        -> (NewCombineTransitionData sm1.State sm2.State sm1.State)
-newConcatInit sm1 sm2 =
-  MkNewCTD sm1.start sm1.accepting CTh1 (newStart2Cons sm2)
+startConcat : (sm1, sm2 : SM) -> List (Either sm1.State sm2.State, Routine)
+startConcat sm1 sm2 = 
+  addEndRoutine 
+    (acceptingConcat sm1 sm2) 
+    [EmitPair] 
+    (addEndTransition 
+      sm1.accepting 
+      (mapStates Right sm2.start) 
+      Left 
+      sm1.start)
 
 public export
-newOneToTwo : (sm1: NewSM) -> (sm2 : NewSM) -> sm1.State -> Char
-            -> (NewCombineTransitionData sm1.State sm2.State sm1.State)
-newOneToTwo sm1 sm2 st c =
-  MkNewCTD (sm1.next st c) sm1.accepting CTh1 (newStart2Cons sm2)
+nextConcat  : (sm1, sm2 : SM) 
+            -> Either sm1.State sm2.State 
+            -> Char 
+            -> List (Either sm1.State sm2.State, Routine)
+nextConcat sm1 sm2 (Left st) c = 
+  addEndRoutine 
+    (acceptingConcat sm1 sm2) 
+    [EmitPair] 
+    (addEndTransition
+      sm1.accepting 
+      (mapStates Right sm2.start) 
+      Left 
+      (sm1.next st c))
+nextConcat sm1 sm2 (Right st) c = 
+  addEndRoutine 
+    (acceptingConcat sm1 sm2)
+    [EmitPair]
+    (mapStates Right (sm2.next st c))
+
+--- functions for Kleene Star
+public export
+acceptingStar : Either state () -> Bool
+acceptingStar (Left _) = False
+acceptingStar (Right ()) = True
 
 public export
-newTwoToEndConcat : (sm2: NewSM) -> sm2.State -> Char
-            -> (NewCombineTransitionData a sm2.State sm2.State)
-newTwoToEndConcat = newTwoToEnd [EmitPair]
+startStar : (sm : SM) -> List (Either sm.State (), Routine)
+startStar sm = mapRoutine (EmitEList::) ((Right (), [EmitBList]) :: (mapStates Left sm.start))
 
 public export
-newNextConcat : (sm1 : NewSM) -> (sm2 : NewSM)
-          -> (CState sm1.State sm2.State) -> Char
-          -> List (CState sm1.State sm2.State, Routine)
+nextStar : (sm : SM) -> Either sm.State () -> Char -> List (Either sm.State (), Routine)
+nextStar sm (Left st) c = addEndTransition sm.accepting [(Right (), [EmitBList])] Left (sm.next st c)
+nextStar sm (Right ()) c = []
 
-newNextConcat sm1 sm2 (CTh1 st) c = newCombineTransitions $ newOneToTwo sm1 sm2 st c
-newNextConcat sm1 sm2 (CTh2 st) c = newCombineTransitions $ newTwoToEndConcat sm2 st c
-newNextConcat sm1 sm2 CEnd      _ = []
-
---functions for alt
+--- Thompson construction
 public export
-newInitTwoAlt : (sm2 : NewSM)
-        -> (NewCombineTransitionData state1 sm2.State sm2.State)
-newInitTwoAlt = newInitTwo [EmitRight]
-
-public export
-newInitOneAlt : (sm1 : NewSM)
-        -> (NewCombineTransitionData sm1.State state2 sm1.State)
-newInitOneAlt sm1 =
-  MkNewCTD sm1.start sm1.accepting CTh1 [(CEnd, [EmitLeft])]
-
-public export
-nextFromTwoAlt : (sm2: NewSM) -> sm2.State -> Char
-            -> (NewCombineTransitionData a sm2.State sm2.State)
-nextFromTwoAlt = newTwoToEnd [EmitRight]
-
-public export
-nextFromOneAlt : (sm1: NewSM) -> sm1.State -> Char
-            -> (NewCombineTransitionData sm1.State a sm1.State)
-nextFromOneAlt = newOneToEnd [EmitLeft]
-
-public export
-newNextAlt : (sm1 : NewSM) -> (sm2 : NewSM)
-          -> (CState sm1.State sm2.State) -> Char
-          -> List (CState sm1.State sm2.State, Routine)
-
-newNextAlt sm1 sm2 (CTh1 st) c = newCombineTransitions $ nextFromOneAlt sm1 st c
-newNextAlt sm1 sm2 (CTh2 st) c = newCombineTransitions $ nextFromTwoAlt sm2 st c
-newNextAlt sm1 sm2 CEnd      _ = []
-
---for Kleene Star
-public export
-newStarNext : (sm : NewSM) -> List (CState sm.State sm.State, Routine)
-newStarNext sm = (CEnd, [EmitBList]) :: (map (\case (st, r) => (CTh2 st, r)) sm.start)
-
-public export
-newStarStart : (sm : NewSM) -> List (CState sm.State sm.State, Routine)
-newStarStart sm = (map (\case (st, r) => (st, EmitEList :: r)) (newStarNext sm))
-
-public export
-newNextStarData : (sm: NewSM) -> sm.State -> Char
-            -> (NewCombineTransitionData sm.State sm.State sm.State)
-newNextStarData sm s c = MkNewCTD (sm.next s c) sm.accepting CTh1 (newStarNext sm)
-
-public export
-newNextStar : (sm : NewSM)
-    -> (CState sm.State sm.State) -> Char
-    -> List (CState sm.State sm.State, Routine)
-newNextStar sm (CTh1 s) c = newCombineTransitions (newNextStarData sm s c)
-newNextStar sm (CTh2 s) c = newCombineTransitions (newNextStarData sm s c)
-newNextStar sm CEnd c = []
-
---Thompson construction
-public export
-newThompson : CoreRE -> NewSM
-newThompson (Pred f) = MkNewSM PState acceptingPred [(StartState, [])] (newNextPred f)
-
-newThompson (Empty) = MkNewSM AState (\st => True) [(ASt, [EmitUnit])] (\_,_ => [])
+newThompson : CoreRE -> SM
+newThompson (Pred f) = MkSM BaseStates acceptingPred [(StartState, [])] (nextPred f)
+newThompson (Empty) = MkSM Unit (\st => True) [((), [EmitUnit])] (\_,_ => [])
 newThompson (Group re) =
-  let prev : NewSM := newThompson re
-      _ := prev.isEq
-
-      0 state : Type
-      state = Either prev.State AState
-
-      accepting : state -> Bool
-      accepting (Left _)             = False
-      accepting (Right _)            = True
-
-  in MkNewSM state accepting (map (\case (st, r) => (Left st, r)) prev.start) (newNextGroup prev)
+  let sm : SM := newThompson re
+      _ := sm.isEq
+  in MkSM sm.State 
+          sm.accepting 
+          (groupTransform sm sm.start) 
+          (\st,c => groupTransform sm (sm.next st c))
 
 newThompson (Concat re1 re2) =
-  let sm1 : NewSM := newThompson re1
-      sm2 : NewSM := newThompson re2
-
-      0 state : Type
-      state = CState sm1.State sm2.State
-
+  let sm1 : SM := newThompson re1
+      sm2 : SM := newThompson re2
       _ := sm1.isEq
       _ := sm2.isEq
-
-  in MkNewSM state acceptingConcat (newCombineTransitions $ newConcatInit sm1 sm2) (newNextConcat sm1 sm2)
+  in MkSM (Either sm1.State sm2.State) 
+          (acceptingConcat sm1 sm2) 
+          (startConcat sm1 sm2) 
+          (nextConcat sm1 sm2)
 
 newThompson (Alt re1 re2) =
-  let sm1 : NewSM := newThompson re1
-      sm2 : NewSM := newThompson re2
-
-      0 state : Type
-      state = CState sm1.State sm2.State
-
+  let sm1 : SM := newThompson re1
+      sm2 : SM := newThompson re2
       _ := sm1.isEq
       _ := sm2.isEq
-
-  in MkNewSM state acceptingConcat (newCombineTransitions (newInitOneAlt sm1) ++ newCombineTransitions (newInitTwoAlt sm2)) (newNextAlt sm1 sm2)
+  in MkSM (Either sm1.State sm2.State) 
+          (acceptingAlt sm1 sm2) 
+          (startAlt sm1 sm2) 
+          (nextAlt sm1 sm2)
 
 newThompson (Star re) =
-  let sm : NewSM := newThompson re
+  let sm : SM := newThompson re
       _ := sm.isEq
-
-      0 state : Type
-      state = CState sm.State sm.State
-
-  in MkNewSM state acceptStar (newStarStart sm) (newNextStar sm)
+  in MkSM (Either sm.State ()) 
+          acceptingStar 
+          (startStar sm) 
+          (nextStar sm)

@@ -32,16 +32,16 @@ newNextToProgNext next st c =
         (trans (lengthMap (next st c)) (sym (lengthMap (next st c))))
         (fromList (map snd (next st c)))
 
-newToNFA : NewSM -> NA
-newToNFA (MkNewSM state accepting start next) = 
+newToNFA : NewThompson.SM -> NA
+newToNFA (MkSM state accepting start next) = 
     MkNFA state accepting (newStartToNFAStart start) (newNextToNFANext next)
 
-newToProg : (sm : NewSM) -> Program (newToNFA sm)
-newToProg (MkNewSM state accepting start next) = 
+newToProg : (sm : NewThompson.SM) -> Program (newToNFA sm)
+newToProg (MkSM state accepting start next) = 
     MkProgram (newStartToProgStart start) (newNextToProgNext next)
 
 export
-newToOld : NewSM -> SM
+newToOld : NewThompson.SM -> NFA.Thompson.SM
 newToOld sm = MkSM (newToNFA sm) (newToProg sm)
 
 
