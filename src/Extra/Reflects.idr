@@ -1,6 +1,6 @@
 module Extra.Reflects
 
-import Pred
+import Extra.Pred
 import Data.List.Elem
 
 public export

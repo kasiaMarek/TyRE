@@ -4,29 +4,31 @@ depends = contrib
 
 sourcedir = "src"
 
-modules =   Data.SnocList.Elem
-          , Data.SnocList.Extra
+modules =   API
+          , Core
+          , Codes
+          , TyRE
+          , Evidence
+          , RE
+          , StringRE
+          , Thompson
+          , NFA
+          --- pretty printer for NFA
+          , NFA.PrettyPrint
+          , NFA.PrettyPrint.Interfaces
+          --- verification bit
+          , Verification
+          , Verification.Thompson
+          , Verification.Routine
+          , Verification.AcceptingPath
+          --- additional more `generic` functions and structures
+          , Extra
+          , Extra.Pred
+          , Extra.Reflects
+          --- lexer copied from Idris 2 (all publicly exported)
           , Text.Lexer
           , Text.Lexer.Core
           , Text.Parser
           , Text.Parser.Core
           , Text.Quantity
           , Text.Token
-          , API
-          , Core
-          , Codes
-          , TyRE
-          , Evidence
-          , NFA
-          , NFA.PrettyPrint
-          , NFA.PrettyPrint.Interfaces
-          , Verification
-          , Verification.Thompson
-          , Verification.Routine
-          , Verification.AcceptingPath
-          , Extra
-          , Extra.Reflects
-          , Pred
-          , RE
-          , StringRE
-          , Thompson

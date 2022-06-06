@@ -1,40 +1,27 @@
 module Extra
 
+import Extra.Pred
+
 import Data.List
+import Data.SnocList
 import Data.List.Elem
 import Data.List.Elem.Extra
-import Data.Vect
-import Data.Vect.Elem
-import Data.Maybe
-import Pred
 import public Data.List.Equalities
-import Data.List.Reverse
-import Syntax.PreorderReasoning
 
 %default total
 
-||| Proof that if an element is found on the list it belongs to that list.
 public export
-foundImpliesExists : (xs : List a) -> (pred : a -> Bool) -> (0 prf : find pred xs = Just e) -> (e : a ** (e `Elem` xs, pred e = True))
-foundImpliesExists [] _ Refl impossible
-foundImpliesExists (x :: xs) pred prf with (pred x) proof p
-  foundImpliesExists (x :: xs) pred prf | False =
-    let (e ** (inTail, eq)) = foundImpliesExists xs pred prf
-    in (e ** (There inTail, eq))
-  foundImpliesExists (x :: xs) pred prf | True = (x ** (Here, p))
-
-||| Map Just
-public export
-mapJust : (f : a -> b) -> (m : Maybe a) -> (prf : map f m = Just e) -> (e': a ** (f e' = e, m = Just e'))
-mapJust _ Nothing Refl impossible
-mapJust f (Just x) Refl = (x ** (Refl, Refl))
-
-||| Extract value from Just
-public export
-fromJust : (m: Maybe a) -> (prf: m = Just x) -> a
-fromJust (Just x) Refl = x
+extractBasedOnFst : (xs: List (a, b)) -> (xInXs: x `Elem` map Builtin.fst xs) -> b
+extractBasedOnFst [] xInXs = absurd xInXs
+extractBasedOnFst ((x, y) :: xs) Here = y
+extractBasedOnFst (x' :: xs) (There pos) = extractBasedOnFst xs pos
 
 public export
+replicate : Nat -> (elem : a) -> SnocList a
+replicate 0 elem = [<]
+replicate (S k) elem = (replicate k elem) :< elem
+
+export
 bindSpec : (f : a -> List b) -> (p : Pred b) -> (q : Pred a) ->
   (spec : (x : a) -> (y: b ** (y `Elem` f x, p y)) -> q x) ->
   (cs : List a) ->
@@ -50,13 +37,7 @@ bindSpec f p q spec (x :: xs) (y ** (isElemF, satP)) =
       let (x ** (isElem, satQ, yInf)) = bindSpec f p q spec xs (y ** (prf1, satP))
       in (x ** (There isElem, satQ, yInf))
 
-public export
-extractBasedOnFst : (xs: List (a, b)) -> (xInXs: x `Elem` map Builtin.fst xs) -> b
-extractBasedOnFst [] xInXs = absurd xInXs
-extractBasedOnFst ((x, y) :: xs) Here = y
-extractBasedOnFst (x' :: xs) (There pos) = extractBasedOnFst xs pos
-
-public export
+export
 mapSpec : (f : (a, b) -> c) -> (q : Pred (a,b)) -> (p : Pred c) -> (xs: List (a,b))
         -> ((x1 : a) -> (x2 : b) -> p(f(x1, x2)) -> q (x1, x2)) -> (y: c)
         -> (y `Elem` map f xs, p y)
@@ -122,3 +103,19 @@ mapSpec f q p ((x1,x2) :: xs) spec y (pos, satP) =
 -- mapF : (f : (a,b) -> c) -> (xs : List a) -> (ys : Vect (length xs) b) -> List c
 -- mapF f [] [] = []
 -- mapF f (x :: xs) (y :: ys) = (f (x,y)) :: (mapF f xs ys)
+
+-- ||| Proof that if an element is found on the list it belongs to that list.
+-- public export
+-- foundImpliesExists : (xs : List a) -> (pred : a -> Bool) -> (0 prf : find pred xs = Just e) -> (e : a ** (e `Elem` xs, pred e = True))
+-- foundImpliesExists [] _ Refl impossible
+-- foundImpliesExists (x :: xs) pred prf with (pred x) proof p
+--   foundImpliesExists (x :: xs) pred prf | False =
+--     let (e ** (inTail, eq)) = foundImpliesExists xs pred prf
+--     in (e ** (There inTail, eq))
+--   foundImpliesExists (x :: xs) pred prf | True = (x ** (Here, p))
+
+-- ||| Map Just
+-- public export
+-- mapJust : (f : a -> b) -> (m : Maybe a) -> (prf : map f m = Just e) -> (e': a ** (f e' = e, m = Just e'))
+-- mapJust _ Nothing Refl impossible
+-- mapJust f (Just x) Refl = (x ** (Refl, Refl))

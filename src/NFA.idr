@@ -1,14 +1,13 @@
 module NFA
 
-import Data.Vect
+import Evidence
+import Extra
+import Extra.Pred
+import Extra.Reflects
+
 import Data.SnocList
 import Data.List
 import Data.List.Elem
-import Data.Vect.Elem
-import Evidence
-import Pred
-import Extra.Reflects
-import Extra
 import Data.Stream
 
 ||| A non-deterministic automaton

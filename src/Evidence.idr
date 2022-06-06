@@ -1,9 +1,10 @@
 module Evidence
 
 import Codes
+import Extra
+
 import Data.SnocList
 import Data.SnocList.Elem
-import Data.SnocList.Extra
 import Data.List
 import Data.Nat
 import Control.Order
@@ -97,17 +98,17 @@ recontextualise prf1 (AGroup prf str) = AGroup (recontextualise prf1 prf) str
 
 recontextualise prf1 (APair {ford = eqprf} prf prf2' prf1') =
   APair (recontextualise prf1 prf) prf2' prf1'
-      {ford = trans (cong (evs1 ++) eqprf) appendAssociative}
+      {ford = trans (cong (evs1 ++) eqprf) (appendAssociative _ _ _)}
 
 recontextualise prf1 (AChar prf c) = AChar (recontextualise prf1 prf) c
 
 recontextualise prf1 (ALeft {ford, ev1, evs} prf prf1' c2) =
   ALeft (recontextualise prf1 prf) prf1' c2
-    {ford = trans (cong (evs1 ++) ford) appendAssociative}
+    {ford = trans (cong (evs1 ++) ford) (appendAssociative _ _ _)}
 
 recontextualise prf1 (ARight {ford, ev2, evs} prf prf2 c1) =
   ARight (recontextualise prf1 prf) prf2 c1
-    {ford = trans (cong (evs1 ++) ford) appendAssociative}
+    {ford = trans (cong (evs1 ++) ford) (appendAssociative _ _ _)}
 
 recontextualise prf1 (AnEmpty prf) = AnEmpty (recontextualise prf1 prf)
 
@@ -115,7 +116,7 @@ recontextualise prf1 (AnEndMark prf) = AnEndMark (recontextualise prf1 prf)
 
 recontextualise prf1 (ARepetiton {ford} prf prf') =
   ARepetiton (recontextualise prf1 prf) prf'
-    {ford = trans (cong (evs1 ++) ford) appendAssociative}
+    {ford = trans (cong (evs1 ++) ford) (appendAssociative _ _ _)}
 
 total
 helper : (0 prf : [<] `Encodes` (cs :< (Left ()) ++ (replicate n (Right c))))
@@ -180,7 +181,7 @@ extractRepRec sx'@(sx :< RightBranchMark) prf fuel enough  = extractRepRecAux sx
 extractRepRec sx'@(sx :< UnitMark       ) prf fuel enough  = extractRepRecAux sx' prf Refl (\case _ impossible) fuel enough
 extractRepRec sx'@(sx :< BList          ) prf fuel enough  = extractRepRecAux sx' prf Refl (\case _ impossible) fuel enough
 extractRepRec sx'@(sx :< EList          ) {n, c} prf fuel enough =
-  let 0 eqPrf : (SnocList.Extra.replicate n (Right c) = [<])
+  let 0 eqPrf : (Extra.replicate n (Right c) = [<])
       eqPrf = case n of
                 0 => Refl
                 (S k) => case prf of {_ impossible}
@@ -214,7 +215,7 @@ extractResult (e@(evs ++ (ev1 ++ ev2)) :< PairMark)
               (APair {cs, c1, c2, ford=Refl} prf prf1 prf2)
               (S fuel) (LTESucc enough) =
   let   0 prf1' = recontextualise (recontextualise prf prf1) prf2
-        0 eqprf = sym (trans Refl appendAssociative)
+        0 eqprf = sym (trans Refl (appendAssociative _ _ _))
         0 prf'  = replace
                   {p=(\x => x `Encodes` (cs :< (Right c1) :< (Right  c2)))}
                   eqprf prf1'

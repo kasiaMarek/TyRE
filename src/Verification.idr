@@ -1,16 +1,16 @@
 module Verification
 
-import Pred
+import Extra
+import Extra.Pred
+import Extra.Reflects
 import NFA
 import Evidence
+import Verification.AcceptingPath
+
 import Data.List.Elem
 import Data.List
-import Data.Vect
-import Data.Vect.Elem
-import Extra
-import Extra.Reflects
-import Verification.AcceptingPath
 import Data.Stream
+import Data.Maybe
 
 recordPathHelper : {auto sm: SM} -> (c: Char) -> (td : Thread sm.State)
               -> (td': Thread sm.State ** (td' `Elem` runMapping c td, (acc: AcceptingFrom (smToNFA sm) td'.naState cs ** extractEvidenceFrom td' acc = ev)))

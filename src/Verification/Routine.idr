@@ -8,7 +8,6 @@ import Data.List
 import Core
 import Codes
 import Data.SnocList
-import Data.SnocList.Extra
 
 public export
 data ExtendedInstruction = Regular Instruction | Observe Char
@@ -128,27 +127,27 @@ parameters {auto sm : SM}
                       )
     in (trans (cong (\e => (snd e).evidence) prf) restPrf)
 
-public export
-extractRoutinePrf  : (sm : SM) -> (acc: Accepting (smToNFA sm) word)
-                -> (executeRoutine (extractRoutine {sm} acc) = extractEvidence acc)
+  public export
+  extractRoutinePrf : (acc: Accepting (smToNFA sm) word)
+                    -> (executeRoutine (extractRoutine acc) = extractEvidence acc)
 
-extractRoutinePrf sm (Start s prf acc) =
-  let r        : Routine
-      r        = extractBasedOnFst sm.start prf
-      td       : Thread sm.State
-      td       = initFuction (s,r)
-      extr     : ExtendedRoutine
-      extr     = cast r
-      rest     : ExtendedRoutine
-      rest     = extractRoutineFrom acc
+  extractRoutinePrf (Start s prf acc) =
+    let r        : Routine
+        r        = extractBasedOnFst sm.start prf
+        td       : Thread sm.State
+        td       = initFuction (s,r)
+        extr     : ExtendedRoutine
+        extr     = cast r
+        rest     : ExtendedRoutine
+        rest     = extractRoutineFrom acc
 
-      restPrf := extractRoutineFromPrf td acc Nothing
-      prf     : (executeRoutineSteps (extr ++ rest) (Nothing, MkVMState False [<] [<])
-                  = executeRoutineSteps rest (Nothing, td.vmState))
-      prf     = trans
-                (routineComposition extr rest (Nothing, MkVMState False [<] [<]))
-                (cong
-                  (executeRoutineSteps rest)
-                  (execEqualityPrf {nfa = (smToNFA sm)} _ _ _)
-                )
-  in (trans (cong (\e => (snd e).evidence) prf) restPrf)
+        restPrf := extractRoutineFromPrf td acc Nothing
+        prf     : (executeRoutineSteps (extr ++ rest) (Nothing, MkVMState False [<] [<])
+                    = executeRoutineSteps rest (Nothing, td.vmState))
+        prf     = trans
+                  (routineComposition extr rest (Nothing, MkVMState False [<] [<]))
+                  (cong
+                    (executeRoutineSteps rest)
+                    (execEqualityPrf {nfa = (smToNFA sm)} _ _ _)
+                  )
+    in (trans (cong (\e => (snd e).evidence) prf) restPrf)
