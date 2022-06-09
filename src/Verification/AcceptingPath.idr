@@ -8,16 +8,16 @@ import Data.Vect
 import Extra
 
 public export
-data AcceptingFrom : (nfa : NA) -> (s : nfa.State) -> (word : Word) -> Type where
-  Accept : {auto nfa : NA} -> (s : nfa.State) -> (prf : nfa.accepting s = True) -> AcceptingFrom nfa s []
-  Step   : {auto nfa : NA} -> (s : nfa.State) -> (c : Char) -> (t : nfa.State)
+data AcceptingFrom : (nfa : NA) -> (s : Maybe nfa.State) -> (word : Word) -> Type where
+  Accept : {auto nfa : NA} -> AcceptingFrom nfa Nothing []
+  Step   : {auto nfa : NA} -> (s : nfa.State) -> (c : Char) -> (t : Maybe nfa.State)
         -> (prf : t `Elem` (nfa.next s c))
         -> AcceptingFrom nfa t w
-        -> AcceptingFrom nfa s (c :: w)
+        -> AcceptingFrom nfa (Just s) (c :: w)
 
 public export
 data Accepting : (nfa : NA) -> (word : Word) -> Type where
-  Start : {auto nfa : NA} -> (s : nfa.State) -> (prf : s `Elem` nfa.start) -> AcceptingFrom nfa s w
+  Start : {auto nfa : NA} -> (s : Maybe nfa.State) -> (prf : s `Elem` nfa.start) -> AcceptingFrom nfa s w
        -> Accepting nfa w
 
 parameters {auto sm : SM}
@@ -25,24 +25,24 @@ parameters {auto sm : SM}
   public export
   stepOfExtractEvidence  : (td : Thread sm.State)
                         -> (c : Char)
-                        -> (s : sm.State)
-                        -> (prf: s `Elem` map Builtin.fst (sm.next td.naState c))
+                        -> (s : Maybe sm.State)
+                        -> (prf: s `Elem` map Builtin.fst (liftNext sm.next td.naState c))
                         -> (Thread sm.State)
 
   stepOfExtractEvidence td c s prf =
-    runFunction c td (s, extractBasedOnFst (sm.next td.naState c) prf)
+    runFunction c td (s, extractBasedOnFst (liftNext sm.next td.naState c) prf)
 
   public export
   extractEvidenceFrom : (td : Thread sm.State) 
                       -> AcceptingFrom (smToNFA sm) td.naState word
                       -> Evidence
 
-  extractEvidenceFrom td (Accept td.naState prf) = td.vmState.evidence
-  extractEvidenceFrom td (Step {w} td.naState c s prf acc) =
-    extractEvidenceFrom (stepOfExtractEvidence td c s prf) acc
+  extractEvidenceFrom (MkThread Nothing vm) Accept = vm.evidence
+  extractEvidenceFrom (MkThread (Just st) vm) (Step {w} st c s prf acc) =
+    extractEvidenceFrom (stepOfExtractEvidence (MkThread (Just st) vm) c s prf) acc
 
   public export
-  extractEvidenceInitialStep  : (s : sm.State) 
+  extractEvidenceInitialStep  : (s : Maybe sm.State) 
                               -> (prf: s `Elem` map Builtin.fst (sm.start))
                               -> (Thread sm.State)
 

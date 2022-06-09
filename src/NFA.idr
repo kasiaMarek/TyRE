@@ -9,6 +9,7 @@ import Data.SnocList
 import Data.List
 import Data.List.Elem
 import Data.Stream
+import Data.Maybe
 
 ||| A non-deterministic automaton
 public export
@@ -18,14 +19,17 @@ record NA where
   0 State : Type
   ||| A way to compare states
   {auto isEq : Eq State}
-  ||| Accepting states
-  accepting : State -> Bool
   ||| Initial states
   ||| A list since the same state might have different initialisation routines (more later).
-  start : List State
+  start : List (Maybe State)
   ||| A list since the same state might have different routines as a result of
   ||| combining NAs (more later).
-  next : State -> Char -> List State
+  next : State -> Char -> List (Maybe State)
+
+public export
+liftNext : (state -> Char -> List a) -> (Maybe state) -> Char -> List a
+liftNext next Nothing c = []
+liftNext next (Just st) c = next st c
 
 public export
 Word : Type
@@ -70,18 +74,17 @@ record SM where
   constructor MkSM
   0 State : Type
   {auto isEq : Eq State}
-  accepting : State -> Bool
-  start : List (State, Routine)
-  next : State -> Char -> List (State, Routine)
+  start : List (Maybe State, Routine)
+  next : State -> Char -> List (Maybe State, Routine)
 
 public export
 smToNFA : SM -> NA
-smToNFA sm = MkNFA sm.State {isEq = sm.isEq} sm.accepting (map fst sm.start) (\st,c => map fst (sm.next st c))
+smToNFA sm = MkNFA sm.State {isEq = sm.isEq} (map fst sm.start) (\st,c => map fst (sm.next st c))
 
 public export
 record Thread (state : Type) where
   constructor MkThread
-  naState : state
+  naState : Maybe state
   vmState : VMState
 
 public export
@@ -156,7 +159,7 @@ initVM = MkVMState False [<] [<]
 parameters {auto sm : SM}
 
   public export
-  initFuction : (sm.State, Routine) -> Thread sm.State
+  initFuction : (Maybe sm.State, Routine) -> Thread sm.State
   initFuction (s,r) = MkThread s (execute Nothing r initVM)
 
   public export
@@ -164,12 +167,12 @@ parameters {auto sm : SM}
   initialise = map initFuction sm.start
 
   public export
-  runFunction : Char -> Thread sm.State -> (sm.State, Routine) -> Thread sm.State
+  runFunction : Char -> Thread sm.State -> (Maybe sm.State, Routine) -> Thread sm.State
   runFunction c td (st, r) = MkThread st (execute (Just c) r (step c td.vmState))
 
   public export
   runMapping: Char -> Thread sm.State -> List (Thread sm.State)
-  runMapping c td = map (runFunction c td) (sm.next td.naState c)
+  runMapping c td = map (runFunction c td) (liftNext sm.next td.naState c)
 
   public export
   distinct : List (Thread sm.State) -> {auto eq : Eq sm.State} -> List (Thread sm.State)
@@ -186,13 +189,13 @@ parameters {auto sm : SM}
   public export
   runFrom : Word -> (tds : List $ Thread sm.State) -> Maybe Evidence
   runFrom [] tds =  map (\td => td.vmState.evidence)
-                        (findR (\td => sm.accepting td.naState) tds).Holds
+                        (findR (\td => isNothing td.naState) tds).Holds
   runFrom (c::cs) tds = runFrom cs $ runMain c tds
 
   public export
   runFromStream : (Stream Char) -> (tds : List $ Thread sm.State) -> Maybe Evidence
   runFromStream cs      []  = Nothing
-  runFromStream (c::cs) tds = case (findR (\td => sm.accepting td.naState) tds).Holds of
+  runFromStream (c::cs) tds = case (findR (\td => isNothing td.naState) tds).Holds of
                                       (Just td) => Just td.vmState.evidence
                                       Nothing   => runFromStream cs $ runMain c tds
 

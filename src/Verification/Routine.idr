@@ -69,20 +69,20 @@ execEqualityPrf vmState (x :: xs) mc =
 parameters {auto sm : SM}
 
   public export
-  stepOfExtractRoutine : {s : sm.State}
+  stepOfExtractRoutine : {s : Maybe sm.State}
                     -> (acc: AcceptingFrom (smToNFA sm) s word)
                     -> ExtendedRoutine
 
-  stepOfExtractRoutine {word=[]} (Accept s prf) = []
+  stepOfExtractRoutine {word=[]} Accept = []
   stepOfExtractRoutine {word=c::_} (Step s c t prf acc)
     = Observe c :: (cast $ extractBasedOnFst (sm.next s c) prf)
 
   public export
-  extractRoutineFrom : {s : sm.State}
+  extractRoutineFrom : {s : Maybe sm.State}
                     -> (acc: AcceptingFrom (smToNFA sm) s word)
                     -> ExtendedRoutine
 
-  extractRoutineFrom {word=[]} (Accept s prf) = []
+  extractRoutineFrom {word=[]} Accept = []
   extractRoutineFrom {word=c::_} (Step s c t prf acc) =
     (stepOfExtractRoutine (Step {nfa = (smToNFA sm)} s c t prf acc))
         ++ (extractRoutineFrom acc)
@@ -105,22 +105,22 @@ parameters {auto sm : SM}
                         ->  (executeRoutineFrom (extractRoutineFrom acc) (mc, td.vmState)
                               = extractEvidenceFrom td acc)
 
-  extractRoutineFromPrf {word=[]} td (Accept td.naState prf) mc = Refl
-  extractRoutineFromPrf {word=c::_} td (Step td.naState c t prf acc) mc =
+  extractRoutineFromPrf {word=[]} (MkThread Nothing vm) Accept mc = Refl
+  extractRoutineFromPrf {word=c::_} (MkThread (Just st) vm) (Step st c t prf acc) mc =
     let r         : Routine
-        r         = extractBasedOnFst (sm.next td.naState c) prf
+        r         = extractBasedOnFst (sm.next st c) prf
         td'       : Thread sm.State
-        td'       = runFunction c td (t,r)
+        td'       = runFunction c (MkThread (Just st) vm) (t,r)
         extr      : ExtendedRoutine
         extr      =  Observe c :: cast r
         rest      : ExtendedRoutine
         rest      = extractRoutineFrom acc
 
         restPrf   := extractRoutineFromPrf td' acc (Just c)
-        prf       : (executeRoutineSteps (extr ++ rest) (mc, td.vmState)
+        prf       : (executeRoutineSteps (extr ++ rest) (mc, vm)
                       = executeRoutineSteps rest (Just c, td'.vmState))
         prf       = trans
-                      (routineComposition extr rest (mc, td.vmState))
+                      (routineComposition extr rest (mc, vm))
                       (cong
                         (executeRoutineSteps rest)
                         (execEqualityPrf {nfa = (smToNFA sm)} _ _ _)
