@@ -18,19 +18,19 @@ Eq BaseStates where
 --- helper functions
 public export
 mapStates : (s -> s') -> List (s, Routine) -> List (s', Routine)
-mapStates f states = map (\case (st, r) => (f st, r)) states
+mapStates f states = map (bimap f id) states
 
 public export
 mapRoutine : (Routine -> Routine) -> List (s, Routine) -> List (s, Routine)
-mapRoutine f xs = map (\case (st, r) => (st, f r)) xs
+mapRoutine f xs = map (bimap id f) xs
 
 public export
 addEndRoutine : (isEnd : state -> Bool) -> Routine -> List (state, Routine) -> List (state, Routine)
 addEndRoutine isEnd routine [] = []
-addEndRoutine isEnd routine ((st, r) :: xs) =
-  if (isEnd st)
-  then (st, r ++ routine) :: (addEndRoutine isEnd routine xs)
-  else (st, r) :: (addEndRoutine isEnd routine xs)
+addEndRoutine isEnd routine (x :: xs) =
+  if (isEnd (fst x))
+  then (fst x, snd x ++ routine) :: (addEndRoutine isEnd routine xs)
+  else x :: (addEndRoutine isEnd routine xs)
 
 public export
 addEndTransition  : (state -> Bool) 
@@ -61,7 +61,7 @@ nextPred _ AcceptState _ = []
 public export
 groupTransform : (sm : SM) -> List (sm.State, Routine) -> List (sm.State, Routine)
 groupTransform sm states = 
-  addEndRoutine sm.accepting [EmitString] (map (\(st, r) => (st, [])) states)
+  addEndRoutine sm.accepting [EmitString] (mapRoutine (const []) states)
 
 --- functions for Alternation
 public export

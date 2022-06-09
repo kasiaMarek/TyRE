@@ -13,8 +13,18 @@ import public Data.List.Equalities
 public export
 extractBasedOnFst : (xs: List (a, b)) -> (xInXs: x `Elem` map Builtin.fst xs) -> b
 extractBasedOnFst [] xInXs = absurd xInXs
-extractBasedOnFst ((x, y) :: xs) Here = y
+extractBasedOnFst (x :: xs) Here = snd x
 extractBasedOnFst (x' :: xs) (There pos) = extractBasedOnFst xs pos
+
+export
+extractBasedOnFstSpec : (xs : List a) 
+                      -> (f : a -> (b, c)) -> (x : b) 
+                      -> (xInXs : x `Elem` map Builtin.fst (map f xs)) 
+                      -> (e : a ** extractBasedOnFst (map f xs) xInXs = Builtin.snd (f e))
+extractBasedOnFstSpec [] _ _ Here impossible
+extractBasedOnFstSpec [] _ _ (There y) impossible
+extractBasedOnFstSpec (y :: xs) f (fst (f y)) Here = (y ** Refl)
+extractBasedOnFstSpec (y :: xs) f x (There pos) = extractBasedOnFstSpec xs f x pos
 
 public export
 replicate : Nat -> (elem : a) -> SnocList a
@@ -51,6 +61,20 @@ mapSpec f q p ((x1,x2) :: xs) spec y (pos, satP) =
       let (x1' ** (x2' ** (pos' ** (ex', eq', satQ')))) =
             mapSpec f q p xs spec y (pos, satP)
       in (x1' ** (x2' ** (There pos' ** (ex', eq', satQ'))))
+
+export
+biMapOnFst : (xs : List (a, c)) -> (f : a -> b) -> (g : c -> d) -> (map Builtin.fst (map (bimap f g) xs) = map f (map Builtin.fst xs))
+biMapOnFst [] f g = Refl
+biMapOnFst ((fst, snd) :: xs) f g = cong (f fst ::) (biMapOnFst xs f g)
+
+export
+elemMapRev : (xs : List a) -> (f : a -> b) -> {e : b} -> (e `Elem` map f xs) ->  (e' : a ** e' `Elem` xs)
+elemMapRev [] _ Here impossible
+elemMapRev [] _ (There pos) impossible
+elemMapRev (x :: xs) f Here = (x ** Here)
+elemMapRev (x :: xs) f (There pos) = 
+    let (e' ** pos') = elemMapRev xs f pos
+    in (e' ** There pos')
 
 -- export
 -- extractBasedOnFstMapEq : (xs: List a) -> (ys : Vect (length xs) b)
