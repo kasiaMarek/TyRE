@@ -26,6 +26,23 @@ extractBasedOnFstSpec [] _ _ (There y) impossible
 extractBasedOnFstSpec (y :: xs) f (fst (f y)) Here = (y ** Refl)
 extractBasedOnFstSpec (y :: xs) f x (There pos) = extractBasedOnFstSpec xs f x pos
 
+export
+extractBasedOnFstAppLor :  (xs : List (a, b)) 
+                        -> (ys : List (a, b))
+                        -> (x : a)
+                        -> (xInApp  : x `Elem` map Builtin.fst (xs ++ ys)) 
+                        -> Either (xInXs : x `Elem` map Builtin.fst xs
+                                      ** extractBasedOnFst (xs ++ ys) xInApp = extractBasedOnFst xs xInXs)
+                                  (xInYs : x `Elem` map Builtin.fst ys
+                                      ** extractBasedOnFst (xs ++ ys) xInApp = extractBasedOnFst ys xInYs)
+extractBasedOnFstAppLor [] ys x xInApp = Right (xInApp ** Refl)
+extractBasedOnFstAppLor ((x, r) :: xs) ys x Here = Left (Here ** Refl)
+extractBasedOnFstAppLor ((x', r') :: xs) ys x (There pos) = 
+  case (extractBasedOnFstAppLor xs ys x pos) of
+    Right (xInXs ** extractEq) => Right (xInXs ** extractEq)
+    Left  (xInYs ** extractEq) => Left  (There xInYs ** extractEq)
+
+
 public export
 replicate : Nat -> (elem : a) -> SnocList a
 replicate 0 elem = [<]
@@ -68,18 +85,27 @@ biMapOnFst [] f g = Refl
 biMapOnFst ((fst, snd) :: xs) f g = cong (f fst ::) (biMapOnFst xs f g)
 
 export
-elemMapRev : (xs : List a) -> (f : a -> b) -> {e : b} -> (e `Elem` map f xs) ->  (e' : a ** e' `Elem` xs)
+elemMapRev : (xs : List a) -> (f : a -> b) -> {0 e : b} -> (e `Elem` map f xs) ->  (e' : a ** (e' `Elem` xs, f e' = e))
 elemMapRev [] _ Here impossible
 elemMapRev [] _ (There pos) impossible
-elemMapRev (x :: xs) f Here = (x ** Here)
+elemMapRev (x :: xs) f Here = (x ** (Here, Refl))
 elemMapRev (x :: xs) f (There pos) = 
-    let (e' ** pos') = elemMapRev xs f pos
-    in (e' ** There pos')
+    let (e' ** (pos', eq)) = elemMapRev xs f pos
+    in (e' ** (There pos', eq))
 
 export
 eqForJust : (Just x = Just y) -> (x = y)
 eqForJust Refl = Refl
 
+-- export
+-- elemAppLorRForFirstElem : (xs, ys : List (a, b)) 
+--                         -> (x `Elem` map Builtin.fst (xs ++ ys)) 
+--                         -> Either (x `Elem` map Builtin.fst xs) (x `Elem` map Builtin.fst ys)
+-- elemAppLorRForFirstElem xs ys fstPos = 
+--   let (e ** (pos, eq)) = elemMapRev (xs ++ ys) Builtin.fst fstPos
+--   in case (elemAppLorR xs ys pos) of
+--     (Left posL) => Left (replace {p = (`Elem` (map fst xs))} eq (elemMap fst posL))
+--     (Right posR) => Right (replace {p = (`Elem` (map fst ys))} eq (elemMap fst posR))
 
 -- export
 -- extractBasedOnFstMapEq : (xs: List a) -> (ys : Vect (length xs) b)

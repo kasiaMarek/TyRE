@@ -14,6 +14,11 @@ Eq BaseState where
   StartState  == StartState   = True
 
 --- helper functions
+-- public export
+-- mapMaybe : (f : a -> b) -> (Maybe a) -> (Maybe b)
+-- mapMaybe f Nothing = Nothing
+-- mapMaybe f (Just x) = Just (f x)
+
 public export
 mapStates : (s -> s') -> List (Maybe s, Routine) -> List (Maybe s', Routine)
 mapStates f states = map (bimap (map f) id) states
