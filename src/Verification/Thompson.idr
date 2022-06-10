@@ -8,7 +8,6 @@ import Extra
 
 import Verification.AcceptingPath
 import Verification.Routine
-import Verification.Thompson.Common
 import Verification.Thompson.Predicate
 import Verification.Thompson.Group
 
@@ -23,12 +22,14 @@ thompsonRoutinePrf : (re : CoreRE)
                         ** (executeRoutineFrom (extractRoutine {sm = (thompson re)} acc) mcvm
                               = (snd mcvm).evidence ++ ev, ev `Encodes` [< Right $ ShapeCode re]))
 
-thompsonRoutinePrf Empty {word = []} (Start () Here (Accept () Refl)) (mc, vm) = ([< UnitMark] ** (Refl, AnEmpty [<]))
-thompsonRoutinePrf Empty {word = c :: cs} (Start () Here (Accept () prf)) (mc, vm) impossible
+thompsonRoutinePrf Empty {word = []} (Start Nothing Here Accept) (mc, vm) = ([< UnitMark] ** (Refl, AnEmpty [<]))
+thompsonRoutinePrf Empty (Start (Just ()) Here acc) (mc, vm) impossible
+thompsonRoutinePrf Empty (Start (Just ()) (There _) acc) (mc, vm) impossible
 thompsonRoutinePrf (Pred f) acc mcvm = thompsonRoutinePrfPredicate f acc mcvm
-thompsonRoutinePrf (Group re) acc (mc, vm) = 
-  let routineEquality := thompsonRoutinePrfGroup re acc
-  in rewrite routineEquality in ([< GroupMark ?p3] ** (?l, AGroup [<] ?p2))
+thompsonRoutinePrf {word} (Group re) acc mcvm = 
+  let routineEq = thompsonRoutinePrfGroup re acc
+      (snocWord ** evidanceEq) = runGroupRoutine word mcvm
+  in rewrite routineEq in ([< GroupMark snocWord] ** (evidanceEq, AGroup [<] snocWord))
 thompsonRoutinePrf (Concat x y) acc mcvm = ?thompsonRoutinePrf_rhs_1
 thompsonRoutinePrf (Alt x y) acc mcvm = ?thompsonRoutinePrf_rhs_4
 thompsonRoutinePrf (Star x) acc mcvm = ?thompsonRoutinePrf_rhs_5

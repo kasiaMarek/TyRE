@@ -10,8 +10,8 @@ interface Ordered ty where
   all : List ty
 
 public export
-Ordered BaseStates where
-  all = [StartState, AcceptState]
+Ordered BaseState where
+  all = [StartState]
 
 public export
 Ordered Unit where
@@ -22,6 +22,9 @@ Ordered a => Ordered b => Ordered (Either a b) where
   all = (map Left all) ++ (map Right all)
 
 public export
-Show BaseStates where
+Ordered a => Ordered (Maybe a) where
+  all = Nothing :: (map Just all)
+
+public export
+Show BaseState where
   show StartState = "S"
-  show AcceptState = "A"

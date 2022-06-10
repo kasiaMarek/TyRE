@@ -76,6 +76,11 @@ elemMapRev (x :: xs) f (There pos) =
     let (e' ** pos') = elemMapRev xs f pos
     in (e' ** There pos')
 
+export
+eqForJust : (Just x = Just y) -> (x = y)
+eqForJust Refl = Refl
+
+
 -- export
 -- extractBasedOnFstMapEq : (xs: List a) -> (ys : Vect (length xs) b)
 --                       -> (f: b -> c) -> (pos : m `Elem` xs)

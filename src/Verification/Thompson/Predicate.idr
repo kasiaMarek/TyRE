@@ -20,8 +20,8 @@ thompsonRoutinePrfPredicate : (f : Char -> Bool)
                                     ** (executeRoutineFrom (extractRoutine {sm = (thompson (Pred f))} acc) mcvm
                                             = (snd mcvm).evidence ++ ev, ev `Encodes` [< Right $ ShapeCode (Pred f)]))
 
-thompsonRoutinePrfPredicate {word = c::cs} f (Start StartState Here (Step StartState c t prf acc)) mcvm with (f c)
-    thompsonRoutinePrfPredicate {word = c::[]} f (Start StartState Here (Step StartState c AcceptState Here (Accept AcceptState Refl))) (mc, vm) | True = ([< CharMark c] ** (Refl, AChar [<] c))
-    thompsonRoutinePrfPredicate {word = c::cs} f (Start StartState Here (Step StartState c s (There prf) acc)) mcvm | True = absurd prf
-    thompsonRoutinePrfPredicate {word = c::cs} f (Start StartState Here (Step StartState c t prf acc)) mcvm | False = absurd prf
+thompsonRoutinePrfPredicate {word = c::cs} f (Start (Just StartState) Here (Step StartState c t prf acc)) mcvm with (f c)
+  thompsonRoutinePrfPredicate {word = c::[]} f (Start (Just StartState) Here (Step StartState c Nothing Here Accept)) (mc, vm) | True = ([< CharMark c] ** (Refl, AChar [<] c))
+  thompsonRoutinePrfPredicate {word = c::cs} f (Start (Just StartState) Here (Step StartState c s (There prf) acc)) mcvm | True = absurd prf
+  thompsonRoutinePrfPredicate {word = c::cs} f (Start (Just StartState) Here (Step StartState c t prf acc)) mcvm | False = absurd prf
 thompsonRoutinePrfPredicate f (Start s (There prf) x) mcvm = absurd prf
