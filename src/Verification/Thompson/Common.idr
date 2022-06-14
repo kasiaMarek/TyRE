@@ -127,3 +127,26 @@ addEndTransactionSpecForJust (((Just y), z) :: xs) x xNotInNew (There pos) =
   in (There xInXsTail ** eq)
 ---TODO :: shouldn't Here also be a valid option ? see what's wrong with this...
 
+export
+mapStatesSpec : (xs : List (Maybe s, Routine))
+              -> (f : s -> s')
+              -> (e : Maybe s)
+              -> (isElem: map f e `Elem` map Builtin.fst (mapStates f xs))
+              -> (isElem': e `Elem` map Builtin.fst xs ** extractBasedOnFst (mapStates f xs) isElem = extractBasedOnFst xs isElem')
+mapStatesSpec [] f e pos = absurd pos
+mapStatesSpec ((Nothing, _) :: xs) f Nothing Here = (Here ** Refl)
+mapStatesSpec (_ :: xs) f Nothing (There pos) = 
+  let (isElemTail ** eq) = mapStatesSpec xs f Nothing pos
+  in (There isElemTail ** eq)
+mapStatesSpec ((y, _) :: xs) f (Just z) (There pos) = 
+  let (isElemTail ** eq) = mapStatesSpec xs f (Just z) pos
+  in (There isElemTail ** eq)
+
+export
+leftNotElemOfRight : {xs : List (Maybe a, Routine)} -> Elem (Just (Left s)) (map fst (mapStates Right xs)) -> Void
+leftNotElemOfRight {xs = []} pos = absurd pos
+leftNotElemOfRight {xs = (Right x) :: xs} Here impossible
+leftNotElemOfRight {xs = _ :: xs} (There pos) = leftNotElemOfRight {xs} pos
+
+
+
