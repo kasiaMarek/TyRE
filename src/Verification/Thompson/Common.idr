@@ -148,5 +148,8 @@ leftNotElemOfRight {xs = []} pos = absurd pos
 leftNotElemOfRight {xs = (Right x) :: xs} Here impossible
 leftNotElemOfRight {xs = _ :: xs} (There pos) = leftNotElemOfRight {xs} pos
 
-
-
+export
+rightNotElemOfLeft : {xs : List (Maybe a, Routine)} -> Elem (Just (Right s)) (map fst (mapStates Left xs)) -> Void
+rightNotElemOfLeft {xs = []} pos = absurd pos
+rightNotElemOfLeft {xs = ((Left _) :: xs)} Here impossible
+rightNotElemOfLeft {xs = (_ :: xs)} (There pos) = rightNotElemOfLeft {xs} pos
