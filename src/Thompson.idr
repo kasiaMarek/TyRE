@@ -13,12 +13,6 @@ public export
 Eq BaseState where
   StartState  == StartState   = True
 
---- helper functions
--- public export
--- mapMaybe : (f : a -> b) -> (Maybe a) -> (Maybe b)
--- mapMaybe f Nothing = Nothing
--- mapMaybe f (Just x) = Just (f x)
-
 public export
 mapStates : (s -> s') -> List (Maybe s, Routine) -> List (Maybe s', Routine)
 mapStates f states = map (bimap (map f) id) states
@@ -101,18 +95,21 @@ nextConcat sm1 sm2 (Right st) c =
 
 --- functions for Kleene Star
 public export
-acceptingStar : Either state () -> Bool
-acceptingStar (Left _) = False
-acceptingStar (Right ()) = True
+filterStar : (Maybe s, Routine) -> Bool
+filterStar (Nothing, _) = False
+filterStar (Just _, _) = True
 
 public export
-startStar : (sm : SM) -> List (Maybe (Either sm.State ()), Routine)
-startStar sm = mapRoutine (EmitEList::) ((Just (Right ()), [EmitBList]) :: (mapStates Left sm.start))
+firstStar : (sm : SM) -> List (Maybe sm.State, Routine)
+firstStar sm = (Nothing, [EmitBList]) :: (filter filterStar sm.start)
 
 public export
-nextStar : (sm : SM) -> Either sm.State () -> Char -> List (Maybe (Either sm.State ()), Routine)
-nextStar sm (Left st) c = addEndTransition [(Just (Right ()), [EmitBList])] Left (sm.next st c)
-nextStar sm (Right ()) c = []
+startStar : (sm : SM) -> List (Maybe sm.State, Routine)
+startStar sm = mapRoutine (EmitEList::) (firstStar sm)
+
+public export
+nextStar : (sm : SM) -> sm.State -> Char -> List (Maybe sm.State, Routine)
+nextStar sm st c = addEndTransition (firstStar sm) id (sm.next st c)
 
 --- Thompson construction
 public export
@@ -147,6 +144,6 @@ thompson (Alt re1 re2) =
 thompson (Star re) =
   let sm : SM := thompson re
       _ := sm.isEq
-  in MkSM (Either sm.State ()) 
-          (startStar sm) 
+  in MkSM sm.State
+          (startStar sm)
           (nextStar sm)

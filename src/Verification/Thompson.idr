@@ -13,6 +13,7 @@ import Verification.Thompson.Group
 import Verification.Thompson.Concatenation
 import Verification.Thompson.Alternation
 import Verification.Thompson.Common
+import Verification.Thompson.Star
 
 import Data.SnocList
 import Data.List.Elem
@@ -80,7 +81,45 @@ thompsonRoutinePrf (Alt re1 re2) acc mcvm =
             ))
             , ARight [<] ev2Encodes (ShapeCode re1)))
 
-thompsonRoutinePrf (Star x) acc mcvm = ?thompsonRoutinePrf_rhs_5
+thompsonRoutinePrf (Star re) acc (mc, vm) = 
+  let (StarPWR accs routineEq) := thompsonRoutinePrfStar re acc
+      (repEv ** (repEvEq, repEnc)) := evidenceForRepetition 
+                                        (executeRoutineSteps [Regular EmitEList] (mc, vm)) 
+                                        accs
+  in ([< EList] ++ repEv :< BList **
+        (rewrite routineEq in (Calc $ 
+          |~ (snd (executeRoutineSteps ((accs >>= (\ac => extractRoutine {sm = thompson re} ac.snd)) ++ [Regular EmitBList]) (mc, MkVMState vm.recording vm.memory (vm .evidence :< EList)))) .evidence
+          ~~ (snd (executeRoutineSteps [Regular EmitBList] (executeRoutineSteps (accs >>= (\ac => extractRoutine {sm = thompson re} ac.snd)) (mc, MkVMState vm.recording vm.memory (vm .evidence :< EList))))).evidence ... cong (\x => (snd x).evidence) (routineComposition _ _ _)
+          ~~ (snd (executeRoutineSteps (accs >>= (\ac => extractRoutine {sm = thompson re} ac.snd)) (mc, MkVMState vm.recording vm.memory (vm .evidence :< EList)))).evidence :< BList ... starRightRoutineEquality _
+          ~~ (vm .evidence :< EList) ++ repEv :< BList ... cong (:< BList) repEvEq
+          ~~ (vm .evidence ++ ([<EList] ++ repEv)) :< BList ... cong (:< BList) (sym (appendAssociative _ _ _))
+        )
+        , ARepetiton [<] repEnc)) where
+    evidenceForRepetition : (mcvm  : (Maybe Char, VMState))
+                          -> (accs  : List (w : Word ** Accepting (smToNFA (thompson re)) w))
+                          -> (ev : Evidence **
+                                (executeRoutineFrom (accs >>= (\ac => extractRoutine {sm = (thompson re)} (snd ac))) mcvm 
+                                    = (snd mcvm).evidence ++ ev
+                                , ev `Encodes` (replicate (length accs) (Right $ ShapeCode re))))
+    evidenceForRepetition (mc, vm) [] = ([<] ** (Refl, [<]))
+    evidenceForRepetition mcvm ((word ** acc) :: accs) = 
+      let (ev ** (eq, enc)) := thompsonRoutinePrf re acc mcvm
+          mcvm' : (Maybe Char, VMState)
+          mcvm' = executeRoutineSteps (extractRoutine {sm = thompson re} acc) mcvm
+          (evsTail ** (eqTail, encTail)) := evidenceForRepetition mcvm' accs
+      in (ev ++ evsTail ** 
+            ((Calc $
+              |~ (snd (executeRoutineSteps (((word ** acc) :: accs) >>= (\ac => extractRoutine {sm = thompson re} ac.snd)) mcvm)).evidence
+              ~~ (snd (executeRoutineSteps (extractRoutine {sm = thompson re} acc ++ (accs >>= (\ac => extractRoutine {sm = thompson re} ac.snd))) mcvm)).evidence ... cong (\x => (snd (executeRoutineSteps x mcvm)).evidence) (bindConcatPrf accs  (word ** acc) _)
+              ~~ (snd (executeRoutineSteps (accs >>= (\ac => extractRoutine {sm = thompson re} ac.snd)) (executeRoutineSteps (extractRoutine {sm = thompson re} acc) mcvm))).evidence ... cong (\x => (snd x).evidence) (routineComposition _ _ _)
+              ~~ (snd (executeRoutineSteps (extractRoutine {sm = thompson re} acc) mcvm)).evidence ++ evsTail ... eqTail
+              ~~ ((snd mcvm).evidence ++ ev) ++ evsTail ... cong (++ evsTail) eq
+              ~~ (snd mcvm).evidence ++ (ev ++ evsTail) ... sym (appendAssociative _ _ _)
+            )
+            , replace {p = ((ev ++ evsTail) `Encodes`)} 
+                      (replicateForSucc _ _)  
+                      (recontextualise enc encTail)))
+
 
 export
 thompsonPrf : (re : CoreRE)

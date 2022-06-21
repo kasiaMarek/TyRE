@@ -21,6 +21,12 @@ modules =   API
           , Verification.Thompson
           , Verification.Routine
           , Verification.AcceptingPath
+          , Verification.Thompson.Common
+          , Verification.Thompson.Predicate
+          , Verification.Thompson.Group
+          , Verification.Thompson.Alternation
+          , Verification.Thompson.Concatenation
+          , Verification.Thompson.Star
           --- additional more `generic` functions and structures
           , Extra
           , Extra.Pred

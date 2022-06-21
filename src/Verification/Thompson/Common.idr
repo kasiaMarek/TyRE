@@ -127,6 +127,36 @@ addEndTransactionSpecForJust (((Just y), z) :: xs) x xNotInNew (There pos) =
   in (There xInXsTail ** eq)
 ---TODO :: shouldn't Here also be a valid option ? see what's wrong with this...
 
+-- Since only needed for Star we prove it for `id` for simplicity. It can be easily generalised.
+export
+addEndTransitionLorR : (newStates : List (Maybe state, Routine))
+                    -> (xs: List (Maybe state, Routine))
+                    -> (x : Maybe state)
+                    -> (xInXs : x `Elem` map Builtin.fst (addEndTransition newStates Prelude.Basics.id xs))
+                    -> Either (xInXs' : x `Elem` map Builtin.fst xs **
+                                  (   extractBasedOnFst (addEndTransition newStates Prelude.Basics.id xs) xInXs 
+                                  =   extractBasedOnFst xs xInXs'))
+                              (xInXs' : Nothing `Elem`  map Builtin.fst xs ** 
+                                    (newStateInNewStates : x `Elem` map Builtin.fst newStates **
+                                      (   extractBasedOnFst (addEndTransition newStates Prelude.Basics.id xs) xInXs 
+                                      =   extractBasedOnFst xs xInXs'  ++  extractBasedOnFst newStates newStateInNewStates)))
+addEndTransitionLorR newStates [] x xInXs = absurd xInXs
+addEndTransitionLorR newStates ((Nothing, z) :: xs) x xInXs =
+  case (extractBasedOnFstAppLor ? ? x xInXs) of
+    Right (isElem ** eq1) =>
+      case (addEndTransitionLorR newStates xs x isElem) of
+        Left (xInXsTail ** eq2) => Left (There xInXsTail ** trans eq1 eq2)
+        Right (npos ** (newStateInNewStates ** eq2)) => Right (There npos ** (newStateInNewStates ** trans eq1 eq2))
+    Left (isElem ** eq1) => 
+      let (newStateInNewStates ** eq2) = mapRoutineSpec ? ? isElem
+      in Right (Here ** (newStateInNewStates ** trans eq1 eq2))
+addEndTransitionLorR newStates (((Just y), z) :: xs) (Just y) Here = Left (Here ** Refl)
+addEndTransitionLorR newStates (((Just y), z) :: xs) x (There pos) = 
+  case (addEndTransitionLorR newStates xs x pos) of
+    Left (xInXsTail ** eq) => Left (There xInXsTail ** eq)
+    Right (npos ** (newStateInNewStates ** eq)) => Right (There npos ** (newStateInNewStates ** eq))
+
+
 export
 mapStatesSpec : (xs : List (Maybe s, Routine))
               -> (f : s -> s')
@@ -143,13 +173,13 @@ mapStatesSpec ((y, _) :: xs) f (Just z) (There pos) =
   in (There isElemTail ** eq)
 
 export
-leftNotElemOfRight : {xs : List (Maybe a, Routine)} -> Elem (Just (Left s)) (map fst (mapStates Right xs)) -> Void
+leftNotElemOfRight : {xs : List (Maybe a, Routine)} -> Elem (Just (Left s)) (map Builtin.fst (mapStates Right xs)) -> Void
 leftNotElemOfRight {xs = []} pos = absurd pos
 leftNotElemOfRight {xs = (Right x) :: xs} Here impossible
 leftNotElemOfRight {xs = _ :: xs} (There pos) = leftNotElemOfRight {xs} pos
 
 export
-rightNotElemOfLeft : {xs : List (Maybe a, Routine)} -> Elem (Just (Right s)) (map fst (mapStates Left xs)) -> Void
+rightNotElemOfLeft : {xs : List (Maybe a, Routine)} -> Elem (Just (Right s)) (map Builtin.fst (mapStates Left xs)) -> Void
 rightNotElemOfLeft {xs = []} pos = absurd pos
 rightNotElemOfLeft {xs = ((Left _) :: xs)} Here impossible
 rightNotElemOfLeft {xs = (_ :: xs)} (There pos) = rightNotElemOfLeft {xs} pos

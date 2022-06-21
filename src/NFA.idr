@@ -206,3 +206,14 @@ parameters {auto sm : SM}
   public export
   runAutomatonStream : (Stream Char) -> Maybe Evidence
   runAutomatonStream stream = runFromStream stream initialise
+
+export
+run : (nfa : NA) -> Word -> List (Maybe nfa.State) -> Bool
+run nfa [] ys = case (find isNothing ys) of
+              (Just _)  => True
+              Nothing   => False
+run nfa (c :: cs) ys = run nfa cs (ys >>= (\s => liftNext nfa.next s c))
+
+export
+runNFA : NA -> Word -> Bool
+runNFA na word = run na word na.start

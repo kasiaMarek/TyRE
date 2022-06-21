@@ -49,6 +49,12 @@ replicate 0 elem = [<]
 replicate (S k) elem = (replicate k elem) :< elem
 
 export
+replicateForSucc  : (k : Nat) -> (elem : a) 
+                  -> ([< elem] ++ replicate k elem = replicate (S k) elem)
+replicateForSucc 0 elem = Refl
+replicateForSucc (S k) elem = cong (:< elem) (replicateForSucc k elem)
+
+export
 bindSpec : (f : a -> List b) -> (p : Pred b) -> (q : Pred a) ->
   (spec : (x : a) -> (y: b ** (y `Elem` f x, p y)) -> q x) ->
   (cs : List a) ->
