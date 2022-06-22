@@ -33,9 +33,9 @@ thompsonRoutinePrf Empty (Start (Just ()) (There _) acc) (mc, vm) impossible
 
 thompsonRoutinePrf (Pred f) acc mcvm = thompsonRoutinePrfPredicate f acc mcvm
 
-thompsonRoutinePrf {word} (Group re) acc mcvm = 
+thompsonRoutinePrf {word} (Group re) acc (mc, vm) = 
   let routineEq = thompsonRoutinePrfGroup re acc
-      (snocWord ** evidanceEq) = runGroupRoutine word mcvm
+      (snocWord ** evidanceEq) = runGroupRoutine word (executeRoutineSteps [Regular Record] (mc, vm))
   in rewrite routineEq in ([< GroupMark snocWord] ** (evidanceEq, AGroup [<] snocWord))
 thompsonRoutinePrf (Concat re1 re2) acc mcvm = 
   let (PWR word1 acc1 (PWR word2 acc2 routineEq)) := thompsonRoutinePrfConcat re1 re2 acc

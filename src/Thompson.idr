@@ -120,7 +120,7 @@ thompson (Group re) =
   let sm : SM := thompson re
       _ := sm.isEq
   in MkSM sm.State 
-          (groupTransform sm sm.start) 
+          (mapRoutine (Record::) (groupTransform sm sm.start))
           (\st,c => groupTransform sm (sm.next st c))
 
 thompson (Concat re1 re2) =

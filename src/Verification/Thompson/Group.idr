@@ -10,9 +10,11 @@ import Extra.Pred
 import Verification.AcceptingPath
 import Verification.Routine
 import Verification.Thompson.Common
+import Syntax.PreorderReasoning
 
 import Data.SnocList
 import Data.List.Elem
+import Data.List
 
 constIdSpec : (xs : List (state, Routine)) 
             -> (isElem : x `Elem` map Builtin.fst (mapRoutine (const []) xs)) 
@@ -50,23 +52,34 @@ export
 thompsonRoutinePrfGroup : (re : CoreRE)
                         -> {word : Word}
                         -> (acc : Accepting (smToNFA (thompson (Group re))) word)
-                        -> (extractRoutine {sm = thompson (Group re)} acc === map Observe word ++ [Regular EmitString])
+                        -> (extractRoutine {sm = thompson (Group re)} acc === [Regular Record] ++ map Observe word ++ [Regular EmitString])
 
 thompsonRoutinePrfGroup re {word = []} (Start Nothing prf Accept) =
-  let (isElem ** rw1) = addEndRoutineSpecForNothing [EmitString]
+  let (pos'' ** rw1) = mapRoutineSpec ? ? prf
+      (pos' ** rw2) = addEndRoutineSpecForNothing [EmitString]
                                                     (mapRoutine (const []) (thompson re).start)
-                                                    prf
-      rw2 = constIdSpec ((thompson re).start) isElem
-  in rewrite rw1 in rewrite rw2 in Refl
+                                                    pos''
+      rw3 = constIdSpec ((thompson re).start) pos'
+  in Calc $
+      |~ cast (extractBasedOnFst (mapRoutine (Record::) (addEndRoutine [EmitString] (mapRoutine (const []) (thompson re).start))) prf) ++ []
+      ~~ cast (extractBasedOnFst (mapRoutine (Record::) (addEndRoutine [EmitString] (mapRoutine (const []) (thompson re).start))) prf) ... appendNilRightNeutral _
+      ~~ (Regular Record) :: cast (extractBasedOnFst (addEndRoutine [EmitString] (mapRoutine (const []) (thompson re) .start)) pos'') ... cong cast rw1
+      ~~ (Regular Record) :: cast (extractBasedOnFst (mapRoutine (const []) (thompson re) .start) pos' ++ [EmitString]) ... cong (\x => (Regular Record) :: cast x) rw2
+      ~~ [Regular Record, Regular EmitString] ...  cong (\x => (Regular Record) :: cast (x ++ [EmitString])) rw3
 
 thompsonRoutinePrfGroup re {word} (Start (Just s) prf acc) = 
-  let (isElem ** rw1) = addEndRoutineSpecForJust  [EmitString]
+  let (pos'' ** rw1) = mapRoutineSpec ? ? prf
+      (pos' ** rw2) = addEndRoutineSpecForJust  [EmitString]
                                                   (mapRoutine (const []) (thompson re).start)
                                                   s
-                                                  prf
-      rw2 = constIdSpec (thompson re).start isElem
+                                                  pos''
+      rw3 = constIdSpec (thompson re).start pos'
       tail = thompsonRoutineFromPrfGroup {word} re s acc
-  in rewrite rw1 in rewrite rw2 in tail
+  in rewrite tail in Calc $
+      |~ cast (extractBasedOnFst (mapRoutine (Record::) (addEndRoutine [EmitString] (mapRoutine (const []) (thompson re) .start))) prf) ++ (map Observe word ++ [Regular EmitString])
+      ~~ [Regular Record] ++ cast (extractBasedOnFst (addEndRoutine [EmitString] (mapRoutine (const []) (thompson re) .start)) pos'') ++ (map Observe word ++ [Regular EmitString]) ... cong (\x => cast x ++ (map Observe word ++ [Regular EmitString])) rw1
+      ~~ [Regular Record] ++ cast (extractBasedOnFst (mapRoutine (const []) (thompson re) .start) pos') ++ (map Observe word ++ [Regular EmitString]) ... cong (\x => [Regular Record] ++ cast x ++ (map Observe word ++ [Regular EmitString])) rw2
+      ~~ [Regular Record] ++ map Observe word ++ [Regular EmitString] ... cong (\x => [Regular Record] ++ cast x ++ (map Observe word ++ [Regular EmitString])) rw3
 
 export
 runGroupRoutine : (word : List Char) 
