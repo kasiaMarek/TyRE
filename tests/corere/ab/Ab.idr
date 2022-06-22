@@ -1,7 +1,7 @@
 import API
 import Core
 import Codes
-import NFA.Thompson
+import Thompson
 
 AorB : CoreRE
 AorB = Pred (\c =>  (c == 'a' || c == 'b'))

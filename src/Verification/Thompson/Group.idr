@@ -1,59 +1,91 @@
 module Verification.Thompson.Group
 
 import Core
-import Evidence
+import Thompson
 import NFA
-import NFA.Thompson
-import Verification.Routine
-import Verification.AcceptingPath
-import Data.SnocList
-import Codes
-import Data.Vect
-import Data.List
-import Data.List.Elem
+import Evidence
 import Extra
-import Extra.Reflects
+import Extra.Pred
 
-stepInGroupToLeftState  : {0 a : Type} -> (c: Char) -> (s : Either a AState) -> (t : a) -> (acc : a -> Bool)
-                        -> (next : a -> Char -> List a) -> (prf: (Left t) `Elem` (fst (nextGroup {a} acc next s c)))
-                        -> (extractBasedOnFst (fst (nextGroup acc next s c)) (snd (nextGroup acc next s c)) prf = [])
+import Verification.AcceptingPath
+import Verification.Routine
+import Verification.Thompson.Common
+import Syntax.PreorderReasoning
 
-stepInGroupToLeftState c (Right ASt) t acc next prf = absurd prf
-stepInGroupToLeftState c (Left x) t acc next pos with ((findR acc (next x c)).Holds)
-  stepInGroupToLeftState c (Left x) t acc next pos | Nothing = (extractBasedOnFstFromRep _ _ _)
-  stepInGroupToLeftState c (Left x) t acc next (There pos) | (Just _) = (extractBasedOnFstFromRep _ _ _)
+import Data.SnocList
+import Data.List.Elem
+import Data.List
 
-stepInGroupToRightState : {0 a : Type} -> (c: Char) -> (s : Either a AState) -> (acc : a -> Bool)
-                        -> (next : a -> Char -> List a) -> (prf: (Right ASt) `Elem` (fst (nextGroup {a} acc next s c)))
-                        -> (extractBasedOnFst (fst (nextGroup acc next s c)) (snd (nextGroup acc next s c)) prf = [EmitString])
+constIdSpec : (xs : List (state, Routine)) 
+            -> (isElem : x `Elem` map Builtin.fst (mapRoutine (const []) xs)) 
+            -> (extractBasedOnFst (mapRoutine (const []) xs) isElem = [])
+constIdSpec ((st, r) :: xs) Here = Refl
+constIdSpec (_       :: xs) (There pos) = constIdSpec xs pos
 
-stepInGroupToRightState c (Right ASt) acc next prf = absurd prf
-stepInGroupToRightState c (Left x) acc next pos with ((findR acc (next x c)).Holds)
-  stepInGroupToRightState c (Left x) acc next pos | Nothing = absurd (rightCantBeElemOfLeft ASt (next x c) pos)
-  stepInGroupToRightState c (Left x) acc next Here | (Just _) = Refl
-  stepInGroupToRightState c (Left x) acc next (There pos) | (Just _) = absurd (rightCantBeElemOfLeft _ _ pos)
 
-public export
-evidenceForGroup  : (re : CoreRE) -> {s : (thompson (Group re)).nfa.State}
-                  -> {mc  : Maybe Char} -> {ev  : Evidence}
-                  -> (acc : AcceptingFrom (thompson (Group re)).nfa s word)
-                  -> (vm  : VMState)
-                  -> (vm.evidence = ev ++ (case acc of {(Accept _ _) => [< GroupMark _]; (Step _ _ _ _ _) => [<]}))
-                  -> (word'': SnocList Char **
-                      executeRoutineFrom (extractRoutineFrom {nfa = (thompson (Group re)).nfa, prog
-                              = (thompson (Group re)).prog} acc) (mc, vm) = ev ++ [< GroupMark word''])
+thompsonRoutineFromPrfGroup : (re : CoreRE)
+                            -> {word : Word}
+                            -> (s : (thompson (Group re)).State)
+                            -> (acc : AcceptingFrom (smToNFA (thompson (Group re))) (Just s) word)
+                            -> (extractRoutineFrom {sm = thompson (Group re)} acc = (map Observe word) ++ [Regular EmitString])
 
-evidenceForGroup re (Accept s prf) vm eqPrf = ([<] ** eqPrf)
+thompsonRoutineFromPrfGroup re s (Step s c Nothing prf Accept) = 
+  let (isElem ** rw1) = addEndRoutineSpecForNothing [EmitString]
+                                                    (mapRoutine (const []) ((thompson re).next s c))
+                                                    prf
 
-evidenceForGroup re (Step s c (Right ASt) prf1 (Accept (Right ASt) prf2)) vm eqPrf =
-    let routine = stepInGroupToRightState c s (thompson re).nfa.accepting (thompson re).nfa.next prf1
-        word: SnocList Char
-        word = (step c vm).memory
-    in rewrite routine in (word ** cong (:< GroupMark word) eqPrf)
+      rw2 = constIdSpec ((thompson re).next s c) isElem
+  in rewrite rw1 in rewrite rw2 in Refl
 
-evidenceForGroup re {mc} {ev} (Step s c (Left t) prf1 (Step (Left t) c' r prf2 acc)) vm eqPrf =
-  let routine := stepInGroupToLeftState c s t (thompson re).nfa.accepting (thompson re).nfa.next prf1
-      (w ** u) := evidenceForGroup re {mc, ev, s=(Left t)}
-                      (Step {nfa = (thompson (Group re)).nfa} (Left t) c' r prf2 acc)
-                      (step c vm) eqPrf
-  in (w ** rewrite routine in u)
+thompsonRoutineFromPrfGroup {word = c :: word'} re s (Step s c (Just t) prf acc) = 
+  let (isElem ** rw1) = addEndRoutineSpecForJust  [EmitString]
+                                                  (mapRoutine (const []) ((thompson re).next s c))
+                                                  t
+                                                  prf
+
+      rw2 = constIdSpec ((thompson re).next s c) isElem
+      tail = thompsonRoutineFromPrfGroup {word = word'} re t acc
+  in cong (Observe c ::) (rewrite rw1 in rewrite rw2 in tail)
+
+
+export
+thompsonRoutinePrfGroup : (re : CoreRE)
+                        -> {word : Word}
+                        -> (acc : Accepting (smToNFA (thompson (Group re))) word)
+                        -> (extractRoutine {sm = thompson (Group re)} acc === [Regular Record] ++ map Observe word ++ [Regular EmitString])
+
+thompsonRoutinePrfGroup re {word = []} (Start Nothing prf Accept) =
+  let (pos'' ** rw1) = mapRoutineSpec ? ? prf
+      (pos' ** rw2) = addEndRoutineSpecForNothing [EmitString]
+                                                    (mapRoutine (const []) (thompson re).start)
+                                                    pos''
+      rw3 = constIdSpec ((thompson re).start) pos'
+  in Calc $
+      |~ cast (extractBasedOnFst (mapRoutine (Record::) (addEndRoutine [EmitString] (mapRoutine (const []) (thompson re).start))) prf) ++ []
+      ~~ cast (extractBasedOnFst (mapRoutine (Record::) (addEndRoutine [EmitString] (mapRoutine (const []) (thompson re).start))) prf) ... appendNilRightNeutral _
+      ~~ (Regular Record) :: cast (extractBasedOnFst (addEndRoutine [EmitString] (mapRoutine (const []) (thompson re) .start)) pos'') ... cong cast rw1
+      ~~ (Regular Record) :: cast (extractBasedOnFst (mapRoutine (const []) (thompson re) .start) pos' ++ [EmitString]) ... cong (\x => (Regular Record) :: cast x) rw2
+      ~~ [Regular Record, Regular EmitString] ...  cong (\x => (Regular Record) :: cast (x ++ [EmitString])) rw3
+
+thompsonRoutinePrfGroup re {word} (Start (Just s) prf acc) = 
+  let (pos'' ** rw1) = mapRoutineSpec ? ? prf
+      (pos' ** rw2) = addEndRoutineSpecForJust  [EmitString]
+                                                  (mapRoutine (const []) (thompson re).start)
+                                                  s
+                                                  pos''
+      rw3 = constIdSpec (thompson re).start pos'
+      tail = thompsonRoutineFromPrfGroup {word} re s acc
+  in rewrite tail in Calc $
+      |~ cast (extractBasedOnFst (mapRoutine (Record::) (addEndRoutine [EmitString] (mapRoutine (const []) (thompson re) .start))) prf) ++ (map Observe word ++ [Regular EmitString])
+      ~~ [Regular Record] ++ cast (extractBasedOnFst (addEndRoutine [EmitString] (mapRoutine (const []) (thompson re) .start)) pos'') ++ (map Observe word ++ [Regular EmitString]) ... cong (\x => cast x ++ (map Observe word ++ [Regular EmitString])) rw1
+      ~~ [Regular Record] ++ cast (extractBasedOnFst (mapRoutine (const []) (thompson re) .start) pos') ++ (map Observe word ++ [Regular EmitString]) ... cong (\x => [Regular Record] ++ cast x ++ (map Observe word ++ [Regular EmitString])) rw2
+      ~~ [Regular Record] ++ map Observe word ++ [Regular EmitString] ... cong (\x => [Regular Record] ++ cast x ++ (map Observe word ++ [Regular EmitString])) rw3
+
+export
+runGroupRoutine : (word : List Char) 
+                -> (mcvm : (Maybe Char, VMState)) 
+                -> (snocWord : SnocList Char ** 
+                      (Builtin.snd (executeRoutineSteps (map Observe word ++ [Regular EmitString]) mcvm)).evidence = (Builtin.snd mcvm).evidence :< GroupMark snocWord)
+runGroupRoutine [] (_, vm) = (vm.memory ** Refl)
+runGroupRoutine (x :: xs) (mc, vm) = runGroupRoutine xs (Just x, step x vm)
+

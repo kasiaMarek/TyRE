@@ -1,5 +1,3 @@
-module StringTest
-
 import StringRE
 
 printParsed : String -> IO ()

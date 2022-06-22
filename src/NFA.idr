@@ -1,15 +1,15 @@
 module NFA
 
-import Data.Vect
+import Evidence
+import Extra
+import Extra.Pred
+import Extra.Reflects
+
 import Data.SnocList
 import Data.List
 import Data.List.Elem
-import Data.Vect.Elem
-import Evidence
-import Pred
-import Extra.Reflects
-import Extra
 import Data.Stream
+import Data.Maybe
 
 ||| A non-deterministic automaton
 public export
@@ -19,14 +19,17 @@ record NA where
   0 State : Type
   ||| A way to compare states
   {auto isEq : Eq State}
-  ||| Accepting states
-  accepting : State -> Bool
   ||| Initial states
   ||| A list since the same state might have different initialisation routines (more later).
-  start : List State
+  start : List (Maybe State)
   ||| A list since the same state might have different routines as a result of
   ||| combining NAs (more later).
-  next : State -> Char -> List State
+  next : State -> Char -> List (Maybe State)
+
+public export
+liftNext : (state -> Char -> List a) -> (Maybe state) -> Char -> List a
+liftNext next Nothing c = []
+liftNext next (Just st) c = next st c
 
 public export
 Word : Type
@@ -66,30 +69,23 @@ public export
 Routine : Type
 Routine = List Instruction
 
-||| A program, relative to a NFA, instructs what to do as we run the automaton:
 public export
-record Program (N : NA) where
-  constructor MkProgram
-  ||| Which routine to execute when we initialise a thread at each starting state
-  init : Vect (length $ N .start) Routine
-  ||| Which routine to execute
-  next : (st : N .State) -> (c : Char) -> Vect (length $ N .next st c) Routine
+record SM where
+  constructor MkSM
+  0 State : Type
+  {auto isEq : Eq State}
+  start : List (Maybe State, Routine)
+  next : State -> Char -> List (Maybe State, Routine)
 
 public export
-record Thread (N : NA) where
+smToNFA : SM -> NA
+smToNFA sm = MkNFA sm.State {isEq = sm.isEq} (map fst sm.start) (\st,c => map fst (sm.next st c))
+
+public export
+record Thread (state : Type) where
   constructor MkThread
-  naState : N .State
+  naState : Maybe state
   vmState : VMState
-
-map : (f : (a,b) -> (c,d)) -> (xs : List a) ->
-  (ys : Vect (length xs) b) ->
-  (xs' : List c ** Vect (length xs') d)
-
-map f [] [] = ([] ** [])
-map f (x :: xs) (y :: ys) =
-  let mp = f (x,y)
-      rest = map f xs ys
-  in (fst mp :: (fst rest) ** snd mp :: (snd rest))
 
 public export
 0 Step : Type
@@ -160,67 +156,64 @@ public export
 initVM : VMState
 initVM = MkVMState False [<] [<]
 
-parameters {auto N : NA}
+parameters {auto sm : SM}
 
   public export
-  run: Word -> List (N .State) -> Bool
-  run [] ys = case (find (N .accepting) ys) of
-                (Just _)  => True
-                Nothing   => False
-  run (c :: cs) ys = run cs (ys >>= (\s => N .next s c))
+  initFuction : (Maybe sm.State, Routine) -> Thread sm.State
+  initFuction (s,r) = MkThread s (execute Nothing r initVM)
 
-  parameters  {auto P : Program N}
+  public export
+  initialise : List (Thread sm.State)
+  initialise = map initFuction sm.start
 
-    ||| Main body of `initialise`
-    public export
-    initFuction : (N .State, Routine) -> Thread N
-    initFuction (s,r) = MkThread s (execute Nothing r initVM)
+  public export
+  runFunction : Char -> Thread sm.State -> (Maybe sm.State, Routine) -> Thread sm.State
+  runFunction c td (st, r) = MkThread st (execute (Just c) r (step c td.vmState))
 
-    public export
-    initialise : List (Thread N)
-    initialise = mapF initFuction (N .start) (P .init)
+  public export
+  runMapping: Char -> Thread sm.State -> List (Thread sm.State)
+  runMapping c td = map (runFunction c td) (liftNext sm.next td.naState c)
 
-    ||| Main body of `runFrom`
-    public export
-    runFunction : Char -> Thread N -> (N .State, Routine) -> Thread N
-    runFunction c td (st, r) = MkThread st (execute (Just c) r (step c td.vmState))
+  public export
+  distinct : List (Thread sm.State) -> {auto eq : Eq sm.State} -> List (Thread sm.State)
+  distinct [] = []
+  distinct (td::tds) =
+    case find (\t => t.naState == td.naState) tds of
+      Nothing => td::(distinct tds)
+      (Just _) => distinct tds
 
-    public export
-    runMapping: Char -> Thread N -> List (Thread N)
-    runMapping c td = mapF  (runFunction c td)
-                            (N .next td.naState c)
-                            (P .next td.naState c)
+  public export
+  runMain : Char -> List (Thread sm.State) -> List (Thread sm.State)
+  runMain c tds = distinct {eq = sm.isEq} (tds >>= runMapping c)
 
-    public export
-    distinct : List (Thread N) -> List (Thread N)
-    distinct [] = []
-    distinct (td::tds) =
-      let _ := N .isEq
-      in case find (\t => t.naState == td.naState) tds of
-          Nothing => td::(distinct tds)
-          (Just _) => distinct tds
+  public export
+  runFrom : Word -> (tds : List $ Thread sm.State) -> Maybe Evidence
+  runFrom [] tds =  map (\td => td.vmState.evidence)
+                        (findR (\td => isNothing td.naState) tds).Holds
+  runFrom (c::cs) tds = runFrom cs $ runMain c tds
 
-    public export
-    runMain : Char -> List (Thread N) -> List (Thread N)
-    runMain c tds = distinct (tds >>= runMapping c)
+  public export
+  runFromStream : (Stream Char) -> (tds : List $ Thread sm.State) -> Maybe Evidence
+  runFromStream cs      []  = Nothing
+  runFromStream (c::cs) tds = case (findR (\td => isNothing td.naState) tds).Holds of
+                                      (Just td) => Just td.vmState.evidence
+                                      Nothing   => runFromStream cs $ runMain c tds
 
-    public export
-    runFrom : Word -> (tds : List $ Thread N) -> Maybe Evidence
-    runFrom [] tds =  map (\td => td.vmState.evidence)
-                          (findR (\td => N .accepting td.naState) tds).Holds
-    runFrom (c::cs) tds = runFrom cs $ runMain c tds
+  public export
+  runAutomaton : Word -> Maybe Evidence
+  runAutomaton word = runFrom word initialise
 
-    public export
-    runFromStream : (Stream Char) -> (tds : List $ Thread N) -> Maybe Evidence
-    runFromStream cs      []  = Nothing
-    runFromStream (c::cs) tds = case (findR (\td => N .accepting td.naState) tds).Holds of
-                                        (Just td) => Just td.vmState.evidence
-                                        Nothing   => runFromStream cs $ runMain c tds
+  public export
+  runAutomatonStream : (Stream Char) -> Maybe Evidence
+  runAutomatonStream stream = runFromStream stream initialise
 
-    public export
-    runAutomaton : Word -> Maybe Evidence
-    runAutomaton word = runFrom word initialise
+export
+run : (nfa : NA) -> Word -> List (Maybe nfa.State) -> Bool
+run nfa [] ys = case (find isNothing ys) of
+              (Just _)  => True
+              Nothing   => False
+run nfa (c :: cs) ys = run nfa cs (ys >>= (\s => liftNext nfa.next s c))
 
-    public export
-    runAutomatonStream : (Stream Char) -> Maybe Evidence
-    runAutomatonStream stream = runFromStream stream initialise
+export
+runNFA : NA -> Word -> Bool
+runNFA na word = run na word na.start

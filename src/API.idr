@@ -3,19 +3,19 @@ module API
 import public Core
 import Evidence
 import NFA
-import NFA.Thompson
 import Verification.AcceptingPath
 import Verification
 import Verification.Thompson
 import TyRE
 import Data.Stream
+import Thompson
 
 public export
 runAutomatonSM : SM -> Word -> Maybe Evidence
-runAutomatonSM sm word = runAutomaton {N = sm.nfa, P = sm.prog} word
+runAutomatonSM sm word = runAutomaton word
 
 runAutomatonSMStream : SM -> Stream Char -> Maybe Evidence
-runAutomatonSMStream sm stream = runAutomatonStream {N = sm.nfa, P = sm.prog} stream
+runAutomatonSMStream sm stream = runAutomatonStream stream
 
 public export
 match : {re : CoreRE} -> (sm : SM) -> {auto prf : thompson re = sm}
@@ -23,8 +23,7 @@ match : {re : CoreRE} -> (sm : SM) -> {auto prf : thompson re = sm}
 match {re} sm {prf} str with (runAutomatonSM sm str) proof p
   match {re} sm {prf} str | Nothing = Nothing
   match {re} sm {prf} str | Just ev =
-    let 0 acc = extractEvidenceEquality (thompson re).nfa (thompson re).prog
-                  str ev (rewrite prf in p)
+    let 0 acc = extractEvidenceEquality (thompson re) str ev (rewrite prf in p)
         0 encodes = thompsonPrf re (fst acc)
     in Just $ extract ev (rewrite (sym $ snd acc) in encodes)
 
@@ -46,9 +45,8 @@ matchStream : {re : CoreRE} -> (sm : SM) -> {auto prf : thompson re = sm}
 matchStream {re} sm {prf} stm with (runAutomatonSMStream sm stm) proof p
   matchStream {re} sm {prf} stm | Nothing = Nothing
   matchStream {re} sm {prf} stm | Just ev =
-    let 0 stmEq := eqForStream (thompson re).nfa (thompson re).prog stm
-        0 acc := extractEvidenceEquality (thompson re).nfa (thompson re).prog
-                  (fst stmEq) ev (trans (snd stmEq) (rewrite prf in p))
+    let 0 stmEq := eqForStream (thompson re) stm
+        0 acc := extractEvidenceEquality (thompson re) (fst stmEq) ev (trans (snd stmEq) (rewrite prf in p))
         0 encodes := thompsonPrf re (fst acc)
     in Just $ extract ev (rewrite (sym $ snd acc) in encodes)
 

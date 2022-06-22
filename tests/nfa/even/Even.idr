@@ -2,9 +2,6 @@ import NFA
 import Data.Vect
 import Evidence
 
-runNFA : NA -> Word -> Bool
-runNFA na word = run {N = na} word na.start
-
 --a. Automaton for language accepting words with even numbers.
 -- I assume words that cointain at least one even number
 data AState = FinishAcc | Start | NumStateAcc | NumStateRej
@@ -16,24 +13,18 @@ Eq AState where
   NumStateRej   == NumStateRej  = True
   _             == _            = False
 
-aAccepting : AState -> Bool
-aAccepting FinishAcc    = True
-aAccepting Start        = False
-aAccepting NumStateAcc  = True
-aAccepting NumStateRej  = False
-
-aNext : AState -> Char -> List AState
+aNext : AState -> Char -> List (Maybe AState)
 aNext NumStateAcc   c = if (isDigit c)
-                        then if (ord c `mod` 2 == 1) then [NumStateRej] else [NumStateAcc]
-                        else [FinishAcc]
+                        then if (ord c `mod` 2 == 1) then [Just NumStateRej] else [Just NumStateAcc, Nothing]
+                        else [Just FinishAcc, Nothing]
 
-aNext FinishAcc     _ = [FinishAcc]
+aNext FinishAcc     _ = [Just FinishAcc, Nothing]
 aNext _             c = if (isDigit c)
-                        then if (ord c `mod` 2 == 1) then [NumStateRej] else [NumStateAcc]
-                        else [Start]
+                        then if (ord c `mod` 2 == 1) then [Just NumStateRej] else [Just NumStateAcc, Nothing]
+                        else [Just Start]
 
 a : NA
-a = MkNFA AState aAccepting [Start] aNext
+a = MkNFA AState [Just Start] aNext
 
 aAcceptExamples : List Word
 aAcceptExamples = map unpack ["46ghjn56jij", "46ghjn57lljij", "uwb77hui2hu9"]

@@ -1,140 +1,151 @@
 module Verification.Thompson.Star
 
-import Data.Vect
+import Core
+import Thompson
+import NFA
+import Evidence
+import Extra
+import Extra.Pred
+
+import Verification.AcceptingPath
+import Verification.Routine
+import Verification.Thompson.Common
+
+import Data.SnocList
 import Data.List
 import Data.List.Elem
-import Data.List.Equalities
-import Data.SnocList
-import Data.SnocList.Extra
+import Syntax.PreorderReasoning
 
-import Core
-import NFA
-import NFA.Thompson
-import Verification.AcceptingPath
-import Extra
-import Verification.Routine
-import Evidence
-import Verification.Thompson.Star.EqualityPrf
-import Verification.Thompson.Extra
-import Verification.Thompson.Star.Extra
+nothingInFirstStatesAux : (sm : SM) -> (pos : Nothing `Elem` map Builtin.fst (filter (filterStar {s = sm.State}) sm.start)) -> Void
+nothingInFirstStatesAux sm pos with (sm.start)
+  nothingInFirstStatesAux sm pos | [] = absurd pos
+  nothingInFirstStatesAux sm pos | ((Nothing, y) :: xs) = nothingInFirstStatesAux sm pos | xs
+  nothingInFirstStatesAux sm (There pos) | (((Just x), y) :: xs) = nothingInFirstStatesAux sm pos | xs
 
-startEvidencePrfAux: (re : CoreRE)
-                    -> (s : (thompson re).nfa.State)
-                    -> {s': (thompson $ Star re).nfa.State}
-                    -> (acc : AcceptingFrom (thompson $ Star re).nfa s' word)
-                    -> (Either (s' = (CTh1 s)) (s' = (CTh2 s)))
-                    -> (currWord : Word **
-                          (currAcc : AcceptingFrom (thompson re).nfa s currWord **
-                            (accs : List (w : Word ** Accepting (thompson re).nfa w) **
-                              (extractRoutineFrom {nfa = (thompson $ Star re).nfa} {prog = (thompson $ Star re).prog} acc
-                                = extractRoutineFrom {nfa = (thompson re).nfa} {prog = (thompson re).prog} currAcc
-                                    ++ (accs >>= (\ac => extractRoutine (thompson re).nfa (thompson re).prog (snd ac)))
-                                      ++ [Regular EmitBList]))))
+nothingInFistStates : (sm : SM) -> (pos : Nothing `Elem` map Builtin.fst (firstStar sm)) -> pos = Here
+nothingInFistStates sm Here = Refl
+nothingInFistStates sm (There pos) = absurd (nothingInFirstStatesAux sm pos)
 
+justInFistStatesAux : (xs : List (Maybe a, Routine)) 
+                    -> (s : a) 
+                    -> (pos : (Just s) `Elem` map Builtin.fst (filter (filterStar {s = a}) xs)) 
+                    -> (posInStart : (Just s) `Elem` map Builtin.fst xs
+                            ** extractBasedOnFst (filter (filterStar {s = a}) xs) pos = extractBasedOnFst xs posInStart)
+justInFistStatesAux [] s pos = absurd pos
+justInFistStatesAux ((Nothing, y) :: xs) s pos =
+  let (posInStart ** eq) := justInFistStatesAux xs s pos
+  in (There posInStart ** eq)
+justInFistStatesAux (((Just x), y) :: xs) x Here = (Here ** Refl)
+justInFistStatesAux (((Just x), y) :: xs) s (There pos) =
+  let (posInStart ** eq) := justInFistStatesAux xs s pos
+  in (There posInStart ** eq)
 
-startEvidencePrfAux {s' = (CTh1 s)} re s (Step (CTh1 s) c CEnd prf (Accept CEnd Refl)) (Left Refl) =
-  let sm : SM
-      sm = thompson re
-      (MkCombiningTransitionsForNewData
-        t tInNext cEndInAdded tAccepts rEqPrf) :=
-          aboutCombiningTransitionsForNew (nextStarData sm s c) CEnd prf CTh1notEqCEnd
-  in case cEndInAdded of
-        (There x) => absurd (CEndIsElemOfMapCTh2 _ x)
-        Here =>
-          ([c] ** (Step {nfa = sm.nfa} s c t tInNext (Accept {nfa = sm.nfa} t tAccepts) **
-            ([] ** rewrite rEqPrf in (cong (Observe c ::) (starEq0 _)))))
+justInFistStates : (sm : SM) 
+                -> (s : sm.State) 
+                -> (pos : (Just s) `Elem` map Builtin.fst (firstStar sm)) 
+                -> (posInStart : (Just s) `Elem` map Builtin.fst sm.start 
+                        ** extractBasedOnFst (firstStar sm) pos = extractBasedOnFst sm.start posInStart)
+justInFistStates sm s (There pos) = justInFistStatesAux sm.start s pos
 
-startEvidencePrfAux {s' = (CTh1 s)} re s (Step (CTh1 s) c (CTh2 t) prf acc) (Left Refl) =
-  let sm : SM
-      sm = thompson re
-      (currWord ** (currAcc ** (accs ** eqPrf))) := startEvidencePrfAux re t acc (Right Refl)
-      (MkCombiningTransitionsForNewData
-        u uInNext cTh2InAdded uAccepts rEqPrf) :=
-          aboutCombiningTransitionsForNew (nextStarData sm s c) (CTh2 t) prf CTh2notEqCTh1
-      (tInStart ** rEq) := routineForStartRep sm cTh2InAdded
-      newAcc : (w : Word ** Accepting sm.nfa w)
-      newAcc = (currWord ** Start {nfa = sm.nfa} t tInStart currAcc)
-  in ([c] ** (Step {nfa = sm.nfa} s c u uInNext (Accept {nfa = sm.nfa} u uAccepts) **
-        (newAcc::accs **
-          rewrite bindConcatPrf accs newAcc ((\ac => extractRoutine sm.nfa sm.prog (snd ac))) in
-            rewrite eqPrf in rewrite rEqPrf in rewrite rEq in
-              cong (Observe c ::) (starEq1 _ _ _ _ _))))
+public export
+record StarPathFromWithRoutine (re : CoreRE) (s : (thompson re).State) (pred : Pred ExtendedRoutine) where
+  constructor StarPFWR
+  currWord : Word
+  currAcc : AcceptingFrom (smToNFA (thompson re)) (Just s) currWord
+  accs : List (word : Word ** Accepting (smToNFA (thompson re)) word)
+  predicateProof : pred (extractRoutineFrom {sm = thompson re} currAcc ++ (accs >>= (\acc => extractRoutine {sm = thompson re} (snd acc))))
 
-startEvidencePrfAux {s' = (CTh1 s)} re s (Step (CTh1 s) c (CTh1 t) prf acc) (Left Refl) =
-  let sm : SM
-      sm = thompson re
-      (currWord ** (currAcc ** (accs ** eqPrf))) := startEvidencePrfAux re t acc (Left Refl)
-      (MkCombiningTransitionsForOldData oldIsElemOfOld routineEqualityPrf) :=
-        aboutCombiningTransitionsForOld (nextStarData sm s c) (CTh1 t)
-                                        prf t (\_,_,Refl => Refl) Refl
-                                        (\(There pos) => CTh1IsElemOfMapCTh2 _ pos)
+thompsonRoutinePrfStarTail  : (re : CoreRE)
+                            -> (s : (thompson re).State)
+                            -> {word : Word}
+                            -> (acc : AcceptingFrom (smToNFA (thompson $ Star re)) (Just s) word)
+                            -> StarPathFromWithRoutine re s (\r => 
+                                      extractRoutineFrom {sm = (thompson $ Star re)} acc
+                                        = r ++ [Regular EmitBList])
 
-  in (c::currWord ** (Step {nfa = sm.nfa} s c t oldIsElemOfOld currAcc **
-          (accs ** rewrite routineEqualityPrf in rewrite eqPrf in
-                cong (Observe c ::) (appendAssociative _ _ _))))
+thompsonRoutinePrfStarTail re s (Step s c Nothing prf Accept) =
+  let (pos1 ** (npos ** rw1)) := addEndTransactionSpecForNothing ? ? (\p => absurd p) prf
+  in StarPFWR  [c] 
+            (Step {nfa = smToNFA (thompson re)} s c Nothing pos1 (Accept {nfa = smToNFA (thompson re)}))
+            []
+            (cong (Observe c ::) (Calc $
+              |~ cast (extractBasedOnFst (addEndTransition (firstStar (thompson re)) id ((thompson re).next s c)) prf) ++ []
+              ~~ cast (extractBasedOnFst (addEndTransition (firstStar (thompson re)) id ((thompson re).next s c)) prf) ... appendNilRightNeutral _
+              ~~ cast (extractBasedOnFst ((thompson re).next s c) pos1 ++ extractBasedOnFst (firstStar (thompson re)) npos) ... cong cast rw1
+              ~~ cast (extractBasedOnFst ((thompson re).next s c) pos1 ++ [EmitBList]) ... cong (\x => cast (extractBasedOnFst ((thompson re).next s c) pos1 ++ extractBasedOnFst (firstStar (thompson re)) x)) (nothingInFistStates (thompson re) npos)
+              ~~ cast (extractBasedOnFst ((thompson re).next s c) pos1) ++ [Regular EmitBList] ... castConcat _ _
+              ~~ (cast (extractBasedOnFst ((thompson re).next s c) pos1) ++ []) ++ [Regular EmitBList] ... cong (++ [Regular EmitBList]) (sym (appendNilRightNeutral _))
+              ~~ ((cast (extractBasedOnFst ((thompson re).next s c) pos1) ++ []) ++ []) ++ [Regular EmitBList] ... cong (++ [Regular EmitBList]) (sym (appendNilRightNeutral _))
+            ))
 
-startEvidencePrfAux {word} re s acc (Right prf) with (prf)
-  startEvidencePrfAux {s' = (CTh2 s)} {word = c::_} re s (Step (CTh2 s) c CEnd prf (Accept CEnd Refl)) (Right Refl) | Refl =
-    let sm : SM
-        sm = thompson re
-        (MkCombiningTransitionsForNewData
-          t tInNext cEndInAdded tAccepts rEqPrf) :=
-            aboutCombiningTransitionsForNew (nextStarData sm s c) CEnd prf CTh1notEqCEnd
-    in case cEndInAdded of
-          (There x) => absurd (CEndIsElemOfMapCTh2 _ x)
-          Here =>
-            ([c] ** (Step {nfa = sm.nfa} s c t tInNext (Accept {nfa = sm.nfa} t tAccepts) **
-              ([] ** rewrite rEqPrf in (cong (Observe c ::) (starEq0 _)))))
+thompsonRoutinePrfStarTail re s (Step s c (Just t) prf (Step t c' u prf' acc)) = 
+  let (StarPFWR currWord currAcc accs rw1) := thompsonRoutinePrfStarTail re t (Step {nfa = smToNFA (thompson $ Star re)} t c' u prf' acc)
+  in case (addEndTransitionLorR _ _ (Just t) prf) of
+    Left (pos ** rw2) =>
+      StarPFWR  (c :: currWord)
+                (Step {nfa = smToNFA (thompson re)} s c (Just t) pos currAcc)
+                accs
+                (rewrite rw1 in cong (Observe c ::) (Calc $ 
+                  |~ cast (extractBasedOnFst (addEndTransition (firstStar (thompson re)) id ((thompson re) .next s c)) prf) ++ ((extractRoutineFrom {sm = thompson re} currAcc ++ listBindOnto (\acc => extractRoutine {sm = thompson re} (acc .snd)) [] accs) ++ [Regular EmitBList])
+                  ~~ cast (extractBasedOnFst ((thompson re) .next s c) pos) ++ ((extractRoutineFrom {sm = thompson re} currAcc ++ listBindOnto (\acc => extractRoutine {sm = thompson re} (acc .snd)) [] accs) ++ [Regular EmitBList]) ... cong (\x => cast x ++ ((extractRoutineFrom {sm = thompson re} currAcc ++ listBindOnto (\acc => extractRoutine {sm = thompson re} (acc .snd)) [] accs) ++ [Regular EmitBList])) rw2
+                  ~~ (cast (extractBasedOnFst ((thompson re) .next s c) pos) ++ (extractRoutineFrom {sm = thompson re} currAcc ++ listBindOnto (\acc => extractRoutine {sm = thompson re} (acc .snd)) [] accs)) ++ [Regular EmitBList] ... appendAssociative _ _ _
+                  ~~ ((cast (extractBasedOnFst ((thompson re) .next s c) pos) ++ extractRoutineFrom {sm = thompson re} currAcc) ++ listBindOnto (\acc => extractRoutine {sm = thompson re} (acc .snd)) [] accs) ++ [Regular EmitBList] ... cong (++ [Regular EmitBList]) (appendAssociative _ _ _)
+                ))
+    Right (npos ** (pos' ** rw2)) =>
+      let (pos ** rw3) := justInFistStates (thompson re) t pos'
+      in StarPFWR [c]
+                  (Step {nfa = smToNFA (thompson re)} s c Nothing npos (Accept {nfa = smToNFA (thompson re)}))
+                  ((currWord ** (Start {nfa = smToNFA (thompson re)} (Just t) pos currAcc)) :: accs)
+                  (cong (Observe c ::) (
+                    rewrite bindConcatPrf accs (currWord ** (Start {nfa = smToNFA (thompson re)} (Just t) pos currAcc)) (\acc => extractRoutine {sm = thompson re} (snd acc)) 
+                    in rewrite rw1 in (Calc $ 
+                      |~ cast (extractBasedOnFst (addEndTransition (firstStar (thompson re)) id ((thompson re).next s c)) prf) ++ ((extractRoutineFrom {sm = thompson re} currAcc ++ listBindOnto (\acc => extractRoutine {sm = thompson re} (acc .snd)) [] accs) ++ [Regular EmitBList])
+                      ~~ cast (extractBasedOnFst ((thompson re).next s c) npos ++ extractBasedOnFst (firstStar (thompson re)) pos') ++ ((extractRoutineFrom {sm = thompson re} currAcc ++ listBindOnto (\acc => extractRoutine {sm = thompson re} (acc .snd)) [] accs) ++ [Regular EmitBList]) ... cong (\x => cast x ++ ((extractRoutineFrom {sm = thompson re} currAcc ++ listBindOnto (\acc => extractRoutine {sm = thompson re} (acc .snd)) [] accs) ++ [Regular EmitBList])) rw2
+                      ~~ cast (extractBasedOnFst ((thompson re).next s c) npos ++ extractBasedOnFst (thompson re).start pos) ++ ((extractRoutineFrom {sm = thompson re} currAcc ++ listBindOnto (\acc => extractRoutine {sm = thompson re} (acc .snd)) [] accs) ++ [Regular EmitBList]) ... cong (\x => cast (extractBasedOnFst ((thompson re).next s c) npos ++ x) ++ ((extractRoutineFrom {sm = thompson re} currAcc ++ listBindOnto (\acc => extractRoutine {sm = thompson re} (acc .snd)) [] accs) ++ [Regular EmitBList])) rw3
+                      ~~ (cast (extractBasedOnFst ((thompson re).next s c) npos) ++ cast (extractBasedOnFst (thompson re).start pos)) ++ ((extractRoutineFrom {sm = thompson re} currAcc ++ listBindOnto (\acc => extractRoutine {sm = thompson re} (acc .snd)) [] accs) ++ [Regular EmitBList]) ... cong (++ ((extractRoutineFrom {sm = thompson re} currAcc ++ listBindOnto (\acc => extractRoutine {sm = thompson re} (acc .snd)) [] accs) ++ [Regular EmitBList])) (castConcat _ _)
+                      ~~ ((cast (extractBasedOnFst ((thompson re).next s c) npos) ++ cast (extractBasedOnFst (thompson re).start pos)) ++ (extractRoutineFrom {sm = thompson re} currAcc ++ listBindOnto (\acc => extractRoutine {sm = thompson re} (acc .snd)) [] accs)) ++ [Regular EmitBList] ... appendAssociative _ _ _
+                      ~~ (cast (extractBasedOnFst ((thompson re).next s c) npos) ++ (cast (extractBasedOnFst (thompson re).start pos) ++ (extractRoutineFrom {sm = thompson re} currAcc ++ listBindOnto (\acc => extractRoutine {sm = thompson re} (acc .snd)) [] accs))) ++ [Regular EmitBList] ... cong (++ [Regular EmitBList]) (sym (appendAssociative _ _ _))
+                      ~~ (cast (extractBasedOnFst ((thompson re).next s c) npos) ++ ((cast (extractBasedOnFst (thompson re).start pos) ++ extractRoutineFrom {sm = thompson re} currAcc) ++ listBindOnto (\acc => extractRoutine {sm = thompson re} (acc .snd)) [] accs)) ++ [Regular EmitBList] ... cong (\x => (cast (extractBasedOnFst ((thompson re).next s c) npos) ++ x) ++ [Regular EmitBList]) (appendAssociative _ _ _)
+                      ~~ ((cast (extractBasedOnFst ((thompson re).next s c) npos) ++ []) ++ ((cast (extractBasedOnFst (thompson re).start pos) ++ extractRoutineFrom {sm = thompson re} currAcc) ++ listBindOnto (\acc => extractRoutine {sm = thompson re} (acc .snd)) [] accs)) ++ [Regular EmitBList] ... cong (\x => (x ++ ((cast (extractBasedOnFst (thompson re).start pos) ++ extractRoutineFrom {sm = thompson re} currAcc) ++ listBindOnto (\acc => extractRoutine {sm = thompson re} (acc .snd)) [] accs)) ++ [Regular EmitBList]) (sym (appendNilRightNeutral _))
+                    )))
 
-  startEvidencePrfAux {s' = (CTh2 s)} {word = c::_} re s (Step (CTh2 s) c (CTh2 t) prf acc) (Right Refl) | Refl =
-    let sm : SM
-        sm = thompson re
-        (currWord ** (currAcc ** (accs ** eqPrf))) := startEvidencePrfAux re t acc (Right Refl)
-        (MkCombiningTransitionsForNewData
-          u uInNext cTh2InAdded uAccepts rEqPrf) :=
-            aboutCombiningTransitionsForNew (nextStarData sm s c) (CTh2 t) prf CTh2notEqCTh1
-        (tInStart ** rEq) := routineForStartRep sm cTh2InAdded
-        newAcc : (w : Word ** Accepting sm.nfa w)
-        newAcc = (currWord ** Start {nfa = sm.nfa} t tInStart currAcc)
-    in ([c] ** (Step {nfa = sm.nfa} s c u uInNext (Accept {nfa = sm.nfa} u uAccepts) **
-          (newAcc::accs **
-            rewrite bindConcatPrf accs newAcc ((\ac => extractRoutine sm.nfa sm.prog (snd ac))) in
-              rewrite eqPrf in rewrite rEqPrf in rewrite rEq in
-                cong (Observe c ::) (starEq1 _ _ _ _ _))))
-
-  startEvidencePrfAux {s' = (CTh2 s)} {word = c::_} re s (Step (CTh2 s) c (CTh1 t) prf acc) (Right Refl) | Refl =
-    let sm : SM
-        sm = thompson re
-        (currWord ** (currAcc ** (accs ** eqPrf))) := startEvidencePrfAux re t acc (Left Refl)
-        (MkCombiningTransitionsForOldData oldIsElemOfOld routineEqualityPrf) :=
-          aboutCombiningTransitionsForOld (nextStarData sm s c) (CTh1 t)
-                                          prf t (\_,_,Refl => Refl) Refl
-                                          (\(There pos) => CTh1IsElemOfMapCTh2 _ pos)
-
-    in (c::currWord ** (Step {nfa = sm.nfa} s c t oldIsElemOfOld currAcc **
-            (accs ** rewrite routineEqualityPrf in rewrite eqPrf in
-                  cong (Observe c ::) (appendAssociative _ _ _))))
+public export
+record StarPathWithRoutine (re : CoreRE) (pred : Pred ExtendedRoutine) where
+  constructor StarPWR
+  accs : List (word : Word ** Accepting (smToNFA (thompson re)) word)
+  predicateProof : pred (accs >>= (\ac => extractRoutine {sm = thompson re} (snd ac)))
 
 export
-starEvidencePrf : (re : CoreRE)
-                -> (acc : Accepting (thompson $ Star re).nfa word)
-                -> (accs : List (w : Word ** Accepting (thompson re).nfa w)
-                      ** (extractRoutine (thompson $ Star re).nfa (thompson $ Star re).prog acc
-                            = (Regular EmitEList) ::
-                            (accs >>= (\ac => extractRoutine (thompson re).nfa (thompson re).prog (snd ac)))
-                              ++ [Regular EmitBList]))
+thompsonRoutinePrfStar : (re : CoreRE)
+                      -> {word : Word}
+                      -> (acc : Accepting (smToNFA (thompson (Star re))) word)
+                      -> (StarPathWithRoutine 
+                            re 
+                            (\r => extractRoutine {sm = thompson (Star re)} acc 
+                              === (Regular EmitEList) :: r ++ [Regular EmitBList]))
+thompsonRoutinePrfStar re (Start Nothing prf Accept) = 
+  let (pos ** rw1) := mapRoutineSpec (firstStar (thompson re)) ? prf
+      rw2 := nothingInFistStates (thompson re) pos
+  in StarPWR [] (Calc $ 
+      |~ cast (extractBasedOnFst (mapRoutine (EmitEList::) (firstStar (thompson re))) prf) ++ []
+      ~~ Regular EmitEList :: cast (extractBasedOnFst (firstStar (thompson re)) pos) ++ [] ... cong (\x => cast x ++ []) rw1
+      ~~ [Regular EmitEList, Regular EmitBList] ... cong (\x => Regular EmitEList :: cast (extractBasedOnFst (firstStar (thompson re)) x) ++ []) rw2)
+thompsonRoutinePrfStar re (Start (Just s) prf (Step s c t prf' acc)) =
+  let (StarPFWR currWord currAcc accs rwTail) := thompsonRoutinePrfStarTail re s (Step {nfa = smToNFA (thompson $ Star re)} s c t prf' acc)
+      (pos' ** rw1) := mapRoutineSpec (firstStar (thompson re)) ? prf
+      (pos ** rw2) := justInFistStates (thompson re) s pos'
+  in StarPWR  ((currWord ** (Start {nfa = smToNFA (thompson re)} (Just s) pos currAcc)) :: accs) 
+              (rewrite rwTail 
+              in Calc $
+                |~ cast (extractBasedOnFst (mapRoutine (EmitEList::) (firstStar (thompson re))) prf) ++ ((extractRoutineFrom {sm = thompson re} currAcc ++ listBindOnto (\acc => extractRoutine {sm = thompson re} (acc .snd)) [] accs) ++ [Regular EmitBList]) 
+                ~~ (Regular EmitEList :: cast (extractBasedOnFst (firstStar (thompson re)) pos')) ++ ((extractRoutineFrom {sm = thompson re} currAcc ++ listBindOnto (\acc => extractRoutine {sm = thompson re} (acc .snd)) [] accs) ++ [Regular EmitBList]) ... cong (\x => cast x ++ ((extractRoutineFrom {sm = thompson re} currAcc ++ listBindOnto (\acc => extractRoutine {sm = thompson re} (acc .snd)) [] accs) ++ [Regular EmitBList])) rw1
+                ~~ Regular EmitEList :: cast (extractBasedOnFst (thompson re).start pos) ++ ((extractRoutineFrom {sm = thompson re} currAcc ++ listBindOnto (\acc => extractRoutine {sm = thompson re} (acc .snd)) [] accs) ++ [Regular EmitBList]) ... cong (\x => (Regular EmitEList :: cast x) ++ ((extractRoutineFrom {sm = thompson re} currAcc ++ listBindOnto (\acc => extractRoutine {sm = thompson re} (acc .snd)) [] accs) ++ [Regular EmitBList])) rw2
+                ~~ Regular EmitEList :: (cast (extractBasedOnFst (thompson re).start pos) ++ (extractRoutineFrom {sm = thompson re} currAcc ++ listBindOnto (\acc => extractRoutine {sm = thompson re} (acc .snd)) [] accs)) ++ [Regular EmitBList] ... cong (Regular EmitEList ::) (appendAssociative _ _ _)
+                ~~ Regular EmitEList :: ((cast (extractBasedOnFst (thompson re).start pos) ++ extractRoutineFrom {sm = thompson re} currAcc) ++ listBindOnto (\acc => extractRoutine {sm = thompson re} (acc .snd)) [] accs) ++ [Regular EmitBList] ... cong (\x => Regular EmitEList :: x ++ [Regular EmitBList]) (appendAssociative _ _ _)
+                ~~ Regular EmitEList :: (extractRoutine {sm = thompson re} (Start {nfa = smToNFA (thompson re)} (Just s) pos currAcc) ++ listBindOnto (\acc => extractRoutine {sm = thompson re} (acc .snd)) [] accs) ++ [Regular EmitBList] ... Refl
+                ~~ Regular EmitEList :: listBindOnto (\ac => extractRoutine {sm = thompson re} (ac .snd)) [] ((currWord ** (Start {nfa = smToNFA (thompson re)} (Just s) pos currAcc))::accs) ++ [Regular EmitBList] ... cong (\x => Regular EmitEList :: x ++ [Regular EmitBList]) (sym (bindConcatPrf accs (currWord ** (Start {nfa = smToNFA (thompson re)} (Just s) pos currAcc)) (\acc => extractRoutine {sm = thompson re} (snd acc))))
+              )
 
-starEvidencePrf re (Start CEnd (There pos) acc)  = absurd (CEndIsElemOfMapCTh2 _ pos)
-starEvidencePrf re (Start (CTh1 s) (There pos) acc) = absurd (CTh1IsElemOfMapCTh2 _ pos)
-starEvidencePrf re (Start CEnd      Here         (Accept CEnd Refl))  = ([] ** Refl)
-starEvidencePrf re (Start (CTh2 s)  pos          acc)                 =
-  let sm : SM
-      sm = thompson re
-      (currWord ** (currAcc ** (accs ** eqPrf))) := startEvidencePrfAux re s acc (Right Refl)
-      (sInStart ** rEq) := routineForStart sm pos
-      newAcc : (w : Word ** Accepting sm.nfa w)
-      newAcc = (currWord ** Start {nfa = sm.nfa} s sInStart currAcc)
-  in (newAcc::accs **
-          rewrite bindConcatPrf accs newAcc ((\ac => extractRoutine sm.nfa sm.prog (snd ac))) in
-            rewrite eqPrf in rewrite rEq in
-              cong (Regular EmitEList ::) (appendAssociative4 _ _ _ _))
+export
+starRightRoutineEquality : (mcvm : (Maybe Char, VMState)) -> (snd (executeRoutineSteps [Regular EmitBList] mcvm)).evidence = (snd mcvm).evidence :< BList
+starRightRoutineEquality (mc, vm) = Refl

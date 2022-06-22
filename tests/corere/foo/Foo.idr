@@ -1,7 +1,7 @@
 import API
 import Core
 import Codes
-import NFA.Thompson
+import Thompson
 
 Exactly: Char -> CoreRE
 Exactly x = Pred (\c =>  c == x)

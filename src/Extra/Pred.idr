@@ -1,4 +1,4 @@
-module Pred
+module Extra.Pred
 
 public export
 Pred : Type -> Type
