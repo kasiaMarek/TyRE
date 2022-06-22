@@ -3,4 +3,4 @@ package tyretests
 main = Main
 executable = tyretests
 
-depends = contrib, test
+depends = tyre, contrib, test

@@ -6,10 +6,13 @@ export TYRE ?= $(CURDIR)/build/ttc
 build:
 	${IDRIS2} --build tyre.ipkg
 
+install: build
+	${IDRIS2} --install tyre.ipkg
+
 buildtests:
 	make -C tests testbin IDRIS2=${IDRIS2} IDRIS2_PATH=${TYRE}
 
-runtests: buildtests
+runtests: install buildtests
 	make -C tests test IDRIS2=${IDRIS2} IDRIS2_PATH=${TYRE} only=$(only)
 
 clean:
