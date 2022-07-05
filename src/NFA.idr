@@ -171,7 +171,7 @@ parameters {auto sm : SM}
   runFunction c td (st, r) = MkThread st (execute (Just c) r (step c td.vmState))
 
   public export
-  runMapping: Char -> Thread sm.State -> List (Thread sm.State)
+  runMapping : Char -> Thread sm.State -> List (Thread sm.State)
   runMapping c td = map (runFunction c td) (liftNext sm.next td.naState c)
 
   public export
@@ -193,10 +193,10 @@ parameters {auto sm : SM}
   runFrom (c::cs) tds = runFrom cs $ runMain c tds
 
   public export
-  runFromStream : (Stream Char) -> (tds : List $ Thread sm.State) -> Maybe Evidence
-  runFromStream cs      []  = Nothing
+  runFromStream : (Stream Char) -> (tds : List $ Thread sm.State) -> (Maybe Evidence, Stream Char)
+  runFromStream cs      []  = (Nothing, cs)
   runFromStream (c::cs) tds = case (findR (\td => isNothing td.naState) tds).Holds of
-                                      (Just td) => Just td.vmState.evidence
+                                      (Just td) => (Just td.vmState.evidence, c::cs)
                                       Nothing   => runFromStream cs $ runMain c tds
 
   public export
@@ -204,7 +204,7 @@ parameters {auto sm : SM}
   runAutomaton word = runFrom word initialise
 
   public export
-  runAutomatonStream : (Stream Char) -> Maybe Evidence
+  runAutomatonStream : (Stream Char) -> (Maybe Evidence, Stream Char)
   runAutomatonStream stream = runFromStream stream initialise
 
 export

@@ -12,9 +12,9 @@ import Data.List
 import Data.Stream
 import Data.Maybe
 
-recordPathHelper : {auto sm: SM} -> (c: Char) -> (td : Thread sm.State)
-              -> (td': Thread sm.State ** (td' `Elem` runMapping c td, (acc: AcceptingFrom (smToNFA sm) td'.naState cs ** extractEvidenceFrom td' acc = ev)))
-              -> (acc: AcceptingFrom (smToNFA sm) td.naState (c::cs) ** extractEvidenceFrom td acc = ev)
+recordPathHelper  : {auto sm: SM} -> (c: Char) -> (td : Thread sm.State)
+                  -> (td': Thread sm.State ** (td' `Elem` runMapping c td, (acc: AcceptingFrom (smToNFA sm) td'.naState cs ** extractEvidenceFrom td' acc = ev)))
+                  -> (acc: AcceptingFrom (smToNFA sm) td.naState (c::cs) ** extractEvidenceFrom td acc = ev)
 
 recordPathHelper c (MkThread (Just st) vm) (td' ** (isElemOfF, (accepts ** isEq))) =
   let (x1 ** (x2 ** (isElem ** (eqToExtractFst, ftd', satQ)))) = mapSpec
@@ -74,10 +74,10 @@ recordPath {sm} tds (c :: cs) prf =
 
 public export
 0 extractEvidenceEquality : (sm : SM)
-                        -> (str : Word)
-                        -> (ev : Evidence)
-                        -> (prf : runAutomaton str = Just ev)
-                        -> (acc: Accepting (smToNFA sm) str ** extractEvidence acc = ev)
+                          -> (str : Word)
+                          -> (ev : Evidence)
+                          -> (prf : runAutomaton str = Just ev)
+                          -> (acc: Accepting (smToNFA sm) str ** extractEvidence acc = ev)
 
 extractEvidenceEquality sm str ev prf =
   let (td ** (pos, (acc ** eq))) = recordPath (NFA.initialise) str prf
@@ -104,14 +104,14 @@ extractEvidenceEquality sm str ev prf =
 0 eqForStreamFrom :  (sm : SM)
                   -> (stm : Stream Char)
                   -> (tds : List (Thread sm.State))
-                  -> (str : Word ** runFrom str tds = runFromStream stm tds)
+                  -> (str : Word ** runFrom str tds = Builtin.fst (runFromStream stm tds))
 eqForStreamFrom sm stm []   = ([] ** Refl)
 eqForStreamFrom sm (c::cs) (t::tds) with (findR (\td => isNothing td.naState) (t::tds)) proof p
   eqForStreamFrom sm (c::cs) (t::tds) | ((Just x) `Because` _) = ([] ** rewrite p in Refl)
   eqForStreamFrom sm (c::cs) (t::tds) | (Nothing `Because` _) =
     let nextTds : List (Thread sm.State)
         nextTds = runMain c (t::tds)
-        rest : (str : Word ** runFrom str nextTds = runFromStream cs nextTds)
+        rest : (str : Word ** runFrom str nextTds = Builtin.fst (runFromStream cs nextTds))
         rest = eqForStreamFrom sm cs nextTds
         (wordTail ** eqRest) := rest
     in (c::wordTail ** eqRest)
@@ -119,5 +119,5 @@ eqForStreamFrom sm (c::cs) (t::tds) with (findR (\td => isNothing td.naState) (t
 public export
 0 eqForStream :  (sm : SM)
               -> (stm : Stream Char)
-              -> (str : Word ** runAutomaton str = runAutomatonStream stm)
+              -> (str : Word ** runAutomaton str = Builtin.fst (runAutomatonStream stm))
 eqForStream sm stm = eqForStreamFrom sm stm initialise

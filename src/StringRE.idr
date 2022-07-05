@@ -182,9 +182,9 @@ rAux str = case (parse reWithEnd (mapTokens (lex reTokenMap str))) of
                     Left _ => Nothing
 
 public export
-toRE : (str: String) -> {auto isJust : IsJust (rAux str)} -> RE
+toRE : (str : String) -> {auto isJust : IsJust (rAux str)} -> RE
 toRE str {isJust} = fromJust (rAux str) @{isJust}
 
 export
-r : (str: String) -> {auto isJust : IsJust (rAux str)} -> TyRE (TypeRE $ toRE str {isJust})
+r : (str : String) -> {auto isJust : IsJust (rAux str)} -> TyRE (TypeRE $ toRE str {isJust})
 r str {isJust} = compile (toRE str {isJust})

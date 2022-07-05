@@ -130,7 +130,7 @@ addEndTransactionSpecForJust (((Just y), z) :: xs) x xNotInNew (There pos) =
 -- Since only needed for Star we prove it for `id` for simplicity. It can be easily generalised.
 export
 addEndTransitionLorR : (newStates : List (Maybe state, Routine))
-                    -> (xs: List (Maybe state, Routine))
+                    -> (xs : List (Maybe state, Routine))
                     -> (x : Maybe state)
                     -> (xInXs : x `Elem` map Builtin.fst (addEndTransition newStates Prelude.Basics.id xs))
                     -> Either (xInXs' : x `Elem` map Builtin.fst xs **
@@ -161,7 +161,7 @@ export
 mapStatesSpec : (xs : List (Maybe s, Routine))
               -> (f : s -> s')
               -> (e : Maybe s)
-              -> (isElem: map f e `Elem` map Builtin.fst (mapStates f xs))
+              -> (isElem : map f e `Elem` map Builtin.fst (mapStates f xs))
               -> (isElem': e `Elem` map Builtin.fst xs ** extractBasedOnFst (mapStates f xs) isElem = extractBasedOnFst xs isElem')
 mapStatesSpec [] f e pos = absurd pos
 mapStatesSpec ((Nothing, _) :: xs) f Nothing Here = (Here ** Refl)

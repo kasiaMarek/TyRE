@@ -55,10 +55,10 @@ startAlt sm1 sm2 = mapStates Left (addEndRoutine [EmitLeft] sm1.start)
                 ++ mapStates Right (addEndRoutine [EmitRight] sm2.start)
 
 public export
-nextAlt   : (sm1, sm2 : SM) 
-          -> Either sm1.State sm2.State 
-          -> Char 
-          -> List(Maybe (Either sm1.State sm2.State), Routine)
+nextAlt : (sm1, sm2 : SM) 
+        -> Either sm1.State sm2.State 
+        -> Char 
+        -> List(Maybe (Either sm1.State sm2.State), Routine)
 
 nextAlt sm1 sm2 (Left st) c = 
   mapStates Left (addEndRoutine [EmitLeft] (sm1.next st c))

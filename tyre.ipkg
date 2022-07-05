@@ -38,3 +38,6 @@ modules =   API
           , Text.Parser.Core
           , Text.Quantity
           , Text.Token
+          -- examples
+          , CommonRegexes
+          , CommonRegexes.DateAndTime

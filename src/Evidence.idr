@@ -83,14 +83,14 @@ data Encodes : Evidence -> SnocList (Either () Code) -> Type where
 record Result (ev : Evidence) (c : Code) (cs : SnocList (Either () Code)) where
   constructor MkResult
   result : Sem c
-  rest   : Evidence
+  rest : Evidence
   0 restValid : rest `Encodes` cs
   0 bound : length rest `LT` length ev
 
 export
 recontextualise : (prf1 : evs1 `Encodes` cs1)
-              -> (prf2 : evs2 `Encodes` cs2)
-              -> (evs1 ++ evs2) `Encodes` (cs1 ++ cs2)
+                -> (prf2 : evs2 `Encodes` cs2)
+                -> (evs1 ++ evs2) `Encodes` (cs1 ++ cs2)
 
 recontextualise prf1 [<] = prf1
 

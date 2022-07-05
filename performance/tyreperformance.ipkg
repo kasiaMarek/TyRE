@@ -1,0 +1,3 @@
+package tyreperformance
+
+depends = tyre, contrib

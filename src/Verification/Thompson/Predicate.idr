@@ -15,8 +15,8 @@ import Data.List.Elem
 export
 thompsonRoutinePrfPredicate : (f : Char -> Bool)
                             -> (acc : Accepting (smToNFA (thompson (Pred f))) word)
-                            -> (mcvm  : (Maybe Char, VMState))
-                            -> (ev  : Evidence
+                            -> (mcvm : (Maybe Char, VMState))
+                            -> (ev : Evidence
                                     ** (executeRoutineFrom (extractRoutine {sm = (thompson (Pred f))} acc) mcvm
                                             = (snd mcvm).evidence ++ ev, ev `Encodes` [< Right $ ShapeCode (Pred f)]))
 

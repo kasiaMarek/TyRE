@@ -82,7 +82,7 @@ def plotresult(test, testresult):
         listOpByIndex(tyretimes["avg"], tyretimes["stdev"], subtract),
         listOpByIndex(tyretimes["avg"], tyretimes["stdev"], add),
         color='blue', alpha=0.2)
-    plt.plot(x, combtimes["avg"], color='orange', label='Parsers Combinators')
+    plt.plot(x, combtimes["avg"], color='orange', label='Idris 2 stdlib parser combinators')
     plt.fill_between(x,
         listOpByIndex(combtimes["avg"], combtimes["stdev"], subtract),
         listOpByIndex(combtimes["avg"], combtimes["stdev"], add),
@@ -94,18 +94,14 @@ def plotresult(test, testresult):
     plt.clf()
 
 tests = [
-    {NAME : "star", ITR : 100, TYRE_FILE: "StarTyRE",
+    {NAME : "star", ITR : 1000, TYRE_FILE: "StarTyRE",
         COMB_FILE: "StarComb", XLABEL: "length of word"},
-    {NAME : "star2", ITR : 100, TYRE_FILE: "StarTyRE2",
+    {NAME : "star2", ITR : 1000, TYRE_FILE: "StarTyRE2",
         COMB_FILE: "StarComb2", XLABEL: "length of word"},
-    {NAME : "concat", ITR : 25, TYRE_FILE: "ConcatTyRE",
-        COMB_FILE: "ConcatComb", XLABEL: "length of regex and word",
-        FUNCTION : exponential, FUNCTION_PARAMS : [0,0,0]} ,
-    {NAME : "alternation", ITR : 25, TYRE_FILE: "AltTyRE",
-        COMB_FILE: "AltComb", XLABEL: "length of regex"},
-    {NAME : "concatLast", ITR : 25, TYRE_FILE: "ConcatLastStep",
-        COMB_FILE: "ConcatComb", XLABEL: "length of regex and word",
-        FUNCTION : exponential, FUNCTION_PARAMS : [0,0,0]}
+    {NAME : "concat", ITR : 1000, TYRE_FILE: "ConcatTyRE",
+        COMB_FILE: "ConcatComb", XLABEL: "length of regex and word"} ,
+    {NAME : "alternation", ITR : 1000, TYRE_FILE: "AltTyRE",
+        COMB_FILE: "AltComb", XLABEL: "length of regex"}
 ]
 
 def runall():

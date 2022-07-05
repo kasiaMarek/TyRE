@@ -6,6 +6,7 @@ import public Data.Bool
 import public Data.List
 import public Data.Nat
 import public Data.String
+import public Data.Maybe
 
 ||| A language of token recognisers.
 ||| @ consumes If `True`, this recogniser is guaranteed to consume at
@@ -112,11 +113,6 @@ public export
 strTail : Nat -> StrLen -> StrLen
 strTail start (MkStrLen str len)
     = MkStrLen (substr start len str) (minus len start)
-
-public export
-isJust : Maybe a -> Bool
-isJust Nothing = False
-isJust (Just x) = True
 
 public export
 unpack' : String -> List Char

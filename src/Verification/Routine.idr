@@ -27,16 +27,16 @@ executeRoutineSteps (Observe c :: r)      (mc, vm) =
 
 
 public export
-executeRoutineFrom: ExtendedRoutine -> (Maybe Char, VMState) -> Evidence
+executeRoutineFrom : ExtendedRoutine -> (Maybe Char, VMState) -> Evidence
 executeRoutineFrom routine st = (snd $ executeRoutineSteps routine st).evidence
 
 public export
-executeRoutine: ExtendedRoutine -> Evidence
+executeRoutine : ExtendedRoutine -> Evidence
 executeRoutine routine = executeRoutineFrom routine (Nothing, initVM)
 
 public export
-routineComposition  : (xs: ExtendedRoutine) -> (ys: ExtendedRoutine)
-                    -> (st: (Maybe Char, VMState))
+routineComposition  : (xs : ExtendedRoutine) -> (ys : ExtendedRoutine)
+                    -> (st : (Maybe Char, VMState))
                     -> (executeRoutineSteps (xs ++ ys) st
                           = executeRoutineSteps ys (executeRoutineSteps xs st))
 routineComposition []                     ys st           = Refl
@@ -51,7 +51,7 @@ Cast Routine ExtendedRoutine where
   cast (inst :: insts) = (Regular inst)::(cast insts)
 
 public export
-castConcat : (xs: Routine) -> (ys: Routine)
+castConcat : (xs : Routine) -> (ys : Routine)
           -> ((the ExtendedRoutine $ cast (xs ++ ys)) = cast xs ++ cast ys)
 castConcat [] ys = Refl
 castConcat (x :: xs) ys = cong (Regular x ::) (castConcat xs ys)
@@ -69,18 +69,18 @@ execEqualityPrf vmState (x :: xs) mc =
 parameters {auto sm : SM}
 
   public export
-  stepOfExtractRoutine : {s : Maybe sm.State}
-                    -> (acc: AcceptingFrom (smToNFA sm) s word)
-                    -> ExtendedRoutine
+  stepOfExtractRoutine  : {s : Maybe sm.State}
+                        -> (acc : AcceptingFrom (smToNFA sm) s word)
+                        -> ExtendedRoutine
 
   stepOfExtractRoutine {word=[]} Accept = []
   stepOfExtractRoutine {word=c::_} (Step s c t prf acc)
     = Observe c :: (cast $ extractBasedOnFst (sm.next s c) prf)
 
   public export
-  extractRoutineFrom : {s : Maybe sm.State}
-                    -> (acc: AcceptingFrom (smToNFA sm) s word)
-                    -> ExtendedRoutine
+  extractRoutineFrom  : {s : Maybe sm.State}
+                      -> (acc : AcceptingFrom (smToNFA sm) s word)
+                      -> ExtendedRoutine
 
   extractRoutineFrom {word=[]} Accept = []
   extractRoutineFrom {word=c::_} (Step s c t prf acc) =
@@ -99,10 +99,10 @@ parameters {auto sm : SM}
     in (extr ++ rest)
 
   public export
-  extractRoutineFromPrf :   (td : Thread sm.State)
-                        ->  (acc: AcceptingFrom (smToNFA sm) td.naState word)
-                        ->  (mc : Maybe Char)
-                        ->  (executeRoutineFrom (extractRoutineFrom acc) (mc, td.vmState)
+  extractRoutineFromPrf :  (td : Thread sm.State)
+                        -> (acc : AcceptingFrom (smToNFA sm) td.naState word)
+                        -> (mc : Maybe Char)
+                        -> (executeRoutineFrom (extractRoutineFrom acc) (mc, td.vmState)
                               = extractEvidenceFrom td acc)
 
   extractRoutineFromPrf {word=[]} (MkThread Nothing vm) Accept mc = Refl
@@ -128,7 +128,7 @@ parameters {auto sm : SM}
     in (trans (cong (\e => (snd e).evidence) prf) restPrf)
 
   public export
-  extractRoutinePrf : (acc: Accepting (smToNFA sm) word)
+  extractRoutinePrf : (acc : Accepting (smToNFA sm) word)
                     -> (executeRoutine (extractRoutine acc) = extractEvidence acc)
 
   extractRoutinePrf (Start s prf acc) =

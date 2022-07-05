@@ -8,7 +8,7 @@ transitionString : String -> String -> String -> String
 transitionString from label to =
   from ++ " -> " ++ to ++ "[label = \"" ++ label ++ "\"];\n"
 
-makeTransitionString : {auto nfa : NA} -> {auto s: Show nfa.State}
+makeTransitionString : {auto nfa : NA} -> {auto s : Show nfa.State}
                 -> (Maybe nfa.State) -> Char -> (Maybe nfa.State) -> String
 makeTransitionString s c t = transitionString (show s) (cast c) (show t)
   --(show s) ++ " -> " ++ (show t) ++ "[label = \"" ++ cast c ++ "\"];\n"
@@ -18,7 +18,7 @@ nodeStyleString shape name =
   "node [shape = " ++ shape ++ "]; "
       ++ name ++ ";\n"
 
-printNodeStyleString : {auto nfa : NA} -> {auto s: Show nfa.State}
+printNodeStyleString : {auto nfa : NA} -> {auto s : Show nfa.State}
                   -> Maybe nfa.State -> String
 printNodeStyleString Nothing = nodeStyleString "doublecircle" "."
 printNodeStyleString (Just s) = nodeStyleString "doublecircle" (show s)
@@ -45,7 +45,7 @@ printNodeStyle s (MkPState seenStates acc) =
   in MkPState (s::seenStates) currentAcc
 
 printTransition : {auto nfa : NA}
-                -> {auto sh: Show nfa.State}
+                -> {auto sh : Show nfa.State}
                 -> (Maybe nfa.State)
                 -> Char -> (Maybe nfa.State)
                 -> (PrinterState nfa) -> (PrinterState nfa)
@@ -53,7 +53,7 @@ printTransition s c t (MkPState seenStates acc) =
   MkPState seenStates (acc :< makeTransitionString s c t)
 
 printTransitionsFrom : {auto nfa : NA}
-                    -> {auto show: Show nfa.State}
+                    -> {auto show : Show nfa.State}
                     -> (Maybe nfa.State)
                     -> Char -> List (Maybe nfa.State)
                     -> (PrinterState nfa) -> (PrinterState nfa)
@@ -65,7 +65,7 @@ printTransitionsFrom s c (t :: ss) ps =
                     (Just _) => ps
   in printTransitionsFrom s c ss (printTransition s c t currPs)
 
-printTransitions : {auto nfa : NA} -> {auto show: Show nfa.State}  -> (Maybe nfa.State)
+printTransitions : {auto nfa : NA} -> {auto show : Show nfa.State}  -> (Maybe nfa.State)
                 -> List Char
                 -> (PrinterState nfa) -> (PrinterState nfa)
 printTransitions s [] ps = ps
@@ -73,7 +73,7 @@ printTransitions s (c :: cs) ps = printTransitionsFrom s c (liftNext nfa.next s 
 
 printState : {auto ord : Ordered Char}
           -> {auto nfa : NA}
-          -> {auto show: Show nfa.State}
+          -> {auto show : Show nfa.State}
           -> (Maybe nfa.State)
           -> (PrinterState nfa)
           -> (PrinterState nfa)
@@ -85,7 +85,7 @@ printState x ps =
 
 printNFAFrom : {auto ord : Ordered Char}
             -> {auto nfa : NA}
-            -> {auto show: Show nfa.State}
+            -> {auto show : Show nfa.State}
             -> (List (Maybe nfa.State))
             -> (PrinterState nfa)
             -> (PrinterState nfa)
@@ -96,7 +96,7 @@ export
 printNFA : {auto ord : Ordered Char}
         -> (nfa : NA)
         -> {auto ordS : Ordered (Maybe nfa .State)}
-        -> {auto show: Show nfa.State}
+        -> {auto show : Show nfa.State}
         -> String
 printNFA nfa =
 """
