@@ -19,11 +19,6 @@ email =
         domain = pack `Conv` repFromTo 2 6 letter
     in firstPart <*> (match '@' *> secondPart <*> domain)
 
----- zipper for transforming
-export
-emailZipper : Vect (zipperShape CommonRegexes.email) String
-emailZipper = ["[a-z]", "[A-Z]", "[0-9]", "[%+_.-]", "[a-z]", "[A-Z]", "[0-9]", "[%+_.-]", "@", "[a-z]", "[A-Z]", "[0-9]", "[a-z]", "[A-Z]", "[0-9]", "\\.", "[a-z]", "[A-Z]", "[0-9]", "[a-z]", "[A-Z]", "[0-9]", "\\.", "[a-z]", "[A-Z]", "[a-z]", "[A-Z]", "[a-z]", "[A-Z]", "[a-z]", "[A-Z]", "[a-z]", "[A-Z]", "[a-z]", "[A-Z]"]
-
 ---password validation
 data PasswordValidationError    = NoDigit 
                                 | NoCapitalLetter 
@@ -76,64 +71,30 @@ namespace UrlRegex
                 queryPart := map ((joinBy "&") . (map (\case (p, v) => p ++ "=" ++ v))) query
             in protocol ++ host ++ "." ++ domain ++ pathPart ++ fromMaybe "" queryPart ++ fromMaybe "" fragment
 
-    digitLetterOr : String -> TyRE Char
-    digitLetterOr str = (digitChar `or` letter) `or` oneOf str
-
-    protocol : TyRE (Maybe Bool)
-    protocol = (map fst) `Conv` r "(https?://(www)?)?"
-
-    host : TyRE (String, String)
-    host =  (pack `Conv` rep1 (digitLetterOr "@:%_~#=.+-\\"))
-            <* match '.' 
-            <*> (pack `Conv` repFromTo 1 6 (digitLetterOr "()"))
-
-    path : TyRE (List String)
-    path = rep0 (match '/' *> (pack `Conv` rep1 (digitLetterOr "_-")))
-
-    query : TyRE (Maybe (List (String, String)))
-    query = TyRE.option $ match '?' 
-                *> rep1 ((pack `Conv` rep1 (digitLetterOr "_-") 
-                    <* match '=') 
-                <*> (pack `Conv` rep1 (digitLetterOr "_-")))
-
-    fragment : TyRE (Maybe String)
-    fragment = TyRE.option $ match '#' *> (pack `Conv` rep1 (digitLetterOr "_-"))
-
     export
     url : TyRE URL
-    url =   (\case (pr, h, p, q, f) => HTTP pr h p q f) 
-            `Conv` 
-            (protocol <*> (host <*> (path <*> (query <*> fragment))))
+    url = (\case (pr, h, p, q, f) => HTTP pr h p q f) 
+          `Conv` 
+          (protocol <*> (host <*> (path <*> (query <*> fragment)))) where
+            digitLetterOr : String -> TyRE Char
+            digitLetterOr str = (digitChar `or` letter) `or` oneOf str
+            
+            protocol : TyRE (Maybe Bool)
+            protocol = (map fst) `Conv` r "(https?://(www)?)?"
 
-    ---- zippers for transforming
+            host : TyRE (String, String)
+            host =  (pack `Conv` rep1 (digitLetterOr "@:%_~#=.+-\\"))
+                    <* match '.' 
+                    <*> (pack `Conv` repFromTo 1 6 (digitLetterOr "()"))
 
-    digitLetterOrZipper : (str : String) -> Vect (zipperShape (UrlRegex.digitLetterOr str)) String
-    digitLetterOrZipper str = ["[a-z]", "[A-Z]", "[0-9]", "[" ++ str ++ "]"]
+            path : TyRE (List String)
+            path = rep0 (match '/' *> (pack `Conv` rep1 (digitLetterOr "_-")))
 
-    protocolZipper : Vect (zipperShape UrlRegex.protocol) String
-    protocolZipper = ["h","t", "t", "p", "s", ":", "/", "/", "w", "w", "w"]
+            query : TyRE (Maybe (List (String, String)))
+            query = TyRE.option $ match '?' 
+                        *> rep1 ((pack `Conv` rep1 (digitLetterOr "_-") 
+                            <* match '=') 
+                        <*> (pack `Conv` rep1 (digitLetterOr "_-")))
 
-    hostZipper : Vect (zipperShape UrlRegex.host) String
-    hostZipper = digitLetterOrZipper "@:%_~#=.+-\\" ++ digitLetterOrZipper "@:%_~#=.+-\\" ++ ["\\."] 
-        ++  digitLetterOrZipper "()" ++ digitLetterOrZipper "()"
-        ++  digitLetterOrZipper "()" ++ digitLetterOrZipper "()"
-        ++  digitLetterOrZipper "()" ++ digitLetterOrZipper "()"
-
-    pathZipper : Vect (zipperShape UrlRegex.path) String
-    pathZipper = ["\\."] ++ digitLetterOrZipper "_-" ++ digitLetterOrZipper "_-"
-
-    queryZipper : Vect (zipperShape UrlRegex.query) String
-    queryZipper = ["\\?"] 
-        ++ digitLetterOrZipper "_-" ++ digitLetterOrZipper "_-"
-        ++ ["="]
-        ++ digitLetterOrZipper "_-" ++ digitLetterOrZipper "_-"
-        ++ digitLetterOrZipper "_-" ++ digitLetterOrZipper "_-"
-        ++ ["="]
-        ++ digitLetterOrZipper "_-" ++ digitLetterOrZipper "_-"
-
-    fragmentZipper : Vect (zipperShape UrlRegex.fragment) String
-    fragmentZipper = ["#"] ++ (digitLetterOrZipper "_-") ++ (digitLetterOrZipper "_-")
-    
-    export
-    urlZipper : Vect (zipperShape UrlRegex.url) String
-    urlZipper = protocolZipper ++ hostZipper ++ pathZipper ++ queryZipper ++ fragmentZipper
+            fragment : TyRE (Maybe String)
+            fragment = TyRE.option $ match '#' *> (pack `Conv` rep1 (digitLetterOr "_-"))

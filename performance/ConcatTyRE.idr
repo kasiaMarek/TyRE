@@ -1,6 +1,6 @@
 import API
 import Core
-import NFA.Thompson
+import Thompson
 import Evidence
 import Data.Maybe
 
@@ -16,7 +16,7 @@ createString 0 = ['a']
 createString (S k) = 'a'::(createString k)
 
 printResult : (n: Nat) -> Maybe (Shape $ createRE n)
-printResult n = runWord (createRE n) (createString n)
+printResult n = run (createRE n) (pack $ createString n)
 
 main : IO ()
 main =  do  str <- getLine

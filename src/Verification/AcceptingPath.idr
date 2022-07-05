@@ -26,7 +26,7 @@ parameters {auto sm : SM}
   stepOfExtractEvidence  : (td : Thread sm.State)
                         -> (c : Char)
                         -> (s : Maybe sm.State)
-                        -> (prf: s `Elem` map Builtin.fst (liftNext sm.next td.naState c))
+                        -> (prf : s `Elem` map Builtin.fst (liftNext sm.next td.naState c))
                         -> (Thread sm.State)
 
   stepOfExtractEvidence td c s prf =
@@ -43,7 +43,7 @@ parameters {auto sm : SM}
 
   public export
   extractEvidenceInitialStep  : (s : Maybe sm.State) 
-                              -> (prf: s `Elem` map Builtin.fst (sm.start))
+                              -> (prf : s `Elem` map Builtin.fst (sm.start))
                               -> (Thread sm.State)
 
   extractEvidenceInitialStep s prf = 

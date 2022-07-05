@@ -3,18 +3,18 @@ module CommonRegexes.DateAndTime
 import API
 import StringRE
 
-export
+public export
 record Date where
     constructor D
     year : Integer
     month : Integer
     day : Integer
 
-export
+public export
 Show Date where
     show (D y m d) = show y ++ "-" ++ show m ++ "-" ++ show d
 
-export
+public export
 record Time where
     constructor T
     hours : Integer
@@ -22,17 +22,17 @@ record Time where
     sec : Integer
     milis : Integer
 
-export
+public export
 Show Time where
     show (T h m s ms) = show h ++ ":" ++ show m ++ ":" ++ show s ++ "." ++ show ms
 
-export
+public export
 record DateTime where
     constructor DT
     date : Date
     time : Time
 
-export
+public export
 Show DateTime where
     show (DT d t) = show d ++ "T" ++ show t
 
@@ -172,41 +172,3 @@ iso =
 
         conv (date, Just (time, _)) = DT date time
         conv (date, _) = DT date (T 0 0 0 0)
-
---- zippers for translate
-hourZipper : Vect (zipperShape DateAndTime.hour) String
-hourZipper = ["[01]", "[0-9]", "2", "[0-4]"]
-
-mOrSZipper : Vect (zipperShape DateAndTime.mOrS) String
-mOrSZipper = [":", "[0-5]", "[0-9]"]
-
-milisZipper : Vect (zipperShape DateAndTime.milis) String
-milisZipper = ["\\.", "[0-9]", "[0-9]", "[0-9]"]
-
-yearZipper : Vect (zipperShape DateAndTime.year) String
-yearZipper = ["[0-9]", "[0-9]", "[0-9]", "[0-9]"]
-
-dayZipper : Vect (zipperShape DateAndTime.day) String
-dayZipper = ["0", "[1-9]", "[12]", "[0-9]"]
-
-monthZipper : Vect (zipperShape DateAndTime.month) String
-monthZipper = ["0", "[1-9]", "1", "[0-2]"]
-
-export
-dateZipper : Vect (zipperShape DateAndTime.date) String
-dateZipper = dayZipper ++ ["/"] ++ monthZipper 
-    ++  ["3", "0", "/", "0", "[13456789]", "1", "[012]"]
-    ++  ["3", "1", "/", "0", "[13578]", "1", "[02]"]
-    ++  ["/"] ++ yearZipper
-
-export
-timeZipper : Vect (zipperShape DateAndTime.time) String
-timeZipper = hourZipper ++ mOrSZipper ++ mOrSZipper
-
-export
-isoZipper : Vect (zipperShape DateAndTime.iso) String
-isoZipper = yearZipper ++ ["-"] ++ monthZipper ++ ["-"] ++ dayZipper
-    ++  ["0", "[13456789]", "1", "[012]", "-", "3", "0"]
-    ++  ["0", "[13578]", "1", "[02]", "-", "3", "1"]
-    ++  ["T"] ++ hourZipper ++ mOrSZipper ++ mOrSZipper ++ milisZipper
-    ++  ["Z", "\\+", "-"] ++ hourZipper ++ mOrSZipper

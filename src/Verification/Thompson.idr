@@ -22,8 +22,8 @@ import Syntax.PreorderReasoning
 thompsonRoutinePrf : (re : CoreRE)
                   -> {word : Word}
                   -> (acc : Accepting (smToNFA (thompson re)) word)
-                  -> (mcvm  : (Maybe Char, VMState))
-                  -> (ev  : Evidence
+                  -> (mcvm : (Maybe Char, VMState))
+                  -> (ev : Evidence
                         ** (executeRoutineFrom (extractRoutine {sm = (thompson re)} acc) mcvm
                               = (snd mcvm).evidence ++ ev, ev `Encodes` [< Right $ ShapeCode re]))
 
@@ -95,8 +95,8 @@ thompsonRoutinePrf (Star re) acc (mc, vm) =
           ~~ (vm .evidence ++ ([<EList] ++ repEv)) :< BList ... cong (:< BList) (sym (appendAssociative _ _ _))
         )
         , ARepetiton [<] repEnc)) where
-    evidenceForRepetition : (mcvm  : (Maybe Char, VMState))
-                          -> (accs  : List (w : Word ** Accepting (smToNFA (thompson re)) w))
+    evidenceForRepetition : (mcvm : (Maybe Char, VMState))
+                          -> (accs : List (w : Word ** Accepting (smToNFA (thompson re)) w))
                           -> (ev : Evidence **
                                 (executeRoutineFrom (accs >>= (\ac => extractRoutine {sm = (thompson re)} (snd ac))) mcvm 
                                     = (snd mcvm).evidence ++ ev
@@ -124,7 +124,7 @@ thompsonRoutinePrf (Star re) acc (mc, vm) =
 export
 thompsonPrf : (re : CoreRE)
             -> {word : Word}
-            -> (acc: Accepting (smToNFA (thompson re)) word)
+            -> (acc : Accepting (smToNFA (thompson re)) word)
             -> (extractEvidence {sm = thompson re} acc `Encodes` [< Right $ ShapeCode re])
 
 thompsonPrf re acc =

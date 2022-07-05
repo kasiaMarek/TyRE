@@ -27,7 +27,7 @@ Eq Code where
     _ == _                          = False
 
 public export
-Sem: Code -> Type
+Sem : Code -> Type
 Sem CharC         = Char
 Sem (PairC x y)   = (Sem x, Sem y)
 Sem StringC       = String
@@ -54,16 +54,16 @@ SimplifyCode (MaybeC x) =
     e => MaybeC sx
 
 SimplifyCode (PairC x y) =
-  let sx: Code = SimplifyCode x
-      sy: Code = SimplifyCode y
+  let sx : Code = SimplifyCode x
+      sy : Code = SimplifyCode y
   in case (sx, sy) of
     (UnitC, x) => x
     (x, UnitC) => x
     _ => PairC sx sy
 
 SimplifyCode (EitherC x y) =
-  let sx: Code = SimplifyCode x
-      sy: Code = SimplifyCode y
+  let sx : Code = SimplifyCode x
+      sy : Code = SimplifyCode y
   in case (sx, sy) of
     (UnitC, UnitC) => BoolC
     (UnitC, y) => MaybeC y
