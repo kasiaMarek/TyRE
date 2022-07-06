@@ -1,8 +1,10 @@
 package tyre
 
-depends = contrib
+version = 0.1.0
+brief   = "A typed regex parser"
 
 sourcedir = "src"
+depends = contrib
 
 modules =   API
           , Core
