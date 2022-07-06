@@ -1,4 +1,4 @@
-module CommonRegexes.DateAndTime
+module Data.Regex.DateAndTime
 
 import API
 import StringRE

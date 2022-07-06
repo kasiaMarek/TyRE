@@ -1,7 +1,6 @@
-module CommonRegexes
+module Data.Regex.CommonRegexes
 
-import API
-import StringRE
+import Data.Regex
 
 import Data.String
 import Data.List
@@ -46,7 +45,7 @@ validatePasswordSecurity : String -> List PasswordValidationError
 validatePasswordSecurity str = 
     passwordStrength >>= f where
         f : (TyRE (), PasswordValidationError) -> List PasswordValidationError
-        f (tyre, error) = if isJust (parse tyre str) then [] else [error]
+        f (tyre, error) = if match tyre str then [] else [error]
 
 --- url
 namespace UrlRegex

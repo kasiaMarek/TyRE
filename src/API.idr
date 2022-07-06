@@ -32,10 +32,6 @@ export
 run : (re : CoreRE) -> String -> Maybe (Shape re)
 run re str = runWord re (unpack str)
 
-export
-parse : TyRE a -> String -> Maybe a
-parse tyre str = map (extract tyre) $ run (compile tyre) str
-
 matchStream : {re : CoreRE} -> (sm : SM) -> {auto prf : thompson re = sm}
             -> Stream Char -> (Maybe (Shape re), Stream Char)
 matchStream {re} sm {prf} stm with (runAutomatonSMStream sm stm) proof p
@@ -49,9 +45,3 @@ matchStream {re} sm {prf} stm with (runAutomatonSMStream sm stm) proof p
 export
 getTokenCore : (re : CoreRE) -> Stream Char -> (Maybe (Shape re), Stream Char)
 getTokenCore re stm = matchStream (thompson re) stm
-
-export
-getToken : TyRE a -> Stream Char -> (Maybe a, Stream Char)
-getToken tyre stm = 
-  let (pres, stmTail) := getTokenCore (compile tyre) stm 
-  in (map (extract tyre) pres, stmTail)
