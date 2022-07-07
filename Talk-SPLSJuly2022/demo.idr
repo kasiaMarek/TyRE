@@ -1,17 +1,15 @@
-import API
-import StringRE
-import CommonRegexes.DateAndTime
+import Data.Regex
+import Data.Regex.DateAndTime
 
 import Data.Stream
 import Data.List
-import Data.Maybe
 
 -- room number
 roomNumber : TyRE Char
 roomNumber = r "A[0-9]"
 
 parseRoomNumber : String -> IO ()
-parseRoomNumber str = printLn (isJust (parse roomNumber str))
+parseRoomNumber str = printLn (match roomNumber str)
 
 
 
