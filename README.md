@@ -4,13 +4,18 @@ Dependently-typed regex parser in Idris 2.
 
 We assign each regex pattern a _shape_ which denotes the type of the of the output parse tree, e.g. `"[a-c]*"` has type `List Char`. We guarantee result type correctness with dependent-type verification. On top of the parser we add [Radanne's](https://doi.org/10.1145/3294032.3294082) type-indexed combinators (_tyre_).
 
-To use TyRE just import `Data.Regex`. The module cointains the following functions for parsing and matching:
+### Usage
+To use TyRE add needed dependencies to your .ipkg file. (_Please note: the order of dependencies matters - `contrib` needs to be after `tyre`._)
+```
+depends = tyre, contrib
+```
+Now just import `Data.Regex`, which cointains the following functions for parsing and matching:
 ```Idris
 getToken : TyRE a -> Stream Char -> (Maybe a, Stream Char)
 match : TyRE a -> String -> Bool
 parse : TyRE a -> String -> Maybe a
 ```
-#### Examples
+#### Example
 Parsing time (from `tests/tyre/time-full`):
 ```Idris
 import Data.Regex
