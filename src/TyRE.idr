@@ -3,6 +3,7 @@ module TyRE
 import public Core
 import Data.List
 import Data.Either
+import Data.SortedSet
 
 infixr 6 <*>
 
@@ -33,7 +34,7 @@ extract (Rep re) xs               = map (extract re) xs
 
 export
 predicate : (Char -> Bool) -> TyRE Char
-predicate f = Untyped (Pred f)
+predicate f = Untyped (CharPred (Pred f))
 
 export
 empty : TyRE ()
@@ -48,12 +49,8 @@ ignore : TyRE a -> TyRE ()
 ignore tyre = (\_ => ()) `Conv` tyre
 
 export
-match : Char -> TyRE ()
-match c = ignore $ predicate (\e => e == c)
-
-export
 range : Char -> Char -> TyRE Char
-range x y = predicate (\c =>  x <= c && c <= y)
+range x y = Untyped (CharPred (Range (x,y)))
 
 export
 digit : TyRE Integer
@@ -65,11 +62,15 @@ digitChar = range '0' '9'
 
 export
 oneOfList : List Char -> TyRE Char
-oneOfList xs = predicate (\e => case (find (\x => e == x) xs) of {(Just _) => True ; Nothing => False})
+oneOfList xs = Untyped (CharPred (OneOf (fromList xs)))
 
 export
 oneOf : String -> TyRE Char
 oneOf xs = oneOfList (unpack xs)
+
+export
+match : Char -> TyRE ()
+match c = ignore $ oneOfList [c]
 
 export
 rep0 : TyRE a -> TyRE (List a)

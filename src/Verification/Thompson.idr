@@ -17,6 +17,7 @@ import Verification.Thompson.Star
 
 import Data.SnocList
 import Data.List.Elem
+import Data.SortedSet
 import Syntax.PreorderReasoning
 
 thompsonRoutinePrf : (re : CoreRE)
@@ -31,7 +32,7 @@ thompsonRoutinePrf Empty {word = []} (Start Nothing Here Accept) (mc, vm) = ([< 
 thompsonRoutinePrf Empty (Start (Just ()) Here acc) (mc, vm) impossible
 thompsonRoutinePrf Empty (Start (Just ()) (There _) acc) (mc, vm) impossible
 
-thompsonRoutinePrf (Pred f) acc mcvm = thompsonRoutinePrfPredicate f acc mcvm
+thompsonRoutinePrf (CharPred cond) acc mcvm = thompsonRoutinePrfPredicate _ acc mcvm
 
 thompsonRoutinePrf {word} (Group re) acc (mc, vm) = 
   let routineEq = thompsonRoutinePrfGroup re acc
