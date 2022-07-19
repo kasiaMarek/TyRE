@@ -3,7 +3,10 @@ module Thompson.GroupThompson
 import Core
 import NFA
 import Data.List
+import Data.List1
 import Data.SortedSet
+
+%default total
 
 public export
 record NextStates where
@@ -30,6 +33,7 @@ addEndRoutine routine ((Just x, r) :: xs) = (Just x, r) :: (addEndRoutine routin
 addEndRoutine routine ((Nothing, r) :: xs) = (Nothing, r ++ routine) :: (addEndRoutine routine xs)
 
 filterNothing : List (Maybe Nat) -> List (Maybe Nat)
+filterNothing xs = filter (/= Nothing) xs
 
 replaceEndInInit : List (Maybe Nat) -> List (Maybe Nat) -> List (Maybe Nat)
 replaceEndInInit xs mks =
@@ -61,8 +65,46 @@ groupStates n (Star re) =
   let (MkGroupSM init sWN n') := groupStates n re
   in MkGroupSM (Nothing :: init) (replaceEndInNext sWN (Nothing :: init)) n'
 
+eq : List (Maybe Nat) -> List (Maybe Nat) -> Bool
+eq mks mjs = (Data.SortedSet.fromList mks) == (fromList mjs)
+
 min : GroupSM -> GroupSM
-min (MkGroupSM initStates statesWithNext max) = ?min_rhs_0
+min (MkGroupSM initStates statesWithNext max) =
+  let (initStates', statesWithNext') := go 500 (initStates, statesWithNext)
+  in MkGroupSM initStates' statesWithNext' max where
+  go : Nat -> (List (Maybe Nat), List (Nat, NextStates)) -> (List (Maybe Nat), List (Nat, NextStates))
+  go 0 xs = xs
+  go (S k) (init, xs) = 
+    let mappings := getMappings (group xs)
+    in if (length mappings == 0) then (init, xs) else go k (squash mappings (init, xs)) where
+    group : List (Nat, NextStates) -> List (List1 (Nat, NextStates))
+    group xs = groupBy stateEq xs where
+      stateEq : (Nat, NextStates) -> (Nat, NextStates) -> Bool
+      stateEq (_, (MkNextStates cond  isSat   notSat  )) 
+              (_, (MkNextStates cond' isSat'  notSat' )) =
+                cond == cond' && (eq isSat isSat') && (eq notSat notSat')
+    getMappings : List (List1 (Nat, NextStates)) -> List (Nat, Nat)
+    getMappings [] = []
+    getMappings (((nh, _) ::: xs) :: ys) = (map (\case (x, _) => (nh, x)) xs) ++ getMappings ys
+    applyFilter : (Nat, Nat) -> List (Maybe Nat) -> List (Maybe Nat)
+    applyFilter (n, n1) xs = 
+      case (find (== Just n1) xs) of
+        Nothing => xs
+        (Just y) => (Just n) :: filter (\x => x == Just n || x == Just n1) xs
+    squash : List (Nat, Nat) -> (List (Maybe Nat), List (Nat, NextStates)) -> (List (Maybe Nat), List (Nat, NextStates))
+    squash [] x = x
+    squash ((n, n1) :: xs) (init, ys) = 
+      squash xs 
+            ( filter (\x => x /= (Just n1)) init
+            , applyMap ys) where
+            applyMap : List (Nat, NextStates) -> List (Nat, NextStates)
+            applyMap [] = []
+            applyMap ((n', y) :: xs) = 
+              if (n' == n1) then applyMap xs
+              else  ( n'
+                    , MkNextStates  y.condition 
+                                    (applyFilter (n, n1) y.isSat) 
+                                    (applyFilter (n, n1) y.notSat)) :: applyMap xs
 
 public export
 groupTransform : List (Maybe Nat) -> List (Maybe Nat, Routine)

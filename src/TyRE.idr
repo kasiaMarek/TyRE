@@ -133,4 +133,8 @@ repTimes 0 re = empty
 repTimes 1 re = re
 repTimes (S (S k)) re = re <*> repTimes (S k) re
 
+export
+group : TyRE a -> TyRE String
+group tyre = Untyped (Group (compile tyre))
+
 

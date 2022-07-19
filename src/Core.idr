@@ -14,6 +14,14 @@ data CharCond =
     | Pred (Char -> Bool)
 
 public export
+Eq CharCond where
+  (==) (OneOf x) (OneOf y) = x == y
+  (==) (OneOf x) _ = False
+  (==) (Range x) (Range y) = x == y
+  (==) (Range x) _ = False
+  (==) (Pred _) _ = False
+
+public export
 data CoreRE =
     CharPred CharCond
     | Concat CoreRE CoreRE

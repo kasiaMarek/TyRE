@@ -1,5 +1,4 @@
-import API
-import RE
+import Data.Regex
 import Data.Either
 
 rightRE : Nat -> TyRE Nat
