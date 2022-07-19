@@ -1,5 +1,4 @@
-import API
-import RE
+import Data.Regex
 import Data.Either
 
 ||| regex: ((a*c)|a)*b -> counts the number of a's

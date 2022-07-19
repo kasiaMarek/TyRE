@@ -1,9 +1,22 @@
 import Data.Regex
 import Data.Nat
 
-altRE : Nat -> TyRE ()
+altREType : Nat -> Type
+altREType 0 = ()
+altREType (S k) = Either () (altREType k)
+
+altRE : (n : Nat) -> TyRE (altREType n)
 altRE 0 = match 'a'
-altRE (S k) = ignore (match 'a' <|> altRE k)
+altRE (S k) = match 'a' <|> altRE k
+
+getRE : Bool -> (n : Nat) -> TyRE (Either String (altREType n))
+getRE True n = Left `Conv` group (altRE n)
+getRE False n = Right `Conv` (altRE n)
+
+toStr : (n : Nat) -> (altREType n) -> String
+toStr 0 () = show ()
+toStr (S k) (Left rest) = "Left ()"
+toStr (S k) (Right rest) = "Right " ++ (toStr k rest)
 
 main : IO ()
 main =  do  isGroup <- getLine
@@ -13,8 +26,10 @@ main =  do  isGroup <- getLine
                 let n : Nat
                     n = (cast str)
                     n' := power 2 n
-                    re := if isGroup == "group" then (ignore (group (altRE n'))) else (altRE n')
+                    re : TyRE (Either String (altREType n'))
+                    re = getRE (isGroup == "group") n'
                 in case parse re "a" of
-                    Just res => putStrLn $ "Matches"
+                    Just (Right res) => putStrLn (toStr n' res)
+                    Just (Left res) => putStrLn res
                     Nothing => putStrLn "Error"
-              else putStrLn "Input should be two numbers"
+              else putStrLn "Second input should be a number"

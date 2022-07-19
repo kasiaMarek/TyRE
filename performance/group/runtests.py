@@ -12,7 +12,7 @@ SAMPLES = 5
 PATH_TO_CHARTS = "charts/"
 RESULTS_FILE = "results.txt"
 
-ITARATIONS = 13
+ITARATIONS = 12
 
 def add(x, y):
     return x + y

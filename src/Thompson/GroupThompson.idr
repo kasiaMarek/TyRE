@@ -107,8 +107,12 @@ min (MkGroupSM initStates statesWithNext max) =
                                     (applyFilter (n, n1) y.notSat)) :: applyMap xs
 
 public export
+addEmptyRoutine : List (Maybe Nat) -> List (Maybe Nat, Routine)
+addEmptyRoutine states = map (`MkPair` []) states
+
+public export
 groupTransform : List (Maybe Nat) -> List (Maybe Nat, Routine)
-groupTransform states = addEndRoutine [EmitString] (map (`MkPair` []) states)
+groupTransform states = addEndRoutine [EmitString] (addEmptyRoutine states)
 
 public export
 smFromGroupSMNext : List (Nat, NextStates) -> Nat -> Char -> List (Maybe Nat, Routine)
@@ -120,10 +124,10 @@ smFromGroupSMNext xs s c = groupTransform $
 
 public export
 smFromGroupSM : GroupSM -> SM
-smFromGroupSM (MkGroupSM initStates statesWithNext max) = 
+smFromGroupSM grsm = 
   MkSM  Nat 
-        (mapRoutine (Record::) (groupTransform initStates))
-        (smFromGroupSMNext statesWithNext)
+        (mapRoutine (Record::) (groupTransform grsm.initStates))
+        (smFromGroupSMNext grsm.statesWithNext)
 
 public export
 groupThompson : CoreRE -> SM
