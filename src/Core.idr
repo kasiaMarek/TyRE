@@ -23,7 +23,7 @@ Eq CharCond where
 
 public export
 data CoreRE =
-    CharPred CharCond
+      CharPred CharCond
     | Concat CoreRE CoreRE
     | Group CoreRE
     | Empty
@@ -38,7 +38,7 @@ satisfies (Pred f) c = f c
 
 public export
 ShapeCode : CoreRE -> Code
-ShapeCode (CharPred _)      = CharC
+ShapeCode (CharPred _)  = CharC
 ShapeCode (Concat x y)  = PairC (ShapeCode x) (ShapeCode y)
 ShapeCode (Group _)     = StringC
 ShapeCode Empty         = UnitC

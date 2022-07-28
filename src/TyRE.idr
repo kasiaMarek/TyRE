@@ -45,8 +45,12 @@ any : TyRE Char
 any = predicate (\_ => True)
 
 export
+group : TyRE a -> TyRE String
+group tyre = Untyped (Group (compile tyre))
+
+export
 ignore : TyRE a -> TyRE ()
-ignore tyre = (\_ => ()) `Conv` tyre
+ignore tyre = (\_ => ()) `Conv` (group tyre)
 
 export
 range : Char -> Char -> TyRE Char
@@ -132,9 +136,3 @@ repTimes : (n : Nat)-> (re : TyRE a) -> TyRE (repTimesType n a)
 repTimes 0 re = empty
 repTimes 1 re = re
 repTimes (S (S k)) re = re <*> repTimes (S k) re
-
-export
-group : TyRE a -> TyRE String
-group tyre = Untyped (Group (compile tyre))
-
-

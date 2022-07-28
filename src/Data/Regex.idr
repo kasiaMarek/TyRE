@@ -15,4 +15,4 @@ parse tyre str = map (extract tyre) $ run (compile tyre) str
 
 export
 match : TyRE a -> String -> Bool
-match tyre str = isJust (parse tyre str)
+match tyre str = isJust $ parse (ignore tyre) str
