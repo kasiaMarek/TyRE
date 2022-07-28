@@ -2,12 +2,12 @@ import Data.Regex
 import Data.Either
 
 rightRE : Nat -> TyRE Nat
-rightRE 0 = (\_ => 1) `Conv` match 'a'
-rightRE (S k) = (\case {Left () => 1; Right n => n+1}) `Conv` (match 'a' <|> rightRE k)
+rightRE 0 = (\_ => 1) `map` match 'a'
+rightRE (S k) = (\case {Left () => 1; Right n => n+1}) `map` (match 'a' <|> rightRE k)
 
 leftRE : Nat -> TyRE Nat
-leftRE 0 = (\_ => 1) `Conv` match 'a'
-leftRE (S k) = (\case {Left n => n; Right () => (S k)}) `Conv` (rightRE k <|> match 'a')
+leftRE 0 = (\_ => 1) `map` match 'a'
+leftRE (S k) = (\case {Left n => n; Right () => (S k)}) `map` (rightRE k <|> match 'a')
 
 main : IO ()
 main =  do  str <- getLine

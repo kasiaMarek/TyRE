@@ -18,6 +18,7 @@ data Token =
             | Plus -- +
             | QMark -- ?
             | Alt -- |
+            | Exclamation
             | CharLit String
             | End -- end of input
 
@@ -42,6 +43,7 @@ reTokenMap = [
               (is '+',    \x => Plus),
               (is '?',    \x => QMark),
               (is '|',    \x => Alt),
+              (is '!',    \x => Exclamation),
               (reCharLit, \x => CharLit x)
               ]
 
@@ -99,6 +101,10 @@ end : Rule ()
 end = terminal "" (\case {(MkToken _ _  End) => Just (); _ => Nothing})
 
 public export
+exclamation : Rule ()
+exclamation = terminal "!" (\case {(MkToken _ _  Exclamation) => Just (); _ => Nothing})
+
+public export
 getCharLit : (TokenData Token) -> Maybe Char
 getCharLit (MkToken _ _ (CharLit str)) with (unpack str)
   getCharLit (MkToken _ _ (CharLit str)) | [] = Nothing --should not happen
@@ -150,6 +156,7 @@ mutual
   postUnit  = (map (\_ => Maybe) qMark) -- ...?
             <|> (map (\_ => Rep1) plus) -- ...+
             <|> (map (\_ => Rep0) star) -- ...*
+            <|> (map (\_ => Keep) exclamation) -- ...!
 
   public export
   semiUnit : Rule RE
