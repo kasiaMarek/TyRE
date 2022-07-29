@@ -10,8 +10,8 @@ altRE 0 = match 'a'
 altRE (S k) = match 'a' <|> altRE k
 
 getRE : Bool -> (n : Nat) -> TyRE (Either String (altREType n))
-getRE True n = Left `Conv` group (altRE n)
-getRE False n = Right `Conv` (altRE n)
+getRE True n = Left `map` group (altRE n)
+getRE False n = Right `map` (altRE n)
 
 toStr : (n : Nat) -> (altREType n) -> String
 toStr 0 () = show ()

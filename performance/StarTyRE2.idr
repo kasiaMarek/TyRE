@@ -3,9 +3,9 @@ import Data.Either
 
 ||| regex: ((a*c)|a)*b -> counts the number of a's
 As : TyRE Nat
-As = sum `Conv` rep0 (fromEither `Conv`
-                        (length `Conv` rep0 (match 'a') <* (match 'c')) <|>
-                        ((\_ => (the Nat) 1) `Conv` match 'a'))
+As = sum `map` rep0 (fromEither `map`
+                        (length `map` rep0 (match 'a') <* (match 'c')) <|>
+                        ((\_ => (the Nat) 1) `map` match 'a'))
                 <* match 'b'
 
 ||| string: aa...ab

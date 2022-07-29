@@ -1,7 +1,7 @@
 import Data.Regex
 
 As : TyRE Nat
-As = compile $ Rep0 $ Exactly 'a'
+As = compile $ Keep $ Rep0 $ Exactly 'a'
 
 createString : Nat -> String
 createString 0 = "a"

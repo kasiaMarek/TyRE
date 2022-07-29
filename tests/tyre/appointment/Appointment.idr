@@ -1,6 +1,4 @@
-import API
-import StringRE
-import TyRE
+import Data.Regex
 
 data WeekDay = Mon | Tue | Wed | Thu | Fri
 
@@ -12,7 +10,7 @@ Show WeekDay where
   show Fri = "5"
 
 aday : TyRE () -> WeekDay -> TyRE WeekDay
-aday tyre wday = (\_ => wday)`Conv` tyre
+aday tyre wday = (\_ => wday)`map` tyre
 
 day : TyRE WeekDay
 day =       (aday (r "Mon") Mon)
@@ -25,12 +23,12 @@ hour : TyRE Integer
 hour =
   let toInt : Char -> Integer
       toInt c = 10 + cast c - cast '0'
-      adjustAmOrPm : (Integer, Either () ()) -> Integer
-      adjustAmOrPm (i, (Left ())) = i
-      adjustAmOrPm (i, (Right ())) = 12 + i
-  in adjustAmOrPm `Conv`
-            ((option (match '0') *> digit) `or` (toInt `Conv` r "1[0-2]"))
-        <*> (r "am" <|> r "pm")
+      adjustAmOrPm : (Integer, Bool) -> Integer
+      adjustAmOrPm (i, True) = i
+      adjustAmOrPm (i, False) = 12 + i
+  in adjustAmOrPm `map`
+            ((option (match '0') *> digit) `or` (toInt `map` r "1[0-2]!"))
+        <*> r "((am)|(pm))!"
 
 appointment : TyRE (WeekDay, Integer)
 appointment =  day <* match ' ' <*> hour

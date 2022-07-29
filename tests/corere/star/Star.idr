@@ -4,7 +4,7 @@ import Codes
 import Thompson
 
 AorB : CoreRE
-AorB = Pred (\c =>  (c == 'a' || c == 'b'))
+AorB = CharPred (Pred (\c =>  (c == 'a' || c == 'b')))
 
 AOrBStar: CoreRE
 AOrBStar = Star AorB

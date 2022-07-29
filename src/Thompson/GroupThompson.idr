@@ -54,7 +54,7 @@ groupStates n Empty =  MkGroupSM [Nothing] [] n
 groupStates n (Concat re1 re2) = 
   let (MkGroupSM init1 sWN1 n1) := groupStates n re1
       (MkGroupSM init2 sWN2 n2) := groupStates n1 re2
-  in MkGroupSM  ((replaceEndInInit init1 init2) ++ init2)
+  in MkGroupSM  (replaceEndInInit init1 init2)
                 ((replaceEndInNext sWN1 init2)  ++ sWN2)  
                 n2
 groupStates n (Alt re1 re2) =
