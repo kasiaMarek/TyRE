@@ -11,11 +11,11 @@ export
 email : TyRE (String, String, String)
 email = 
     let firstPart : TyRE String
-        firstPart = pack `Conv` rep1 ((letter `or` digitChar) `or` oneOf "%+_.-")
+        firstPart = pack `map` rep1 ((letter `or` digitChar) `or` oneOf "%+_.-")
         secondPart : TyRE String
-        secondPart = (joinBy ".") `Conv` rep1 (pack `Conv` rep1 (letter `or` digitChar) <* match '.')
+        secondPart = (joinBy ".") `map` rep1 (pack `map` rep1 (letter `or` digitChar) <* match '.')
         domain : TyRE String
-        domain = pack `Conv` repFromTo 2 6 letter
+        domain = pack `map` repFromTo 2 6 letter
     in firstPart <*> (match '@' *> secondPart <*> domain)
 
 ---password validation
@@ -27,10 +27,10 @@ data PasswordValidationError    = NoDigit
 
 passwordStrength : List ((TyRE (), PasswordValidationError))
 passwordStrength =
-    let hasDigit := ignore (r ".*[0-9].*")
-        hasCapitalLetter := ignore (r ".*[A-Z].*")
-        hasLowerCaseLetter := ignore (r ".*[a-z].*")
-        hasSpecialCharacter := ignore (r "[!@#$<>%^&:=,_\\*\\+\\.\\?\\-]")
+    let hasDigit := r ".*[0-9].*"
+        hasCapitalLetter := r ".*[A-Z].*"
+        hasLowerCaseLetter := r ".*[a-z].*"
+        hasSpecialCharacter := r "[@#$<>%^&:=,_\\*\\+\\.\\?\\-\\!]"
         doesntHaveSpaces := ignore $ rep0 $ predicate (/= ' ')
     in  [ (hasDigit, NoDigit)
         , (hasCapitalLetter, NoCapitalLetter)
@@ -73,27 +73,27 @@ namespace UrlRegex
     export
     url : TyRE URL
     url = (\case (pr, h, p, q, f) => HTTP pr h p q f) 
-          `Conv` 
+          `map` 
           (protocol <*> (host <*> (path <*> (query <*> fragment)))) where
             digitLetterOr : String -> TyRE Char
             digitLetterOr str = (digitChar `or` letter) `or` oneOf str
             
             protocol : TyRE (Maybe Bool)
-            protocol = (map fst) `Conv` r "(https?://(www)?)?"
+            protocol = r "((https?)!://(www)?)?"
 
             host : TyRE (String, String)
-            host =  (pack `Conv` rep1 (digitLetterOr "@:%_~#=.+-\\"))
+            host =  (pack `map` rep1 (digitLetterOr "@:%_~#=.+-\\"))
                     <* match '.' 
-                    <*> (pack `Conv` repFromTo 1 6 (digitLetterOr "()"))
+                    <*> (pack `map` repFromTo 1 6 (digitLetterOr "()"))
 
             path : TyRE (List String)
-            path = rep0 (match '/' *> (pack `Conv` rep1 (digitLetterOr "_-")))
+            path = rep0 (match '/' *> (pack `map` rep1 (digitLetterOr "_-")))
 
             query : TyRE (Maybe (List (String, String)))
             query = TyRE.option $ match '?' 
-                        *> rep1 ((pack `Conv` rep1 (digitLetterOr "_-") 
+                        *> rep1 ((pack `map` rep1 (digitLetterOr "_-") 
                             <* match '=') 
-                        <*> (pack `Conv` rep1 (digitLetterOr "_-")))
+                        <*> (pack `map` rep1 (digitLetterOr "_-")))
 
             fragment : TyRE (Maybe String)
-            fragment = TyRE.option $ match '#' *> (pack `Conv` rep1 (digitLetterOr "_-"))
+            fragment = TyRE.option $ match '#' *> (pack `map` rep1 (digitLetterOr "_-"))

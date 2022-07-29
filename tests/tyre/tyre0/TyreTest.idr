@@ -1,8 +1,7 @@
-import API
-import TyRE
+import Data.Regex
 
 regex : TyRE Integer
-regex = (\x => cast x - cast '0') `Conv` rep1 (match 'a' <|> match 'b') *> range '0' '9'
+regex = (\x => cast x - cast '0') `map` rep1 (match 'a' <|> match 'b') *> range '0' '9'
 
 main : IO ()
 main = do putStrLn $ show $ parse regex "abbbaa9"

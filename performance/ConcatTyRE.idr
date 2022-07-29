@@ -5,7 +5,7 @@ import Evidence
 import Data.Maybe
 
 A : CoreRE
-A = Pred (\c =>  c == 'a')
+A = CharPred (Pred (\c =>  c == 'a'))
 
 createRE : Nat -> CoreRE
 createRE 0 = A

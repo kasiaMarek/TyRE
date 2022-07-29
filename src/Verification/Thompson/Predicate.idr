@@ -14,11 +14,11 @@ import Data.List.Elem
 
 export
 thompsonRoutinePrfPredicate : (f : Char -> Bool)
-                            -> (acc : Accepting (smToNFA (thompson (Pred f))) word)
+                            -> (acc : Accepting (smToNFA (smForPred f)) word)
                             -> (mcvm : (Maybe Char, VMState))
                             -> (ev : Evidence
-                                    ** (executeRoutineFrom (extractRoutine {sm = (thompson (Pred f))} acc) mcvm
-                                            = (snd mcvm).evidence ++ ev, ev `Encodes` [< Right $ ShapeCode (Pred f)]))
+                                    ** (executeRoutineFrom (extractRoutine {sm = (smForPred f)} acc) mcvm
+                                            = (snd mcvm).evidence ++ ev, ev `Encodes` [< Right CharC]))
 
 thompsonRoutinePrfPredicate {word = c::cs} f (Start (Just StartState) Here (Step StartState c t prf acc)) mcvm with (f c)
   thompsonRoutinePrfPredicate {word = c::[]} f (Start (Just StartState) Here (Step StartState c Nothing Here Accept)) (mc, vm) | True = ([< CharMark c] ** (Refl, AChar [<] c))

@@ -1,13 +1,29 @@
 module Core
 
 import public Codes
+
+import Data.SortedSet
 import Data.List
 
 %default total
 
+public export 
+data CharCond =
+      OneOf (SortedSet Char)
+    | Range (Char, Char)
+    | Pred (Char -> Bool)
+
+public export
+Eq CharCond where
+  (==) (OneOf x) (OneOf y) = x == y
+  (==) (OneOf x) _ = False
+  (==) (Range x) (Range y) = x == y
+  (==) (Range x) _ = False
+  (==) (Pred _) _ = False
+
 public export
 data CoreRE =
-    Pred (Char -> Bool)
+      CharPred CharCond
     | Concat CoreRE CoreRE
     | Group CoreRE
     | Empty
@@ -15,8 +31,14 @@ data CoreRE =
     | Star CoreRE
 
 public export
+satisfies : CharCond -> Char -> Bool
+satisfies (OneOf xs) c = contains c xs
+satisfies (Range (x, y)) c = x <= c && c <= y
+satisfies (Pred f) c = f c
+
+public export
 ShapeCode : CoreRE -> Code
-ShapeCode (Pred f)      = CharC
+ShapeCode (CharPred _)  = CharC
 ShapeCode (Concat x y)  = PairC (ShapeCode x) (ShapeCode y)
 ShapeCode (Group _)     = StringC
 ShapeCode Empty         = UnitC
@@ -33,7 +55,7 @@ ShapeSimp = Sem . SimplifyCode . ShapeCode
 
 public export
 showAux : {re : CoreRE} -> Shape re -> String
-showAux {re = (Pred _)} c = show c
+showAux {re = (CharPred _)} c = show c
 showAux {re = (Concat re1 re2)} (sh1, sh2) = "(" ++ showAux sh1 ++ ", " ++ showAux sh2 ++ ")"
 showAux {re = (Group _)} str = str
 showAux {re = (Alt re1 re2)} (Left x) = "Left " ++ showAux x

@@ -4,10 +4,10 @@ import Codes
 import Thompson
 
 Exactly: Char -> CoreRE
-Exactly x = Pred (\c =>  c == x)
+Exactly x = CharPred (Pred (\c =>  c == x))
 
 Range: Char -> Char -> CoreRE
-Range x y = Pred (\c =>  x <= c && c <= y)
+Range x y = CharPred (Pred (\c =>  x <= c && c <= y))
 
 -- this is similar to time regex but allows ONLY SOME valid times
 Time: CoreRE

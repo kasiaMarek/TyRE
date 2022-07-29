@@ -4,7 +4,7 @@ import Codes
 import Thompson
 
 Exactly: Char -> CoreRE
-Exactly x = Pred (\c =>  c == x)
+Exactly x = CharPred (Pred (\c =>  c == x))
 
 --matches only word "foo"
 Foo: CoreRE

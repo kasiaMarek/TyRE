@@ -13,12 +13,14 @@ data Code =
     | MaybeC Code
     | BoolC
     | NatC
+    | IgnoreC
 
 Eq Code where
     CharC == CharC                  = True
     (PairC x z) == (PairC y v)      = (x == y) && (z == v)
     StringC == StringC              = True
     UnitC == UnitC                  = True
+    IgnoreC == IgnoreC              = True
     BoolC == BoolC                  = True
     (EitherC x z) == (EitherC y v)  = ((x == y) && (z == v))
     (ListC x) == (ListC y)          = x == y
@@ -37,18 +39,21 @@ Sem (ListC x)     = List (Sem x)
 Sem (MaybeC x)    = Maybe (Sem x)
 Sem BoolC         = Bool
 Sem NatC          = Nat
+Sem IgnoreC       = ()
 
 public export
 SimplifyCode : Code -> Code
 
 SimplifyCode (ListC x) =
   case (SimplifyCode x) of
+    IgnoreC => IgnoreC
     UnitC => NatC
     e => ListC e
 
 SimplifyCode (MaybeC x) =
   let sx = SimplifyCode x
   in case sx of
+    IgnoreC => IgnoreC
     UnitC => BoolC
     (MaybeC y) => sx
     e => MaybeC sx
@@ -57,6 +62,8 @@ SimplifyCode (PairC x y) =
   let sx : Code = SimplifyCode x
       sy : Code = SimplifyCode y
   in case (sx, sy) of
+    (IgnoreC, x) => x
+    (x, IgnoreC) => x
     (UnitC, x) => x
     (x, UnitC) => x
     _ => PairC sx sy
@@ -65,6 +72,11 @@ SimplifyCode (EitherC x y) =
   let sx : Code = SimplifyCode x
       sy : Code = SimplifyCode y
   in case (sx, sy) of
+    (IgnoreC, UnitC) => BoolC
+    (UnitC, IgnoreC) => BoolC
+    (IgnoreC, IgnoreC) => IgnoreC
+    (IgnoreC, y) => MaybeC y
+    (x, IgnoreC) => MaybeC x
     (UnitC, UnitC) => BoolC
     (UnitC, y) => MaybeC y
     (x, UnitC) => MaybeC x
@@ -79,6 +91,7 @@ ConvertSimplification StringC m = m
 ConvertSimplification BoolC m   = m
 ConvertSimplification NatC m    = m
 ConvertSimplification UnitC _   = ()
+ConvertSimplification IgnoreC _   = ()
 
 ConvertSimplification (MaybeC x) Nothing with (SimplifyCode x)
   ConvertSimplification (MaybeC x) Nothing | CharC          = Nothing
@@ -90,6 +103,7 @@ ConvertSimplification (MaybeC x) Nothing with (SimplifyCode x)
   ConvertSimplification (MaybeC x) Nothing | (MaybeC y)     = Nothing
   ConvertSimplification (MaybeC x) Nothing | NatC           = Nothing
   ConvertSimplification (MaybeC x) Nothing | BoolC          = Nothing
+  ConvertSimplification (MaybeC x) Nothing | IgnoreC        = ()
 --
 ConvertSimplification (MaybeC x) (Just y) with (ConvertSimplification x y)
   ConvertSimplification (MaybeC x) (Just y) | cs with (SimplifyCode x)
@@ -102,6 +116,7 @@ ConvertSimplification (MaybeC x) (Just y) with (ConvertSimplification x y)
     ConvertSimplification (MaybeC x) (Just y) | cs | (ListC z)      = Just cs
     ConvertSimplification (MaybeC x) (Just y) | cs | NatC           = Just cs
     ConvertSimplification (MaybeC x) (Just y) | cs | BoolC          = Just cs
+    ConvertSimplification (MaybeC x) (Just y) | cs | IgnoreC        = ()
 
 ConvertSimplification (ListC x) m with (ConvertSimplification x `map` m)
   ConvertSimplification (ListC x) m | cs with (SimplifyCode x)
@@ -114,6 +129,7 @@ ConvertSimplification (ListC x) m with (ConvertSimplification x `map` m)
     ConvertSimplification (ListC x) m | cs | (MaybeC y)     = cs
     ConvertSimplification (ListC x) m | cs | BoolC          = cs
     ConvertSimplification (ListC x) m | cs | NatC           = cs
+    ConvertSimplification (ListC x) m | cs | IgnoreC        = ()
 
 ConvertSimplification (PairC x y) m with (ConvertSimplification x $ fst m, ConvertSimplification y $ snd m)
   ConvertSimplification (PairC x y) m | (csx, csy) with (SimplifyCode x)
@@ -127,6 +143,7 @@ ConvertSimplification (PairC x y) m with (ConvertSimplification x $ fst m, Conve
       ConvertSimplification (PairC x y) m | (csx, csy) | CharC          | (MaybeC z)    = (csx, csy)
       ConvertSimplification (PairC x y) m | (csx, csy) | CharC          | BoolC         = (csx, csy)
       ConvertSimplification (PairC x y) m | (csx, csy) | CharC          | NatC          = (csx, csy)
+      ConvertSimplification (PairC x y) m | (csx, csy) | CharC          | IgnoreC       = csx
 
       ConvertSimplification (PairC x y) m | (csx, csy) | (PairC _ _)    | CharC         = (csx, csy)
       ConvertSimplification (PairC x y) m | (csx, csy) | (PairC _ _)    | (PairC v s)   = (csx, csy)
@@ -137,6 +154,7 @@ ConvertSimplification (PairC x y) m with (ConvertSimplification x $ fst m, Conve
       ConvertSimplification (PairC x y) m | (csx, csy) | (PairC _ _)    | (MaybeC v)    = (csx, csy)
       ConvertSimplification (PairC x y) m | (csx, csy) | (PairC _ _)    | BoolC         = (csx, csy)
       ConvertSimplification (PairC x y) m | (csx, csy) | (PairC _ _)    | NatC          = (csx, csy)
+      ConvertSimplification (PairC x y) m | (csx, csy) | (PairC _ _)    | IgnoreC       = csx
 
       ConvertSimplification (PairC x y) m | (csx, csy) | StringC        | CharC         = (csx, csy)
       ConvertSimplification (PairC x y) m | (csx, csy) | StringC        | (PairC z w)   = (csx, csy)
@@ -147,6 +165,7 @@ ConvertSimplification (PairC x y) m with (ConvertSimplification x $ fst m, Conve
       ConvertSimplification (PairC x y) m | (csx, csy) | StringC        | (MaybeC z)    = (csx, csy)
       ConvertSimplification (PairC x y) m | (csx, csy) | StringC        | BoolC         = (csx, csy)
       ConvertSimplification (PairC x y) m | (csx, csy) | StringC        | NatC          = (csx, csy)
+      ConvertSimplification (PairC x y) m | (csx, csy) | StringC        | IgnoreC       = csx
 
       ConvertSimplification (PairC x y) m | (csx, csy) | UnitC          | CharC         = csy
       ConvertSimplification (PairC x y) m | (csx, csy) | UnitC          | (PairC z w)   = csy
@@ -157,6 +176,7 @@ ConvertSimplification (PairC x y) m with (ConvertSimplification x $ fst m, Conve
       ConvertSimplification (PairC x y) m | (csx, csy) | UnitC          | (MaybeC z)    = csy
       ConvertSimplification (PairC x y) m | (csx, csy) | UnitC          | BoolC         = csy
       ConvertSimplification (PairC x y) m | (csx, csy) | UnitC          | NatC          = csy
+      ConvertSimplification (PairC x y) m | (csx, csy) | UnitC          | IgnoreC       = ()
 
       ConvertSimplification (PairC x y) m | (csx, csy) | (EitherC _ _)  | CharC         = (csx, csy)
       ConvertSimplification (PairC x y) m | (csx, csy) | (EitherC _ _)  | (PairC z w)   = (csx, csy)
@@ -167,6 +187,7 @@ ConvertSimplification (PairC x y) m with (ConvertSimplification x $ fst m, Conve
       ConvertSimplification (PairC x y) m | (csx, csy) | (EitherC _ _)  | (MaybeC z)    = (csx, csy)
       ConvertSimplification (PairC x y) m | (csx, csy) | (EitherC _ _)  | BoolC         = (csx, csy)
       ConvertSimplification (PairC x y) m | (csx, csy) | (EitherC _ _)  | NatC          = (csx, csy)
+      ConvertSimplification (PairC x y) m | (csx, csy) | (EitherC _ _)  | IgnoreC       = csx
 
       ConvertSimplification (PairC x y) m | (csx, csy) | (ListC _)      | CharC         = (csx, csy)
       ConvertSimplification (PairC x y) m | (csx, csy) | (ListC _)      | (PairC z w)   = (csx, csy)
@@ -177,6 +198,7 @@ ConvertSimplification (PairC x y) m with (ConvertSimplification x $ fst m, Conve
       ConvertSimplification (PairC x y) m | (csx, csy) | (ListC _)      | (MaybeC z)    = (csx, csy)
       ConvertSimplification (PairC x y) m | (csx, csy) | (ListC _)      | BoolC         = (csx, csy)
       ConvertSimplification (PairC x y) m | (csx, csy) | (ListC _)      | NatC          = (csx, csy)
+      ConvertSimplification (PairC x y) m | (csx, csy) | (ListC _)      | IgnoreC       = csx
 
       ConvertSimplification (PairC x y) m | (csx, csy) | (MaybeC _)     | CharC         = (csx, csy)
       ConvertSimplification (PairC x y) m | (csx, csy) | (MaybeC _)     | (PairC z w)   = (csx, csy)
@@ -187,6 +209,7 @@ ConvertSimplification (PairC x y) m with (ConvertSimplification x $ fst m, Conve
       ConvertSimplification (PairC x y) m | (csx, csy) | (MaybeC _)     | (MaybeC z)    = (csx, csy)
       ConvertSimplification (PairC x y) m | (csx, csy) | (MaybeC _)     | BoolC         = (csx, csy)
       ConvertSimplification (PairC x y) m | (csx, csy) | (MaybeC _)     | NatC          = (csx, csy)
+      ConvertSimplification (PairC x y) m | (csx, csy) | (MaybeC _)     | IgnoreC       = csx
 
       ConvertSimplification (PairC x y) m | (csx, csy) | BoolC          | CharC         = (csx, csy)
       ConvertSimplification (PairC x y) m | (csx, csy) | BoolC          | (PairC z w)   = (csx, csy)
@@ -197,6 +220,7 @@ ConvertSimplification (PairC x y) m with (ConvertSimplification x $ fst m, Conve
       ConvertSimplification (PairC x y) m | (csx, csy) | BoolC          | (MaybeC z)    = (csx, csy)
       ConvertSimplification (PairC x y) m | (csx, csy) | BoolC          | BoolC         = (csx, csy)
       ConvertSimplification (PairC x y) m | (csx, csy) | BoolC          | NatC          = (csx, csy)
+      ConvertSimplification (PairC x y) m | (csx, csy) | BoolC          | IgnoreC       = csx
 
       ConvertSimplification (PairC x y) m | (csx, csy) | NatC          | CharC         = (csx, csy)
       ConvertSimplification (PairC x y) m | (csx, csy) | NatC          | (PairC z w)   = (csx, csy)
@@ -207,6 +231,18 @@ ConvertSimplification (PairC x y) m with (ConvertSimplification x $ fst m, Conve
       ConvertSimplification (PairC x y) m | (csx, csy) | NatC          | (MaybeC z)    = (csx, csy)
       ConvertSimplification (PairC x y) m | (csx, csy) | NatC          | BoolC         = (csx, csy)
       ConvertSimplification (PairC x y) m | (csx, csy) | NatC          | NatC          = (csx, csy)
+      ConvertSimplification (PairC x y) m | (csx, csy) | NatC          | IgnoreC       = csx
+
+      ConvertSimplification (PairC x y) m | (csx, csy) | IgnoreC       | CharC         = csy
+      ConvertSimplification (PairC x y) m | (csx, csy) | IgnoreC       | (PairC z w)   = csy
+      ConvertSimplification (PairC x y) m | (csx, csy) | IgnoreC       | StringC       = csy
+      ConvertSimplification (PairC x y) m | (csx, csy) | IgnoreC       | UnitC         = ()
+      ConvertSimplification (PairC x y) m | (csx, csy) | IgnoreC       | (EitherC z w) = csy
+      ConvertSimplification (PairC x y) m | (csx, csy) | IgnoreC       | (ListC z)     = csy
+      ConvertSimplification (PairC x y) m | (csx, csy) | IgnoreC       | (MaybeC z)    = csy
+      ConvertSimplification (PairC x y) m | (csx, csy) | IgnoreC       | BoolC         = csy
+      ConvertSimplification (PairC x y) m | (csx, csy) | IgnoreC       | NatC          = csy
+      ConvertSimplification (PairC x y) m | (csx, csy) | IgnoreC       | IgnoreC       = ()
 
 ConvertSimplification (EitherC x y) (Left m) with (ConvertSimplification x m)
   ConvertSimplification (EitherC x y) (Left m) | cs with (SimplifyCode x)
@@ -221,6 +257,7 @@ ConvertSimplification (EitherC x y) (Left m) with (ConvertSimplification x m)
       ConvertSimplification (EitherC x y) (Left m) | cs | CharC           | (MaybeC z)      = Left cs
       ConvertSimplification (EitherC x y) (Left m) | cs | CharC           | BoolC           = Left cs
       ConvertSimplification (EitherC x y) (Left m) | cs | CharC           | NatC            = Left cs
+      ConvertSimplification (EitherC x y) (Left m) | cs | CharC           | IgnoreC         = Just cs
 
       ConvertSimplification (EitherC x y) (Left m) | cs | (PairC _ _)     | CharC           = Left cs
       ConvertSimplification (EitherC x y) (Left m) | cs | (PairC _ _)     | (PairC z w)     = Left cs
@@ -231,6 +268,7 @@ ConvertSimplification (EitherC x y) (Left m) with (ConvertSimplification x m)
       ConvertSimplification (EitherC x y) (Left m) | cs | (PairC _ _)     | (MaybeC z)      = Left cs
       ConvertSimplification (EitherC x y) (Left m) | cs | (PairC _ _)     | BoolC           = Left cs
       ConvertSimplification (EitherC x y) (Left m) | cs | (PairC _ _)     | NatC            = Left cs
+      ConvertSimplification (EitherC x y) (Left m) | cs | (PairC _ _)     | IgnoreC         = Just cs
 
       ConvertSimplification (EitherC x y) (Left m) | cs | StringC         | CharC           = Left cs
       ConvertSimplification (EitherC x y) (Left m) | cs | StringC         | (PairC z w)     = Left cs
@@ -241,6 +279,7 @@ ConvertSimplification (EitherC x y) (Left m) with (ConvertSimplification x m)
       ConvertSimplification (EitherC x y) (Left m) | cs | StringC         | (MaybeC z)      = Left cs
       ConvertSimplification (EitherC x y) (Left m) | cs | StringC         | BoolC           = Left cs
       ConvertSimplification (EitherC x y) (Left m) | cs | StringC         | NatC            = Left cs
+      ConvertSimplification (EitherC x y) (Left m) | cs | StringC         | IgnoreC         = Just cs
 
       ConvertSimplification (EitherC x y) (Left m) | cs | UnitC           | CharC           = Nothing
       ConvertSimplification (EitherC x y) (Left m) | cs | UnitC           | (PairC z w)     = Nothing
@@ -251,6 +290,7 @@ ConvertSimplification (EitherC x y) (Left m) with (ConvertSimplification x m)
       ConvertSimplification (EitherC x y) (Left m) | cs | UnitC           | (MaybeC z)      = Nothing
       ConvertSimplification (EitherC x y) (Left m) | cs | UnitC           | BoolC           = Nothing
       ConvertSimplification (EitherC x y) (Left m) | cs | UnitC           | NatC            = Nothing
+      ConvertSimplification (EitherC x y) (Left m) | cs | UnitC           | IgnoreC         = True
 
       ConvertSimplification (EitherC x y) (Left m) | cs | (EitherC _ _)   | CharC           = Left cs
       ConvertSimplification (EitherC x y) (Left m) | cs | (EitherC _ _)   | (PairC z w)     = Left cs
@@ -261,6 +301,7 @@ ConvertSimplification (EitherC x y) (Left m) with (ConvertSimplification x m)
       ConvertSimplification (EitherC x y) (Left m) | cs | (EitherC _ _)   | (MaybeC z)      = Left cs
       ConvertSimplification (EitherC x y) (Left m) | cs | (EitherC _ _)   | BoolC           = Left cs
       ConvertSimplification (EitherC x y) (Left m) | cs | (EitherC _ _)   | NatC            = Left cs
+      ConvertSimplification (EitherC x y) (Left m) | cs | (EitherC _ _)   | IgnoreC         = Just cs
 
       ConvertSimplification (EitherC x y) (Left m) | cs | (ListC _)       | CharC           = Left cs
       ConvertSimplification (EitherC x y) (Left m) | cs | (ListC _)       | (PairC z w)     = Left cs
@@ -271,6 +312,7 @@ ConvertSimplification (EitherC x y) (Left m) with (ConvertSimplification x m)
       ConvertSimplification (EitherC x y) (Left m) | cs | (ListC _)       | (MaybeC z)      = Left cs
       ConvertSimplification (EitherC x y) (Left m) | cs | (ListC _)       | BoolC           = Left cs
       ConvertSimplification (EitherC x y) (Left m) | cs | (ListC _)       | NatC            = Left cs
+      ConvertSimplification (EitherC x y) (Left m) | cs | (ListC _)       | IgnoreC         = Just cs
 
       ConvertSimplification (EitherC x y) (Left m) | cs | (MaybeC _)       | CharC           = Left cs
       ConvertSimplification (EitherC x y) (Left m) | cs | (MaybeC _)       | (PairC z w)     = Left cs
@@ -281,6 +323,7 @@ ConvertSimplification (EitherC x y) (Left m) with (ConvertSimplification x m)
       ConvertSimplification (EitherC x y) (Left m) | cs | (MaybeC _)       | (MaybeC z)      = Left cs
       ConvertSimplification (EitherC x y) (Left m) | cs | (MaybeC _)       | BoolC           = Left cs
       ConvertSimplification (EitherC x y) (Left m) | cs | (MaybeC _)       | NatC            = Left cs
+      ConvertSimplification (EitherC x y) (Left m) | cs | (MaybeC _)       | IgnoreC         = Just cs
 
       ConvertSimplification (EitherC x y) (Left m) | cs | BoolC           | CharC           = Left cs
       ConvertSimplification (EitherC x y) (Left m) | cs | BoolC           | (PairC z w)     = Left cs
@@ -291,6 +334,7 @@ ConvertSimplification (EitherC x y) (Left m) with (ConvertSimplification x m)
       ConvertSimplification (EitherC x y) (Left m) | cs | BoolC           | (MaybeC z)      = Left cs
       ConvertSimplification (EitherC x y) (Left m) | cs | BoolC           | BoolC           = Left cs
       ConvertSimplification (EitherC x y) (Left m) | cs | BoolC           | NatC            = Left cs
+      ConvertSimplification (EitherC x y) (Left m) | cs | BoolC           | IgnoreC         = Just cs
 
       ConvertSimplification (EitherC x y) (Left m) | cs | NatC            | CharC           = Left cs
       ConvertSimplification (EitherC x y) (Left m) | cs | NatC            | (PairC z w)     = Left cs
@@ -301,6 +345,18 @@ ConvertSimplification (EitherC x y) (Left m) with (ConvertSimplification x m)
       ConvertSimplification (EitherC x y) (Left m) | cs | NatC            | (MaybeC z)      = Left cs
       ConvertSimplification (EitherC x y) (Left m) | cs | NatC            | BoolC           = Left cs
       ConvertSimplification (EitherC x y) (Left m) | cs | NatC            | NatC            = Left cs
+      ConvertSimplification (EitherC x y) (Left m) | cs | NatC            | IgnoreC         = Just cs
+
+      ConvertSimplification (EitherC x y) (Left m) | cs | IgnoreC         | CharC           = Nothing
+      ConvertSimplification (EitherC x y) (Left m) | cs | IgnoreC         | (PairC z w)     = Nothing
+      ConvertSimplification (EitherC x y) (Left m) | cs | IgnoreC         | StringC         = Nothing
+      ConvertSimplification (EitherC x y) (Left m) | cs | IgnoreC         | UnitC           = False
+      ConvertSimplification (EitherC x y) (Left m) | cs | IgnoreC         | (EitherC _ _)   = Nothing
+      ConvertSimplification (EitherC x y) (Left m) | cs | IgnoreC         | (ListC z)       = Nothing
+      ConvertSimplification (EitherC x y) (Left m) | cs | IgnoreC         | (MaybeC z)      = Nothing
+      ConvertSimplification (EitherC x y) (Left m) | cs | IgnoreC         | BoolC           = Nothing
+      ConvertSimplification (EitherC x y) (Left m) | cs | IgnoreC         | NatC            = Nothing
+      ConvertSimplification (EitherC x y) (Left m) | cs | IgnoreC         | IgnoreC         = ()
 
 ConvertSimplification (EitherC x y) (Right m) with (ConvertSimplification y m)
   ConvertSimplification (EitherC x y) (Right m) | cs with (SimplifyCode y)
@@ -315,6 +371,7 @@ ConvertSimplification (EitherC x y) (Right m) with (ConvertSimplification y m)
       ConvertSimplification (EitherC x y) (Right m) | cs | CharC           | (MaybeC z)      = Right cs
       ConvertSimplification (EitherC x y) (Right m) | cs | CharC           | BoolC           = Right cs
       ConvertSimplification (EitherC x y) (Right m) | cs | CharC           | NatC            = Right cs
+      ConvertSimplification (EitherC x y) (Right m) | cs | CharC           | IgnoreC         = Just cs
 
       ConvertSimplification (EitherC x y) (Right m) | cs | (PairC _ _)     | CharC           = Right cs
       ConvertSimplification (EitherC x y) (Right m) | cs | (PairC _ _)     | (PairC z w)     = Right cs
@@ -325,6 +382,7 @@ ConvertSimplification (EitherC x y) (Right m) with (ConvertSimplification y m)
       ConvertSimplification (EitherC x y) (Right m) | cs | (PairC _ _)     | (MaybeC z)      = Right cs
       ConvertSimplification (EitherC x y) (Right m) | cs | (PairC _ _)     | BoolC           = Right cs
       ConvertSimplification (EitherC x y) (Right m) | cs | (PairC _ _)     | NatC            = Right cs
+      ConvertSimplification (EitherC x y) (Right m) | cs | (PairC _ _)     | IgnoreC         = Just cs
 
       ConvertSimplification (EitherC x y) (Right m) | cs | StringC         | CharC           = Right cs
       ConvertSimplification (EitherC x y) (Right m) | cs | StringC         | (PairC z w)     = Right cs
@@ -335,6 +393,7 @@ ConvertSimplification (EitherC x y) (Right m) with (ConvertSimplification y m)
       ConvertSimplification (EitherC x y) (Right m) | cs | StringC         | (MaybeC z)      = Right cs
       ConvertSimplification (EitherC x y) (Right m) | cs | StringC         | BoolC           = Right cs
       ConvertSimplification (EitherC x y) (Right m) | cs | StringC         | NatC            = Right cs
+      ConvertSimplification (EitherC x y) (Right m) | cs | StringC         | IgnoreC         = Just cs
 
       ConvertSimplification (EitherC x y) (Right m) | cs | UnitC           | CharC           = Nothing
       ConvertSimplification (EitherC x y) (Right m) | cs | UnitC           | (PairC z w)     = Nothing
@@ -345,6 +404,7 @@ ConvertSimplification (EitherC x y) (Right m) with (ConvertSimplification y m)
       ConvertSimplification (EitherC x y) (Right m) | cs | UnitC           | (MaybeC z)      = Nothing
       ConvertSimplification (EitherC x y) (Right m) | cs | UnitC           | BoolC           = Nothing
       ConvertSimplification (EitherC x y) (Right m) | cs | UnitC           | NatC            = Nothing
+      ConvertSimplification (EitherC x y) (Right m) | cs | UnitC           | IgnoreC         = True
 
       ConvertSimplification (EitherC x y) (Right m) | cs | (EitherC _ _)   | CharC           = Right cs
       ConvertSimplification (EitherC x y) (Right m) | cs | (EitherC _ _)   | (PairC z w)     = Right cs
@@ -355,6 +415,7 @@ ConvertSimplification (EitherC x y) (Right m) with (ConvertSimplification y m)
       ConvertSimplification (EitherC x y) (Right m) | cs | (EitherC _ _)   | (MaybeC z)      = Right cs
       ConvertSimplification (EitherC x y) (Right m) | cs | (EitherC _ _)   | BoolC           = Right cs
       ConvertSimplification (EitherC x y) (Right m) | cs | (EitherC _ _)   | NatC            = Right cs
+      ConvertSimplification (EitherC x y) (Right m) | cs | (EitherC _ _)   | IgnoreC         = Just cs
 
       ConvertSimplification (EitherC x y) (Right m) | cs | (ListC _)       | CharC           = Right cs
       ConvertSimplification (EitherC x y) (Right m) | cs | (ListC _)       | (PairC z w)     = Right cs
@@ -365,6 +426,7 @@ ConvertSimplification (EitherC x y) (Right m) with (ConvertSimplification y m)
       ConvertSimplification (EitherC x y) (Right m) | cs | (ListC _)       | (MaybeC z)      = Right cs
       ConvertSimplification (EitherC x y) (Right m) | cs | (ListC _)       | BoolC           = Right cs
       ConvertSimplification (EitherC x y) (Right m) | cs | (ListC _)       | NatC            = Right cs
+      ConvertSimplification (EitherC x y) (Right m) | cs | (ListC _)       | IgnoreC         = Just cs
 
       ConvertSimplification (EitherC x y) (Right m) | cs | (MaybeC _)       | CharC           = Right cs
       ConvertSimplification (EitherC x y) (Right m) | cs | (MaybeC _)       | (PairC z w)     = Right cs
@@ -375,6 +437,7 @@ ConvertSimplification (EitherC x y) (Right m) with (ConvertSimplification y m)
       ConvertSimplification (EitherC x y) (Right m) | cs | (MaybeC _)       | (MaybeC z)      = Right cs
       ConvertSimplification (EitherC x y) (Right m) | cs | (MaybeC _)       | BoolC           = Right cs
       ConvertSimplification (EitherC x y) (Right m) | cs | (MaybeC _)       | NatC            = Right cs
+      ConvertSimplification (EitherC x y) (Right m) | cs | (MaybeC _)       | IgnoreC         = Just cs
 
       ConvertSimplification (EitherC x y) (Right m) | cs | BoolC           | CharC           = Right cs
       ConvertSimplification (EitherC x y) (Right m) | cs | BoolC           | (PairC z w)     = Right cs
@@ -385,6 +448,7 @@ ConvertSimplification (EitherC x y) (Right m) with (ConvertSimplification y m)
       ConvertSimplification (EitherC x y) (Right m) | cs | BoolC           | (MaybeC z)      = Right cs
       ConvertSimplification (EitherC x y) (Right m) | cs | BoolC           | BoolC           = Right cs
       ConvertSimplification (EitherC x y) (Right m) | cs | BoolC           | NatC            = Right cs
+      ConvertSimplification (EitherC x y) (Right m) | cs | BoolC           | IgnoreC         = Just cs
 
       ConvertSimplification (EitherC x y) (Right m) | cs | NatC            | CharC           = Right cs
       ConvertSimplification (EitherC x y) (Right m) | cs | NatC            | (PairC z w)     = Right cs
@@ -395,3 +459,15 @@ ConvertSimplification (EitherC x y) (Right m) with (ConvertSimplification y m)
       ConvertSimplification (EitherC x y) (Right m) | cs | NatC            | (MaybeC z)      = Right cs
       ConvertSimplification (EitherC x y) (Right m) | cs | NatC            | BoolC           = Right cs
       ConvertSimplification (EitherC x y) (Right m) | cs | NatC            | NatC            = Right cs
+      ConvertSimplification (EitherC x y) (Right m) | cs | NatC            | IgnoreC         = Just cs
+
+      ConvertSimplification (EitherC x y) (Right m) | cs | IgnoreC         | CharC           = Nothing
+      ConvertSimplification (EitherC x y) (Right m) | cs | IgnoreC         | (PairC z w)     = Nothing
+      ConvertSimplification (EitherC x y) (Right m) | cs | IgnoreC         | StringC         = Nothing
+      ConvertSimplification (EitherC x y) (Right m) | cs | IgnoreC         | UnitC           = False
+      ConvertSimplification (EitherC x y) (Right m) | cs | IgnoreC         | (EitherC _ _)   = Nothing
+      ConvertSimplification (EitherC x y) (Right m) | cs | IgnoreC         | (ListC z)       = Nothing
+      ConvertSimplification (EitherC x y) (Right m) | cs | IgnoreC         | (MaybeC z)      = Nothing
+      ConvertSimplification (EitherC x y) (Right m) | cs | IgnoreC         | BoolC           = Nothing
+      ConvertSimplification (EitherC x y) (Right m) | cs | IgnoreC         | NatC            = Nothing
+      ConvertSimplification (EitherC x y) (Right m) | cs | IgnoreC         | IgnoreC         = ()
