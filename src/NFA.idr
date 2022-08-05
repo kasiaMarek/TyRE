@@ -193,6 +193,16 @@ parameters {auto sm : SM}
   runFrom (c::cs) tds = runFrom cs $ runMain c tds
 
   public export
+  runFromPrefix : Word -> (tds : List $ Thread sm.State) -> Maybe (Evidence, Word)
+  runFromPrefix cs []  = Nothing
+  runFromPrefix cs tds = case (findR (\td => isNothing td.naState) tds).Holds of
+                                      (Just td) => Just (td.vmState.evidence, cs)
+                                      Nothing   => 
+                                        case cs of 
+                                          [] => Nothing
+                                          c::cs => runFromPrefix cs $ runMain c tds
+
+  public export
   runFromStream : (Stream Char) -> (tds : List $ Thread sm.State) -> (Maybe Evidence, Stream Char)
   runFromStream cs      []  = (Nothing, cs)
   runFromStream (c::cs) tds = case (findR (\td => isNothing td.naState) tds).Holds of
@@ -202,6 +212,10 @@ parameters {auto sm : SM}
   public export
   runAutomaton : Word -> Maybe Evidence
   runAutomaton word = runFrom word initialise
+
+  public export
+  runAutomatonPrefix : Word -> Maybe (Evidence, Word)
+  runAutomatonPrefix word = runFromPrefix word initialise
 
   public export
   runAutomatonStream : (Stream Char) -> (Maybe Evidence, Stream Char)

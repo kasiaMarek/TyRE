@@ -1,13 +1,14 @@
 module Data.Regex
 
 import public StringRE
+import public DisjointMatches
 import API
 
 export
-getToken : TyRE a -> Stream Char -> (Maybe a, Stream Char)
+getToken : TyRE a -> Stream Char -> Maybe (a, Stream Char)
 getToken tyre stm = 
-  let (pres, stmTail) := getTokenCore (compile tyre) stm 
-  in (map (extract tyre) pres, stmTail)
+  map (\case (pres, stmTail) => (extract tyre pres, stmTail)) 
+      (getTokenCore (compile tyre) stm)
 
 export
 parse : TyRE a -> String -> Maybe a
@@ -16,3 +17,8 @@ parse tyre str = map (extract tyre) $ run (compile tyre) str
 export
 match : TyRE a -> String -> Bool
 match tyre str = isJust $ parse (ignore tyre) str
+
+export
+asDisjoinMatches : TyRE a -> String -> DisjointMatches a
+asDisjoinMatches tyre str = map (extract tyre) 
+                                (asDisjoinMatchesCore (compile tyre) str)
