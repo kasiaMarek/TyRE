@@ -93,11 +93,11 @@ filterStar (Just _, _) = True
 
 public export
 firstStar : (sm : SM) -> List (Maybe sm.State, Routine)
-firstStar sm = (Nothing, [EmitBList]) :: (filter filterStar sm.start)
+firstStar sm = (Nothing, [EmitEList]) :: (filter filterStar sm.start)
 
 public export
 startStar : (sm : SM) -> List (Maybe sm.State, Routine)
-startStar sm = mapRoutine (EmitEList::) (firstStar sm)
+startStar sm = mapRoutine (EmitBList::) (firstStar sm)
 
 public export
 nextStar : (sm : SM) -> sm.State -> Char -> List (Maybe sm.State, Routine)
