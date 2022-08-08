@@ -70,7 +70,7 @@ eq mks mjs = (Data.SortedSet.fromList mks) == (fromList mjs)
 
 min : GroupSM -> GroupSM
 min (MkGroupSM initStates statesWithNext max) =
-  let (initStates', statesWithNext') := go 500 (initStates, statesWithNext)
+  let (initStates', statesWithNext') := go (length statesWithNext) (initStates, statesWithNext)
   in MkGroupSM initStates' statesWithNext' max where
   go : Nat -> (List (Maybe Nat), List (Nat, NextStates)) -> (List (Maybe Nat), List (Nat, NextStates))
   go 0 xs = xs
