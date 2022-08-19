@@ -1,8 +1,7 @@
-import API
-import RE
+import Data.Regex
 
 TimeRE: RE
-TimeRE =
+TimeRE = Keep $
     (
         (
             (
@@ -30,7 +29,7 @@ toDig : Char -> Integer
 toDig c = cast c - cast '0'
 
 Time : TyRE (Integer, Integer)
-Time = f `Conv` (compile TimeRE) where
+Time = f `map` (compile TimeRE) where
   f : (Either (Char, Char) (Char), (Char, Char)) -> (Integer, Integer)
   f ((Left (h1,h2)), (m1,m2)) = (10 * toDig h1 + toDig h2, 10 * toDig m1 + toDig m2)
   f ((Right h2), (m1,m2)) = (20 + toDig h2, 10 * toDig m1 + toDig m2)

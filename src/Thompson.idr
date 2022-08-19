@@ -1,8 +1,11 @@
 module Thompson
 
+import public Thompson.GroupThompson
+
 import Core
 import NFA
 import Data.List
+import Data.SortedSet
 
 %default total
 
@@ -16,16 +19,6 @@ Eq BaseState where
 public export
 mapStates : (s -> s') -> List (Maybe s, Routine) -> List (Maybe s', Routine)
 mapStates f states = map (bimap (map f) id) states
-
-public export
-mapRoutine : (Routine -> Routine) -> List (s, Routine) -> List (s, Routine)
-mapRoutine f xs = map (bimap id f) xs
-
-public export
-addEndRoutine : Routine -> List (Maybe state, Routine) -> List (Maybe state, Routine)
-addEndRoutine routine [] = []
-addEndRoutine routine ((Just x, r) :: xs) = (Just x, r) :: (addEndRoutine routine xs)
-addEndRoutine routine ((Nothing, r) :: xs) = (Nothing, r ++ routine) :: (addEndRoutine routine xs)
 
 public export
 addEndTransition  : List (Maybe state', Routine) 
@@ -43,10 +36,9 @@ nextPred  : (f : Char -> Bool) -> (st: BaseState) -> (c: Char)
           -> List (Maybe BaseState, Routine)
 nextPred f StartState c = if (f c) then [(Nothing, [EmitLast])] else []
 
---- functions for Group
 public export
-groupTransform : (sm : SM) -> List (Maybe sm.State, Routine) -> List (Maybe sm.State, Routine)
-groupTransform sm states = addEndRoutine [EmitString] (mapRoutine (const []) states)
+smForPred : (f : Char -> Bool) -> SM
+smForPred f = MkSM BaseState [(Just StartState, [])] (nextPred f)
 
 --- functions for Alternation
 public export
@@ -114,15 +106,9 @@ nextStar sm st c = addEndTransition (firstStar sm) id (sm.next st c)
 --- Thompson construction
 public export
 thompson : CoreRE -> SM
-thompson (Pred f) = MkSM BaseState [(Just StartState, [])] (nextPred f)
+thompson (CharPred cond) = smForPred (satisfies cond)
 thompson (Empty) = MkSM Unit [(Nothing, [EmitUnit])] (\_,_ => [])
-thompson (Group re) =
-  let sm : SM := thompson re
-      _ := sm.isEq
-  in MkSM sm.State 
-          (mapRoutine (Record::) (groupTransform sm sm.start))
-          (\st,c => groupTransform sm (sm.next st c))
-
+thompson (Group re) = groupThompson re
 thompson (Concat re1 re2) =
   let sm1 : SM := thompson re1
       sm2 : SM := thompson re2

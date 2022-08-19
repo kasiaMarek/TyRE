@@ -56,36 +56,36 @@ monthConv (Right c) = 10 + int c
 
 ||| hour regex
 hour : TyRE Integer 
-hour = hourConv `Conv` r "([01][0-9])|(2[0-4])"
+hour = hourConv `map` r "(([01][0-9])|(2[0-4]))!"
 
 ||| minutes or seconds regex
 mOrS : TyRE Integer 
-mOrS = (\case(t, d) => 10 * int t + int d) `Conv` r ":[0-5][0-9]"
+mOrS = (\case(t, d) => 10 * int t + int d) `map` r ":([0-5][0-9])!"
 
 milis : TyRE Integer
-milis = (\case (h, t, d) => 100 * h + 10 * t + d) `Conv` match '.' *> digit <*> (digit <*> digit)
+milis = (\case (h, t, d) => 100 * h + 10 * t + d) `map` match '.' *> digit <*> (digit <*> digit)
 
 ||| year regex
 year : TyRE Integer
-year = yearConv `Conv` repTimes 4 digit
+year = yearConv `map` repTimes 4 digit
 
 ||| day regex from 01 to 20
 day : TyRE Integer
-day = dayConv `Conv` r "(0?[1-9])|([12][0-9])"
+day = dayConv `map` r "((0?[1-9])|([12][0-9]))!"
 
 ||| month regex
 month : TyRE Integer
-month = monthConv `Conv` r "(0?[1-9])|(1[0-2])"
+month = monthConv `map` r "((0?[1-9])|(1[0-2]))!"
 
 ||| Date regex pattern: DD/MM/YYYY (24.03.1999)
 export
 date : TyRE Date
 date = 
-    let thirtieth := Conv   ((withSnd 30) . monthConv)
-                            (r "30/((0?[13456789])|(1[012]))")
-        thirtyfirst := Conv ((withSnd 31) . monthConv)
-                            (r "31/((0?[13578])|(1[02]))")
-    in Conv (\case ((d, m), y) => D y m d) $ 
+    let thirtieth := map   ((withSnd 30) . monthConv)
+                            (r "(30/((0?[13456789])|(1[012])))!")
+        thirtyfirst := map ((withSnd 31) . monthConv)
+                            (r "(31/((0?[13578])|(1[02])))!")
+    in map (\case ((d, m), y) => D y m d) $ 
             ((((day <* match '/') <*> month) `or` thirtieth) `or` thirtyfirst) 
                 <*> (match '/' *> year) where
     withSnd : Integer -> (Integer -> (Integer, Integer))
@@ -96,7 +96,7 @@ date =
 |||     HH:mm:ss (22:53:34)
 export
 time : TyRE Time
-time = conv `Conv` hour <*> (mOrS <*> option mOrS) where
+time = conv `map` hour <*> (mOrS <*> option mOrS) where
     conv : (Integer, Integer, Maybe Integer) -> Time
     conv (h, m, Just s) = T h m s 0
     conv (h, m, Nothing) = T h m 0 0
@@ -111,14 +111,14 @@ time = conv `Conv` hour <*> (mOrS <*> option mOrS) where
 export
 iso : TyRE DateTime
 iso =
-    let thirtieth := ((withFst 30) . monthConv) `Conv` r "((0?[13456789])|(1[012]))\\-30"
-        thirtyfirst := ((withFst 31) . monthConv) `Conv` r "((0?[13578])|(1[02]))\\-31"
-        date := Conv (\case (y, m, d) => D y m d) $
+    let thirtieth := ((withFst 30) . monthConv) `map` r "(((0?[13456789])|(1[012]))\\-30)!"
+        thirtyfirst := ((withFst 31) . monthConv) `map` r "(((0?[13578])|(1[02]))\\-31)!"
+        date := map (\case (y, m, d) => D y m d) $
                     (year <* match '-') <*> 
                     ((((month <* match '-') <*> day) `or` thirtieth) `or` thirtyfirst)
-        time := convTime `Conv` hour <*> (mOrS <*> option (mOrS <*> option milis))
+        time := convTime `map` hour <*> (mOrS <*> option (mOrS <*> option milis))
         timeZone := match 'Z' <|> ((match '+' <|> match '-') <*> (hour <*> mOrS))
-    in conv `Conv` (date <*> option (convTimeWithZone `Conv` (match 'T' *> time <*> option timeZone))) where
+    in conv `map` (date <*> option (convTimeWithZone `map` (match 'T' *> time <*> option timeZone))) where
         withFst : Integer -> (Integer -> (Integer, Integer))
         withFst snd fst = (fst, snd)
 

@@ -1,14 +1,12 @@
+import Data.Regex
 import API
-import Core
-import Codes
-import Thompson
 
 AorB : CoreRE
-AorB = Pred (\c =>  (c == 'a' || c == 'b'))
+AorB = CharPred (Pred (\c =>  (c == 'a' || c == 'b')))
 
 --matches only word "foo"
 Ab: CoreRE
-Ab = (Group (AorB `Concat` AorB)) `Concat` AorB
+Ab = Group (AorB `Concat` AorB) `Concat` AorB
 
 printResult : String -> IO ()
 printResult str = putStrLn $ show $ run Ab str

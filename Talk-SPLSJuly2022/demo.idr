@@ -6,7 +6,7 @@ import Data.List
 
 -- room number
 roomNumber : TyRE Char
-roomNumber = r "A[0-9]"
+roomNumber = r "A[0-9]!"
 
 parseRoomNumber : String -> IO ()
 parseRoomNumber str = printLn (match roomNumber str)
@@ -24,7 +24,7 @@ parseRoomNumber str = printLn (match roomNumber str)
 
 -- tyre time
 time' : TyRE (Integer, Integer)
-time' = ?timeconv `Conv` r "(([01][0-9])|([2][0-4])):([0-5][0-9])"
+time' = ?timeconv `map` r "(([01][0-9])|([2][0-4])):([0-5][0-9])"
 
 
 
@@ -43,9 +43,9 @@ digit c = cast c - cast '0'
 
 time'' : TyRE (Integer, Integer)
 time'' = 
-  (f `Conv` (r "[01][0-9]"  `or` r "[2][0-4]"))
+  (f `map` (r "([01][0-9])!"  `or` r "([2][0-4])!"))
   <*>
-  (f `Conv` r ":([0-5][0-9])") where
+  (f `map` r ":([0-5][0-9])!") where
     f : (Char, Char) -> Integer
     f (c1, c2) = 10 * digit c1 + digit c2
 
