@@ -1,7 +1,7 @@
-import API
-import Core
-import Codes
-import Thompson
+import TyRE.API
+import TyRE.CoreRE
+import TyRE.Codes
+import TyRE.Thompson
 
 Exactly: Char -> CoreRE
 Exactly x = CharPred (Pred (\c =>  c == x))

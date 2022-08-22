@@ -6,45 +6,45 @@ brief   = "A typed regex parser"
 sourcedir = "src"
 depends = contrib
 
-modules =   API
-          , Core
-          , Codes
-          , TyRE
-          , Evidence
-          , RE
-          , StringRE
-          , Thompson
-          , Thompson.GroupThompson
-          , NFA
+modules =   TyRE.API
+          , TyRE.CoreRE
+          , TyRE.Codes
+          , TyRE.Core
+          , TyRE.Evidence
+          , TyRE.RE
+          , TyRE.StringRE
+          , TyRE.Thompson
+          , TyRE.Thompson.GroupThompson
+          , TyRE.NFA
           --- pretty printer for NFA
-          , NFA.PrettyPrint
-          , NFA.PrettyPrint.Interfaces
+          , TyRE.NFA.PrettyPrint
+          , TyRE.NFA.PrettyPrint.Interfaces
           --- verification bit
-          , Verification
-          , Verification.Thompson
-          , Verification.Routine
-          , Verification.AcceptingPath
-          , Verification.Thompson.Common
-          , Verification.Thompson.Predicate
-          , Verification.Thompson.Group
-          , Verification.Thompson.Alternation
-          , Verification.Thompson.Concatenation
-          , Verification.Thompson.Star
+          , TyRE.Verification
+          , TyRE.Verification.Thompson
+          , TyRE.Verification.Routine
+          , TyRE.Verification.AcceptingPath
+          , TyRE.Verification.Thompson.Common
+          , TyRE.Verification.Thompson.Predicate
+          , TyRE.Verification.Thompson.Group
+          , TyRE.Verification.Thompson.Alternation
+          , TyRE.Verification.Thompson.Concatenation
+          , TyRE.Verification.Thompson.Star
           --- additional more `generic` functions and structures
-          , Extra
-          , Extra.Pred
-          , Extra.Reflects
+          , TyRE.Extra
+          , TyRE.Extra.Pred
+          , TyRE.Extra.Reflects
           --- lexer copied from Idris 2 (all publicly exported)
-          , Text.Lexer
-          , Text.Lexer.Core
-          , Text.Parser
-          , Text.Parser.Core
-          , Text.Quantity
-          , Text.Token
+          , TyRE.Text.Lexer
+          , TyRE.Text.Lexer.Core
+          , TyRE.Text.Parser
+          , TyRE.Text.Parser.Core
+          , TyRE.Text.Quantity
+          , TyRE.Text.Token
           -- main export
           , Data.Regex
           -- examples
           , Data.Regex.CommonRegexes
           , Data.Regex.DateAndTime
           -- other
-          , DisjointMatches
+          , TyRE.DisjointMatches

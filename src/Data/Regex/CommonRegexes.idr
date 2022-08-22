@@ -90,10 +90,10 @@ namespace UrlRegex
             path = rep0 (match '/' *> (pack `map` rep1 (digitLetterOr "_-")))
 
             query : TyRE (Maybe (List (String, String)))
-            query = TyRE.option $ match '?' 
+            query = TyRE.Core.option $ match '?' 
                         *> rep1 ((pack `map` rep1 (digitLetterOr "_-") 
                             <* match '=') 
                         <*> (pack `map` rep1 (digitLetterOr "_-")))
 
             fragment : TyRE (Maybe String)
-            fragment = TyRE.option $ match '#' *> (pack `map` rep1 (digitLetterOr "_-"))
+            fragment = TyRE.Core.option $ match '#' *> (pack `map` rep1 (digitLetterOr "_-"))
