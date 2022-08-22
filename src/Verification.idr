@@ -121,3 +121,25 @@ public export
               -> (stm : Stream Char)
               -> (str : Word ** runAutomaton str = Builtin.fst (runAutomatonStream stm))
 eqForStream sm stm = eqForStreamFrom sm stm initialise
+
+0 eqForPrefixFrom :  (sm : SM)
+                  -> (stm : Word)
+                  -> (tds : List (Thread sm.State))
+                  -> (str : Word ** runFrom str tds = map Builtin.fst (runFromPrefix stm tds))
+eqForPrefixFrom sm stm []   = ([] ** Refl)
+eqForPrefixFrom sm cs (t::tds) with (findR (\td => isNothing td.naState) (t::tds)) proof p
+  eqForPrefixFrom sm cs (t::tds) | ((Just x) `Because` _) = ([] ** rewrite p in Refl)
+  eqForPrefixFrom sm [] (t::tds) | (Nothing `Because` _) = ([] ** rewrite p in Refl)
+  eqForPrefixFrom sm (c :: cs) (t::tds) | (Nothing `Because` _) =
+    let nextTds : List (Thread sm.State)
+        nextTds = runMain c (t::tds)
+        rest : (str : Word ** runFrom str nextTds = map Builtin.fst (runFromPrefix cs nextTds))
+        rest = eqForPrefixFrom sm cs nextTds
+        (wordTail ** eqRest) := rest
+    in (c::wordTail ** eqRest)
+
+public export
+0 eqForPrefix :  (sm : SM)
+              -> (stm : Word)
+              -> (str : Word ** runAutomaton str = map Builtin.fst (runAutomatonPrefix stm))
+eqForPrefix sm stm = eqForPrefixFrom sm stm initialise

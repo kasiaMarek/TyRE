@@ -85,15 +85,15 @@ thompsonRoutinePrf (Alt re1 re2) acc mcvm =
 thompsonRoutinePrf (Star re) acc (mc, vm) = 
   let (StarPWR accs routineEq) := thompsonRoutinePrfStar re acc
       (repEv ** (repEvEq, repEnc)) := evidenceForRepetition 
-                                        (executeRoutineSteps [Regular EmitEList] (mc, vm)) 
+                                        (executeRoutineSteps [Regular EmitBList] (mc, vm)) 
                                         accs
-  in ([< EList] ++ repEv :< BList **
+  in ([< BList] ++ repEv :< EList **
         (rewrite routineEq in (Calc $ 
-          |~ (snd (executeRoutineSteps ((accs >>= (\ac => extractRoutine {sm = thompson re} ac.snd)) ++ [Regular EmitBList]) (mc, MkVMState vm.recording vm.memory (vm .evidence :< EList)))) .evidence
-          ~~ (snd (executeRoutineSteps [Regular EmitBList] (executeRoutineSteps (accs >>= (\ac => extractRoutine {sm = thompson re} ac.snd)) (mc, MkVMState vm.recording vm.memory (vm .evidence :< EList))))).evidence ... cong (\x => (snd x).evidence) (routineComposition _ _ _)
-          ~~ (snd (executeRoutineSteps (accs >>= (\ac => extractRoutine {sm = thompson re} ac.snd)) (mc, MkVMState vm.recording vm.memory (vm .evidence :< EList)))).evidence :< BList ... starRightRoutineEquality _
-          ~~ (vm .evidence :< EList) ++ repEv :< BList ... cong (:< BList) repEvEq
-          ~~ (vm .evidence ++ ([<EList] ++ repEv)) :< BList ... cong (:< BList) (sym (appendAssociative _ _ _))
+          |~ (snd (executeRoutineSteps ((accs >>= (\ac => extractRoutine {sm = thompson re} ac.snd)) ++ [Regular EmitEList]) (mc, MkVMState vm.recording vm.memory (vm .evidence :< BList)))) .evidence
+          ~~ (snd (executeRoutineSteps [Regular EmitEList] (executeRoutineSteps (accs >>= (\ac => extractRoutine {sm = thompson re} ac.snd)) (mc, MkVMState vm.recording vm.memory (vm .evidence :< BList))))).evidence ... cong (\x => (snd x).evidence) (routineComposition _ _ _)
+          ~~ (snd (executeRoutineSteps (accs >>= (\ac => extractRoutine {sm = thompson re} ac.snd)) (mc, MkVMState vm.recording vm.memory (vm .evidence :< BList)))).evidence :< EList ... starRightRoutineEquality _
+          ~~ (vm .evidence :< BList) ++ repEv :< EList ... cong (:< EList) repEvEq
+          ~~ (vm .evidence ++ ([<BList] ++ repEv)) :< EList ... cong (:< EList) (sym (appendAssociative _ _ _))
         )
         , ARepetiton [<] repEnc)) where
     evidenceForRepetition : (mcvm : (Maybe Char, VMState))

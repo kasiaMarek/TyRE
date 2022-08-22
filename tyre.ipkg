@@ -46,3 +46,5 @@ modules =   API
           -- examples
           , Data.Regex.CommonRegexes
           , Data.Regex.DateAndTime
+          -- other
+          , DisjointMatches

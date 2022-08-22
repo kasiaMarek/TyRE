@@ -34,5 +34,11 @@ tyre = MkTestPool "tyre" [] Nothing
               "tyre/time-full"
             ]
 
+disjointMatches : TestPool
+disjointMatches = MkTestPool "disjointmatches" [] Nothing
+                    [
+                      "disjointmatches/ex01"
+                    ]
+
 main : IO ()
-main = runner [ nfa, corere, stringTests, tyre]
+main = runner [ nfa, corere, stringTests, tyre, disjointMatches]

@@ -41,9 +41,9 @@ Evidence = SnocList EvidenceMarker
 public export
 data Encodes : Evidence -> SnocList (Either () Code) -> Type where
   Lin : [<] `Encodes` [<]
-  AnEndMark
+  AnBegMark
     : (prf : evs `Encodes` cs)
-    -> (evs :< EList) `Encodes` cs :< Left ()
+    -> (evs :< BList) `Encodes` cs :< Left ()
   AChar
     : (prf : evs `Encodes` cs)
     -> (c : Char)
@@ -76,8 +76,8 @@ data Encodes : Evidence -> SnocList (Either () Code) -> Type where
   ARepetiton
     : (prf : evs `Encodes` cs)
     -> (prf1: evss `Encodes` (replicate n (Right c)))
-    -> {auto ford: ev' = evs :< EList ++ evss}
-    -> (ev' :< BList) `Encodes` (cs :< (Right (ListC c)))
+    -> {auto ford: ev' = evs :< BList ++ evss}
+    -> (ev' :< EList) `Encodes` (cs :< (Right (ListC c)))
 
 
 record Result (ev : Evidence) (c : Code) (cs : SnocList (Either () Code)) where
@@ -112,7 +112,7 @@ recontextualise prf1 (ARight {ford, ev2, evs} prf prf2 c1) =
 
 recontextualise prf1 (AnEmpty prf) = AnEmpty (recontextualise prf1 prf)
 
-recontextualise prf1 (AnEndMark prf) = AnEndMark (recontextualise prf1 prf)
+recontextualise prf1 (AnBegMark prf) = AnBegMark (recontextualise prf1 prf)
 
 recontextualise prf1 (ARepetiton {ford} prf prf') =
   ARepetiton (recontextualise prf1 prf) prf'
@@ -121,7 +121,7 @@ recontextualise prf1 (ARepetiton {ford} prf prf') =
 total
 helper : (0 prf : [<] `Encodes` (cs :< (Left ()) ++ (replicate n (Right c))))
       -> Void
-helper (AnEndMark prf) impossible
+helper (AnBegMark prf) impossible
 helper (AChar prf x) impossible
 helper (APair prf prf1 prf2) impossible
 helper (AGroup prf str) impossible
@@ -146,7 +146,7 @@ extractRepRecAux
   : (ev : Evidence)
   -> (0 prf : ev `Encodes` (cs :< (Left ()) ++ (replicate n (Right c))))
   -> (0 prf1 : ev = ev' :< e)
-  -> (0 prf2 : e = EList -> Void)
+  -> (0 prf2 : e = BList -> Void)
   -> (0 fuel : Nat) -> (0 enough : length ev `LTE` fuel)
   -> Result ev (ListC c) cs
 
@@ -168,7 +168,7 @@ extractRepRecAux x@(ev' :< e) {n} prf Refl prf2 (S fuel) (LTESucc enough) =
   let 0 eqPrf : (k ** n = (S k))
       eqPrf = case n of
                     0 => case prf of
-                          (AnEndMark x) => absurd (prf2 Refl)
+                          (AnBegMark x) => absurd (prf2 Refl)
                     (S k) => (k ** Refl)
   in extractRepRecSucc x n (snd eqPrf) prf (S fuel) (LTESucc enough) ItIsSucc
 
@@ -179,17 +179,17 @@ extractRepRec sx'@(sx :< (GroupMark sy )) prf fuel enough  = extractRepRecAux sx
 extractRepRec sx'@(sx :< LeftBranchMark ) prf fuel enough  = extractRepRecAux sx' prf Refl (\case _ impossible) fuel enough
 extractRepRec sx'@(sx :< RightBranchMark) prf fuel enough  = extractRepRecAux sx' prf Refl (\case _ impossible) fuel enough
 extractRepRec sx'@(sx :< UnitMark       ) prf fuel enough  = extractRepRecAux sx' prf Refl (\case _ impossible) fuel enough
-extractRepRec sx'@(sx :< BList          ) prf fuel enough  = extractRepRecAux sx' prf Refl (\case _ impossible) fuel enough
-extractRepRec sx'@(sx :< EList          ) {n, c} prf fuel enough =
+extractRepRec sx'@(sx :< EList          ) prf fuel enough  = extractRepRecAux sx' prf Refl (\case _ impossible) fuel enough
+extractRepRec sx'@(sx :< BList          ) {n, c} prf fuel enough =
   let 0 eqPrf : (Extra.replicate n (Right c) = [<])
       eqPrf = case n of
                 0 => Refl
                 (S k) => case prf of {_ impossible}
   in MkResult [] sx
               (case (replace
-                      {p=(\r => (sx :< EList) `Encodes` (cs :< (Left ()) ++ r))}
+                      {p=(\r => (sx :< BList) `Encodes` (cs :< (Left ()) ++ r))}
                         eqPrf prf) of
-                      (AnEndMark prf') => prf')
+                      (AnBegMark prf') => prf')
               (reflexive {rel = LTE})
 
 extractRepRecSucc ev {c} (S k) Refl prf (S fuel) enough ItIsSucc =
@@ -258,10 +258,10 @@ extractResult (e@(evs ++ ev) :< RightBranchMark)
 extractResult (evs :< UnitMark) (AnEmpty prf) (S fuel) (LTESucc enough) =
   MkResult () evs prf (reflexive {rel = LTE})
 
-extractResult (evs :< BList)
+extractResult (evs :< EList)
               (ARepetiton {ford, n} prf prf1) (S fuel) (LTESucc enough) =
   let res = extractRepRec evs
-        (rewrite ford in (recontextualise (AnEndMark prf) prf1)) fuel enough
+        (rewrite ford in (recontextualise (AnBegMark prf) prf1)) fuel enough
   in MkResult (reverse res.result) res.rest res.restValid
   $ CalcWith {leq = LTE} $
     |~ 1 + length res.rest
