@@ -19,6 +19,10 @@ match : TyRE a -> String -> Bool
 match tyre str = isJust $ parse (ignore tyre) str
 
 export
-asDisjoinMatches : TyRE a -> String -> DisjointMatches a
-asDisjoinMatches tyre str = map (extract tyre) 
+asDisjointMatches : TyRE a -> String -> DisjointMatches a
+asDisjointMatches tyre str = map (extract tyre) 
                                 (asDisjoinMatchesCore (compile tyre) str)
+
+export
+substitute : TyRE a -> (a -> String) -> String -> String
+substitute tyre f str = toString f (asDisjointMatches tyre str)
