@@ -1,8 +1,8 @@
 module Data.Regex
 
-import public StringRE
-import public DisjointMatches
-import API
+import public TyRE.StringRE
+import public TyRE.DisjointMatches
+import TyRE.API
 
 export
 getToken : TyRE a -> Stream Char -> Maybe (a, Stream Char)

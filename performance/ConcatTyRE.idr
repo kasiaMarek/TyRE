@@ -1,8 +1,9 @@
-import API
-import Core
-import Thompson
-import Evidence
 import Data.Maybe
+
+import TyRE.API
+import TyRE.CoreRE
+import TyRE.Thompson
+import TyRE.Evidence
 
 A : CoreRE
 A = CharPred (Pred (\c =>  c == 'a'))

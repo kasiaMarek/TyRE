@@ -1,11 +1,11 @@
 import Data.Regex
-import API
+import TyRE.API
 
 AorB : CoreRE
 AorB = CharPred (Pred (\c =>  (c == 'a' || c == 'b')))
 
 --matches only word "foo"
-Ab: CoreRE
+Ab : CoreRE
 Ab = Group (AorB `Concat` AorB) `Concat` AorB
 
 printResult : String -> IO ()
