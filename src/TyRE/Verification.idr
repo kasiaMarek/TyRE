@@ -4,6 +4,7 @@ import Data.List.Elem
 import Data.List
 import Data.Stream
 import Data.Maybe
+import Data.List.Quantifiers
 
 import TyRE.Extra
 import TyRE.Extra.Pred
@@ -13,18 +14,22 @@ import TyRE.Evidence
 import TyRE.Verification.AcceptingPath
 
 recordPathHelper  : {auto sm: SM} -> (c: Char) -> (td : Thread sm.State)
-                  -> (td': Thread sm.State ** (td' `Elem` runMapping c td, (acc: AcceptingFrom (smToNFA sm) td'.naState cs ** extractEvidenceFrom td' acc = ev)))
-                  -> (acc: AcceptingFrom (smToNFA sm) td.naState (c::cs) ** extractEvidenceFrom td acc = ev)
+                  ->  (td': Thread sm.State 
+                      ** (td' `Elem` runMapping c td,
+                            (acc: AcceptingFrom (smToNFA sm) td'.naState cs
+                            ** extractEvidenceFrom td' acc = ev)))
+                  ->  (acc: AcceptingFrom (smToNFA sm) td.naState (c::cs)
+                      ** extractEvidenceFrom td acc = ev)
 
 recordPathHelper c (MkThread (Just st) vm) (td' ** (isElemOfF, (accepts ** isEq))) =
-  let (x1 ** (x2 ** (isElem ** (eqToExtractFst, ftd', satQ)))) = mapSpec
-                                              (runFunction c (MkThread (Just st) vm))
-                                              (\e => (td'.naState = fst e))
-                                              (\t => (td'.naState = t.naState))
-                                              (sm .next st c)
-                                              (\x1 => \x2 => \p => p)
-                                              td'
-                                              (isElemOfF, Refl)
+  let (x1 ** (x2 ** (isElem ** (eqToExtractFst, ftd', satQ)))) =
+        mapSpec (runFunction c (MkThread (Just st) vm))
+                (\e => (td'.naState = fst e))
+                (\t => (td'.naState = t.naState))
+                (sm .next st c)
+                (\x1 => \x2 => \p => p)
+                td'
+                (isElemOfF, Refl)
       isElem' : td'.naState `Elem` (liftNext (smToNFA sm).next (Just st) c)
       isElem' = (rewrite satQ in isElem)
 
@@ -35,7 +40,8 @@ recordPathHelper c (MkThread (Just st) vm) (td' ** (isElemOfF, (accepts ** isEq)
       prf = rewrite satQ in rewrite eqToExtractFst in ftd'
   in (acc ** rewrite prf in isEq)
 
-recordPathHelper c td@(MkThread Nothing vm) (td' ** (isElemOfF, (accepts ** isEq))) = absurd isElemOfF
+recordPathHelper c td@(MkThread Nothing vm) (td' ** (isElemOfF, (accepts ** isEq)))
+  = absurd isElemOfF
 
 isElemDistinct : {auto sm : SM}
               -> (tds : List (Thread sm.State)) 
@@ -44,7 +50,8 @@ isElemDistinct : {auto sm : SM}
               -> (td `Elem` tds)
 
 isElemDistinct [] td prf = absurd prf
-isElemDistinct {sm} (t :: tds) td prf with (sm.isEq) proof p | (find (\e => e.naState == t.naState) tds)
+isElemDistinct {sm} (t :: tds) td prf with (sm.isEq) proof p
+               | (find (\e => e.naState == t.naState) tds)
   isElemDistinct {sm} (t :: tds) t Here | _ | Nothing = Here
   isElemDistinct {sm} (t :: tds) td (There pos) | eq | Nothing =
     There (isElemDistinct tds td (rewrite p in pos))
@@ -53,42 +60,51 @@ isElemDistinct {sm} (t :: tds) td prf with (sm.isEq) proof p | (find (\e => e.na
 
 0 recordPath : {auto sm : SM} -> (tds : List (Thread sm.State)) -> (str : Word)
           -> (prf : runFrom str tds = Just ev)
-          -> (td : Thread sm.State ** (td `Elem` tds, (acc: AcceptingFrom (smToNFA sm) td.naState  str ** extractEvidenceFrom td acc = ev)))
+          -> (td : Thread sm.State 
+                ** (td `Elem` tds, (acc : AcceptingFrom (smToNFA sm) td.naState str
+                                        ** extractEvidenceFrom td acc = ev)))
 
 recordPath tds [] prf with (findR (\td => isNothing td.naState) tds)
   recordPath tds [] prf | (Nothing `Because` (Otherwise f)) = absurd prf
-  recordPath tds [] prf | ((Just (MkThread Nothing vm)) `Because` (Indeed (pos, Refl))) = ((MkThread Nothing vm) ** (pos, (Accept {nfa = (smToNFA sm)} ** eqForJust prf)))
-  recordPath tds [] prf | ((Just (MkThread (Just st) vm)) `Because` (Indeed (pos, isEq))) = absurd isEq
+  recordPath tds [] prf
+             | ((Just (MkThread Nothing vm)) `Because` (Indeed (pos, Refl)))
+    = ((MkThread Nothing vm) ** (pos, (Accept {nfa = (smToNFA sm)} ** eqForJust prf)))
+  recordPath tds [] prf
+             | ((Just (MkThread (Just st) vm)) `Because` (Indeed (pos, isEq)))
+    = absurd isEq
 
 recordPath {sm} tds (c :: cs) prf =
   let (td' ** (pos', (acc' ** isEq'))) = recordPath _ cs prf
       (x ** (isElem, satQ , _)) =
         bindSpec
           (runMapping c)
-          (\e => (acc: AcceptingFrom (smToNFA sm) e.naState cs ** extractEvidenceFrom e acc = ev))
-          (\e => (acc: AcceptingFrom (smToNFA sm) e.naState (c :: cs) ** extractEvidenceFrom e acc = ev))
+          (\e => (acc: AcceptingFrom (smToNFA sm) e.naState cs
+            ** extractEvidenceFrom e acc = ev))
+          (\e => (acc: AcceptingFrom (smToNFA sm) e.naState (c :: cs)
+            ** extractEvidenceFrom e acc = ev))
           (recordPathHelper c)
           tds
           (td' ** (isElemDistinct _ _ pos', (acc' ** isEq')))
   in (x ** (isElem, satQ))
 
 public export
-0 extractEvidenceEquality : (sm : SM)
+0 extractEvidenceEquality :  (sm  : SM)
                           -> (str : Word)
-                          -> (ev : Evidence)
+                          -> (ev  : Evidence)
                           -> (prf : runAutomaton str = Just ev)
-                          -> (acc: Accepting (smToNFA sm) str ** extractEvidence acc = ev)
+                          -> (acc : Accepting (smToNFA sm) str 
+                                  ** extractEvidence acc = ev)
 
 extractEvidenceEquality sm str ev prf =
   let (td ** (pos, (acc ** eq))) = recordPath (NFA.initialise) str prf
-      (x1 ** (x2 ** (isElem ** (eqToExtractFst, ftd', satQ)))) = mapSpec
-                                                                  (initFuction)
-                                                                  (\e => (td.naState = fst e))
-                                                                  (\t => (td.naState = t.naState))
-                                                                  (sm .start)
-                                                                  (\x1 => \x2 => \p => p)
-                                                                  td
-                                                                  (pos, Refl)
+      (x1 ** (x2 ** (isElem ** (eqToExtractFst, ftd', satQ))))
+        = mapSpec (initFuction)
+                  (\e => (td.naState = fst e))
+                  (\t => (td.naState = t.naState))
+                  (sm .start)
+                  (\x1 => \x2 => \p => p)
+                  td
+                  (pos, Refl)
       acc' : AcceptingFrom (smToNFA sm) x1 str
       acc' = replace {p=(\s => AcceptingFrom (smToNFA sm) s str)} satQ acc
 
@@ -98,20 +114,25 @@ extractEvidenceEquality sm str ev prf =
       prf : (extractEvidenceInitialStep td.naState isElem' = td)
       prf = rewrite satQ in rewrite eqToExtractFst in ftd'
 
-  in (Start {nfa = (smToNFA sm)} td.naState (rewrite satQ in isElem) acc ** (rewrite prf in eq))
+  in  (Start {nfa = (smToNFA sm)} td.naState (rewrite satQ in isElem) acc
+      ** (rewrite prf in eq))
 
 
 0 eqForStreamFrom :  (sm : SM)
                   -> (stm : Stream Char)
                   -> (tds : List (Thread sm.State))
-                  -> (str : Word ** runFrom str tds = Builtin.fst (runFromStream stm tds))
+                  -> (str : Word ** runFrom str tds
+                                  = map Builtin.fst (runFromStream stm tds))
 eqForStreamFrom sm stm []   = ([] ** Refl)
-eqForStreamFrom sm (c::cs) (t::tds) with (findR (\td => isNothing td.naState) (t::tds)) proof p
-  eqForStreamFrom sm (c::cs) (t::tds) | ((Just x) `Because` _) = ([] ** rewrite p in Refl)
+eqForStreamFrom sm (c::cs) (t::tds) 
+                with (findR (\td => isNothing td.naState) (t::tds)) proof p
+  eqForStreamFrom sm (c::cs) (t::tds) | ((Just x) `Because` _) 
+    = ([] ** rewrite p in Refl)
   eqForStreamFrom sm (c::cs) (t::tds) | (Nothing `Because` _) =
     let nextTds : List (Thread sm.State)
         nextTds = runMain c (t::tds)
-        rest : (str : Word ** runFrom str nextTds = Builtin.fst (runFromStream cs nextTds))
+        rest : (str : Word ** runFrom str nextTds
+                            = map Builtin.fst (runFromStream cs nextTds))
         rest = eqForStreamFrom sm cs nextTds
         (wordTail ** eqRest) := rest
     in (c::wordTail ** eqRest)
@@ -119,21 +140,25 @@ eqForStreamFrom sm (c::cs) (t::tds) with (findR (\td => isNothing td.naState) (t
 public export
 0 eqForStream :  (sm : SM)
               -> (stm : Stream Char)
-              -> (str : Word ** runAutomaton str = Builtin.fst (runAutomatonStream stm))
+              -> (str : Word ** runAutomaton str 
+                              = map Builtin.fst (runAutomatonStream stm))
 eqForStream sm stm = eqForStreamFrom sm stm initialise
 
 0 eqForPrefixFrom :  (sm : SM)
                   -> (stm : Word)
                   -> (tds : List (Thread sm.State))
-                  -> (str : Word ** runFrom str tds = map Builtin.fst (runFromPrefix stm tds))
+                  -> (str : Word ** runFrom str tds
+                                  = map Builtin.fst (runFromPrefix stm tds))
 eqForPrefixFrom sm stm []   = ([] ** Refl)
-eqForPrefixFrom sm cs (t::tds) with (findR (\td => isNothing td.naState) (t::tds)) proof p
+eqForPrefixFrom sm cs (t::tds) with
+    (findR (\td => isNothing td.naState) (t::tds)) proof p
   eqForPrefixFrom sm cs (t::tds) | ((Just x) `Because` _) = ([] ** rewrite p in Refl)
   eqForPrefixFrom sm [] (t::tds) | (Nothing `Because` _) = ([] ** rewrite p in Refl)
   eqForPrefixFrom sm (c :: cs) (t::tds) | (Nothing `Because` _) =
     let nextTds : List (Thread sm.State)
         nextTds = runMain c (t::tds)
-        rest : (str : Word ** runFrom str nextTds = map Builtin.fst (runFromPrefix cs nextTds))
+        rest : (str : Word ** runFrom str nextTds 
+                            = map Builtin.fst (runFromPrefix cs nextTds))
         rest = eqForPrefixFrom sm cs nextTds
         (wordTail ** eqRest) := rest
     in (c::wordTail ** eqRest)
@@ -141,5 +166,22 @@ eqForPrefixFrom sm cs (t::tds) with (findR (\td => isNothing td.naState) (t::tds
 public export
 0 eqForPrefix :  (sm : SM)
               -> (stm : Word)
-              -> (str : Word ** runAutomaton str = map Builtin.fst (runAutomatonPrefix stm))
+              -> (str : Word ** runAutomaton str 
+                              = map Builtin.fst (runAutomatonPrefix stm))
 eqForPrefix sm stm = eqForPrefixFrom sm stm initialise
+
+public export
+0 eqForPrefixGreedy : (sm : SM)
+                    -> (cs : Word)
+                    -> (ev : Evidence)
+                    -> (prf : runAutomatonPrefixGreedy cs = Just (ev, tail))
+                    -> (word : Word ** (acc : Accepting (smToNFA sm) word ** extractEvidence acc = ev))
+eqForPrefixGreedy sm str ev prf = ?eqForPrefixGreedy_rhs0
+
+public export
+0 eqForStreamGreedy : (sm : SM)
+                    -> (stm : Stream Char)
+                    -> (ev : Evidence)
+                    -> (prf : runAutomatonStreamGreedy stm = Just (ev, tail))
+                    -> (word : Word ** (acc : Accepting (smToNFA sm) word ** extractEvidence acc = ev))
+eqForStreamGreedy sm stm ev prf = ?eqForStreamGreedy_rhs

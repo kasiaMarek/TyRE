@@ -5,10 +5,10 @@ import public TyRE.DisjointMatches
 import TyRE.API
 
 export
-getToken : TyRE a -> Stream Char -> Maybe (a, Stream Char)
-getToken tyre stm = 
+getToken : TyRE a -> Stream Char -> (greedy : Bool) -> Maybe (a, Stream Char)
+getToken tyre stm greedy = 
   map (\case (pres, stmTail) => (extract tyre pres, stmTail)) 
-      (getTokenCore (compile tyre) stm)
+      (getTokenCore (compile tyre) stm greedy)
 
 export
 parse : TyRE a -> String -> Maybe a
@@ -19,10 +19,11 @@ match : TyRE a -> String -> Bool
 match tyre str = isJust $ parse (ignore tyre) str
 
 export
-asDisjointMatches : TyRE a -> String -> DisjointMatches a
-asDisjointMatches tyre str = map (extract tyre) 
-                                (asDisjoinMatchesCore (compile tyre) str)
+asDisjointMatches : TyRE a -> String -> (greedy : Bool) -> DisjointMatches a
+asDisjointMatches tyre str greedy
+  = map (extract tyre) 
+        (asDisjoinMatchesCore (compile tyre) str greedy)
 
 export
 substitute : TyRE a -> (a -> String) -> String -> String
-substitute tyre f str = toString f (asDisjointMatches tyre str)
+substitute tyre f str = toString f (asDisjointMatches tyre str True)

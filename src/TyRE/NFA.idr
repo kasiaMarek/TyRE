@@ -203,11 +203,37 @@ parameters {auto sm : SM}
                                           c::cs => runFromPrefix cs $ runMain c tds
 
   public export
-  runFromStream : (Stream Char) -> (tds : List $ Thread sm.State) -> (Maybe Evidence, Stream Char)
-  runFromStream cs      []  = (Nothing, cs)
+  runFromPrefixGreedy : Word -> (tds : List $ Thread sm.State) -> Maybe (Evidence, Word) -> Maybe (Evidence, Word)
+  runFromPrefixGreedy cs []  res = res
+  runFromPrefixGreedy cs tds res = 
+    case (findR (\td => isNothing td.naState) tds).Holds of
+          (Just td) => 
+            case cs of 
+              [] => Just (td.vmState.evidence, cs)
+              c::cs => runFromPrefixGreedy  cs (runMain c tds) 
+                                            (Just (td.vmState.evidence, c::cs))
+          Nothing   => 
+            case cs of 
+              [] => res
+              c::cs => runFromPrefixGreedy cs (runMain c tds) res
+
+  public export
+  runFromStream : (Stream Char) -> (tds : List $ Thread sm.State) -> Maybe (Evidence, Stream Char)
+  runFromStream cs      []  = Nothing
   runFromStream (c::cs) tds = case (findR (\td => isNothing td.naState) tds).Holds of
-                                      (Just td) => (Just td.vmState.evidence, c::cs)
+                                      (Just td) => Just (td.vmState.evidence, c::cs)
                                       Nothing   => runFromStream cs $ runMain c tds
+
+  public export
+  runFromStreamGreedy : (Stream Char)
+                      -> (tds : List $ Thread sm.State)
+                      -> Maybe (Evidence, Stream Char)
+                      -> Maybe (Evidence, Stream Char)
+  runFromStreamGreedy cs      []  res = res
+  runFromStreamGreedy (c::cs) tds res =
+    case (findR (\td => isNothing td.naState) tds).Holds of
+      (Just td) => runFromStreamGreedy cs (runMain c tds) (Just (td.vmState.evidence, c::cs))
+      Nothing   => runFromStreamGreedy cs (runMain c tds) res
 
   public export
   runAutomaton : Word -> Maybe Evidence
@@ -218,8 +244,16 @@ parameters {auto sm : SM}
   runAutomatonPrefix word = runFromPrefix word initialise
 
   public export
-  runAutomatonStream : (Stream Char) -> (Maybe Evidence, Stream Char)
+  runAutomatonPrefixGreedy : Word -> Maybe (Evidence, Word)
+  runAutomatonPrefixGreedy word = runFromPrefixGreedy word initialise Nothing
+
+  public export
+  runAutomatonStream : (Stream Char) -> Maybe (Evidence, Stream Char)
   runAutomatonStream stream = runFromStream stream initialise
+
+  public export
+  runAutomatonStreamGreedy : (Stream Char) -> Maybe (Evidence, Stream Char)
+  runAutomatonStreamGreedy stream = runFromStreamGreedy stream initialise Nothing
 
 export
 run : (nfa : NA) -> Word -> List (Maybe nfa.State) -> Bool
