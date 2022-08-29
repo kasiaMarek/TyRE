@@ -21,21 +21,6 @@ data Accepting : (nfa : NA) -> (word : Word) -> Type where
   Start : {auto nfa : NA} -> (s : Maybe nfa.State) -> (prf : s `Elem` nfa.start) -> AcceptingFrom nfa s w
        -> Accepting nfa w
 
-public export
-data Path : (nfa : NA) -> (s : Maybe nfa.State) -> (t : Maybe nfa.State) -> (word : Word) -> Type where
-  Here : {auto nfa : NA} -> (s : Maybe nfa.State) -> Path nfa s s []
-  Concat : {auto nfa : NA} -> {auto r : Maybe nfa.State}
-        -> (s : nfa.State) -> (c : Char) -> (t : Maybe nfa.State)
-        -> (prf : t `Elem` (nfa.next s c))
-        -> Path nfa r (Just s) w
-        -> Path nfa r t (w ++ [c])
-
-public export
-data PathFromStart : (nfa : NA) -> (t : Maybe nfa.State) -> (word : Word) -> Type where
-  Start' : {auto nfa : NA} -> {auto t : Maybe nfa.State} 
-        -> (s : Maybe nfa.State) -> (prf : s `Elem` nfa.start)
-        -> Path nfa s t word -> PathFromStart nfa t word
-
 parameters {auto sm : SM}
 
   public export
@@ -71,16 +56,3 @@ parameters {auto sm : SM}
     let td : Thread sm.State
         td = extractEvidenceInitialStep s prf
     in extractEvidenceFrom td acc
-
-export
-(++) : (Path nfa s t wordNeck) -> (AcceptingFrom nfa t wordTail)
-    -> AcceptingFrom nfa s (wordNeck ++ wordTail)
-(++) (Here _) acc = acc
-(++) (Concat s c t prf path) acc = replace  {p = (AcceptingFrom nfa _)}
-                                            (appendAssociative _ _ _)
-                                            (path ++ Step s c t prf acc)
-
-export
-(+) : (PathFromStart nfa s wordNeck) -> (AcceptingFrom nfa s wordTail)
-    -> Accepting nfa (wordNeck ++ wordTail)
-(+) (Start' s prf path) acc = Start s prf (path ++ acc)

@@ -170,18 +170,113 @@ public export
                               = map Builtin.fst (runAutomatonPrefix stm))
 eqForPrefix sm stm = eqForPrefixFrom sm stm initialise
 
-public export
-0 eqForPrefixGreedy : (sm : SM)
-                    -> (cs : Word)
-                    -> (ev : Evidence)
-                    -> (prf : runAutomatonPrefixGreedy cs = Just (ev, tail))
-                    -> (word : Word ** (acc : Accepting (smToNFA sm) word ** extractEvidence acc = ev))
-eqForPrefixGreedy sm str ev prf = ?eqForPrefixGreedy_rhs0
 
-public export
-0 eqForStreamGreedy : (sm : SM)
-                    -> (stm : Stream Char)
-                    -> (ev : Evidence)
-                    -> (prf : runAutomatonStreamGreedy stm = Just (ev, tail))
-                    -> (word : Word ** (acc : Accepting (smToNFA sm) word ** extractEvidence acc = ev))
-eqForStreamGreedy sm stm ev prf = ?eqForStreamGreedy_rhs
+record Result (sm : SM) (T : Type) where
+  constructor MkResult
+  res : (Evidence, T)
+  tds : List (Thread sm.State)
+  word : Word
+  prf : runFrom word tds = (Just $ fst res)
+
+0 eqForPrefixFromGreedy
+  :  (sm : SM)
+  -> (cs : Word)
+  -> (mres : Maybe (Result sm Word))
+  -> (tds : List (Thread sm.State))
+  -> (str : Word **
+      Either  (runFrom str tds 
+                = map Builtin.fst (runFromPrefixGreedy cs tds (map (.res) mres)))
+              (isJust : IsJust mres **
+                  runFrom str (fromJust mres).tds
+                    = map Builtin.fst (runFromPrefixGreedy cs tds (map (.res) mres))))
+
+eqForPrefixFromGreedy sm cs Nothing [] = ([] ** Left Refl)
+
+eqForPrefixFromGreedy sm cs (Just (MkResult res tds word prf)) []
+  = (word ** Right (ItIsJust ** prf))
+
+eqForPrefixFromGreedy sm [] Nothing (t :: tds)
+                      with (findR (\td => isNothing td.naState) (t::tds)) proof p
+  eqForPrefixFromGreedy sm [] Nothing (t :: tds) | ((Just td) `Because` _)
+    = ([] ** Left (rewrite p in Refl))
+  eqForPrefixFromGreedy sm [] Nothing (t :: tds) | (Nothing `Because` _)
+    = ([] ** Left (rewrite p in Refl))
+
+eqForPrefixFromGreedy sm [] (Just y) (t :: tds)
+                      with (findR (\td => isNothing td.naState) (t::tds)) proof p
+    eqForPrefixFromGreedy sm [] (Just y) (t :: tds) | ((Just td) `Because` _)
+      = ([] ** Left (rewrite p in Refl))
+    eqForPrefixFromGreedy sm [] (Just (MkResult res xs word prf)) (t :: tds)
+      | (Nothing `Because` _)
+      = (word ** Right (ItIsJust ** prf))
+
+eqForPrefixFromGreedy sm (c :: cs) res (t :: tds)
+                      with (findR (\td => isNothing td.naState) (t::tds)) proof p
+    eqForPrefixFromGreedy sm (c :: cs) res (t :: tds) | ((Just td) `Because` _)
+      = case eqForPrefixFromGreedy sm cs 
+                (Just $ MkResult  (td.vmState.evidence, c::cs)
+                                  (t :: tds)
+                                  []
+                                  (rewrite p in Refl))
+                (runMain c (t::tds)) of
+          (word ** (Left prf)) => (c::word ** (Left prf))
+          (word ** (Right (_ ** prf))) => (word ** Left prf)
+    eqForPrefixFromGreedy sm (c :: cs) res (t :: tds) | (Nothing `Because` _)
+      = case eqForPrefixFromGreedy sm cs res (runMain c (t::tds)) of
+          (word ** (Left prf)) => (c::word ** (Left prf))
+          (word ** (Right (ItIsJust ** prf))) => (word ** Right (ItIsJust ** prf))
+
+export
+0 eqForPrefixGreedy :  (sm : SM)
+                    -> (cs : Word)
+                    -> (str : Word ** runAutomaton str 
+                              = map Builtin.fst (runAutomatonPrefixGreedy cs))
+eqForPrefixGreedy sm cs =
+  let (word ** res) := eqForPrefixFromGreedy sm cs Nothing initialise
+  in case res of
+    (Left eq) => (word ** eq)
+    (Right (isJust, _)) impossible
+
+
+0 eqForStreamGreedyFrom
+  :  (sm : SM)
+  -> (cs : Stream Char)
+  -> (mres : Maybe (Result sm (Stream Char)))
+  -> (tds : List (Thread sm.State))
+  -> (str : Word **
+      Either  (runFrom str tds 
+                = map Builtin.fst (runFromStreamGreedy cs tds (map (.res) mres)))
+              (isJust : IsJust mres **
+                  runFrom str (fromJust mres).tds
+                    = map Builtin.fst (runFromStreamGreedy cs tds (map (.res) mres))))
+
+eqForStreamGreedyFrom sm cs Nothing [] = ([] ** Left Refl)
+eqForStreamGreedyFrom sm cs (Just (MkResult res tds word prf)) []
+  = (word ** Right (ItIsJust ** prf))
+eqForStreamGreedyFrom sm (c :: cs) mres (t :: tds)
+                      with (findR (\td => isNothing td.naState) (t::tds)) proof p
+  eqForStreamGreedyFrom sm (c :: cs) mres (t :: tds) | ((Just td) `Because` _)
+    = case eqForStreamGreedyFrom sm cs 
+                (Just $ MkResult  (td.vmState.evidence, c::cs)
+                                  (t :: tds)
+                                  []
+                                  (rewrite p in Refl))
+                (runMain c (t::tds)) of
+        (word ** (Left prf)) => (c::word ** (Left prf))
+        (word ** (Right (_ ** prf))) => (word ** Left prf)
+  eqForStreamGreedyFrom sm (c :: cs) mres (t :: tds) | (Nothing `Because` _)
+    = case eqForStreamGreedyFrom sm cs mres (runMain c (t::tds)) of
+        (word ** (Left prf)) => (c::word ** (Left prf))
+        (word ** (Right (ItIsJust ** prf))) => (word ** Right (ItIsJust ** prf))
+
+
+export
+0 eqForStreamGreedy :  (sm : SM)
+                    -> (cs : Stream Char)
+                    -> (str : Word ** runAutomaton str 
+                              = map Builtin.fst (runAutomatonStreamGreedy cs))
+eqForStreamGreedy sm cs =
+  let (word ** res) := eqForStreamGreedyFrom sm cs Nothing initialise
+  in case res of
+    (Left eq) => (word ** eq)
+    (Right (isJust, _)) impossible

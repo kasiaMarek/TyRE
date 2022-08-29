@@ -50,9 +50,14 @@ matchStreamGreedy : {re : CoreRE} -> (sm : SM) -> {auto prf : thompson re = sm}
 matchStreamGreedy {re} sm {prf} stm with (runAutomatonStreamGreedy {sm} stm) proof p
   matchStreamGreedy {re} sm {prf} stm | Nothing = Nothing
   matchStreamGreedy {re} sm {prf} stm | Just (ev, stmTail) =
-    let 0 acc := eqForStreamGreedy (thompson re) stm ev (rewrite prf in p)
-        0 encodes := thompsonPrf re (fst $ snd acc)
-    in Just (extract ev (rewrite (sym $ snd $ snd acc) in encodes), stmTail)
+    let 0 stmEq := eqForStreamGreedy (thompson re) stm
+        0 acc := extractEvidenceEquality  (thompson re)
+                                          (fst stmEq)
+                                          ev
+                                          (trans  (snd stmEq)
+                                                  (rewrite prf in (cong (map fst) p)))
+        0 encodes := thompsonPrf re (fst acc)
+    in Just (extract ev (rewrite (sym $ snd acc) in encodes), stmTail)
 
 export
 getTokenCore : (re : CoreRE) -> Stream Char -> Bool -> Maybe (Shape re, Stream Char)
@@ -79,9 +84,14 @@ matchPrefixGreedy : {re : CoreRE} -> (sm : SM) -> {auto prf : thompson re = sm}
 matchPrefixGreedy {re} sm {prf} cs with (runAutomatonPrefixGreedy cs) proof p
   matchPrefixGreedy {re} sm {prf} cs | Nothing = Nothing
   matchPrefixGreedy {re} sm {prf} cs | Just (ev, stmTail) =
-    let 0 acc := eqForPrefixGreedy (thompson re) cs ev (rewrite prf in p)
-        0 encodes := thompsonPrf re (fst $ snd acc)
-    in Just (extract ev (rewrite (sym $ snd $ snd acc) in encodes), stmTail)
+    let 0 stmEq := eqForPrefixGreedy (thompson re) cs
+        0 acc := extractEvidenceEquality  (thompson re)
+                                          (fst stmEq)
+                                          ev
+                                          (trans  (snd stmEq)
+                                                  (rewrite prf in (cong (map fst) p)))
+        0 encodes := thompsonPrf re (fst acc)
+    in Just (extract ev (rewrite (sym $ snd acc) in encodes), stmTail)
 
 asDisjoinMatchesFrom : {re : CoreRE} -> (sm : SM) -> {auto prf : thompson re = sm}
                     -> Word -> DisjointMatchesSnoc (Shape re)
