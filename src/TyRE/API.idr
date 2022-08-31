@@ -13,9 +13,12 @@ import TyRE.Verification.Thompson
 
 import Data.Stream
 
+%default total
+
 runAutomatonSM : SM -> Word -> Maybe Evidence
 runAutomatonSM sm word = runAutomaton word
 
+partial
 runAutomatonSMStream : SM -> Stream Char -> Maybe (Evidence, Stream Char)
 runAutomatonSMStream sm stream = runAutomatonStream stream
 
@@ -35,6 +38,7 @@ export
 run : (re : CoreRE) -> String -> Maybe (Shape re)
 run re str = runWord re (unpack str)
 
+partial
 matchStream : {re : CoreRE} -> (sm : SM) -> {auto prf : thompson re = sm}
             -> Stream Char -> Maybe (Shape re, Stream Char)
 matchStream {re} sm {prf} stm with (runAutomatonSMStream sm stm) proof p
@@ -45,6 +49,7 @@ matchStream {re} sm {prf} stm with (runAutomatonSMStream sm stm) proof p
         0 encodes := thompsonPrf re (fst acc)
     in Just (extract ev (rewrite (sym $ snd acc) in encodes), stmTail)
 
+partial
 matchStreamGreedy : {re : CoreRE} -> (sm : SM) -> {auto prf : thompson re = sm}
                   -> Stream Char -> Maybe (Shape re, Stream Char)
 matchStreamGreedy {re} sm {prf} stm with (runAutomatonStreamGreedy {sm} stm) proof p
@@ -60,6 +65,7 @@ matchStreamGreedy {re} sm {prf} stm with (runAutomatonStreamGreedy {sm} stm) pro
     in Just (extract ev (rewrite (sym $ snd acc) in encodes), stmTail)
 
 export
+partial
 getTokenCore : (re : CoreRE) -> Stream Char -> Bool -> Maybe (Shape re, Stream Char)
 getTokenCore re stm False = matchStream       (thompson re) stm
 getTokenCore re stm True  = matchStreamGreedy (thompson re) stm
@@ -93,7 +99,9 @@ matchPrefixGreedy {re} sm {prf} cs with (runAutomatonPrefixGreedy cs) proof p
         0 encodes := thompsonPrf re (fst acc)
     in Just (extract ev (rewrite (sym $ snd acc) in encodes), stmTail)
 
+partial -- we should be able to prove this to be total thanks to consuming
 asDisjoinMatchesFrom : {re : CoreRE} -> (sm : SM) -> {auto prf : thompson re = sm}
+                    -> {auto 0 consuming : IsConsuming re}
                     -> Word -> DisjointMatchesSnoc (Shape re)
                     -> (greedy : Bool)
                     -> DisjointMatchesSnoc (Shape re)
@@ -107,6 +115,8 @@ asDisjoinMatchesFrom sm {prf} (c :: cs) dm greedy =
     (Just (parse, tail)) => asDisjoinMatchesFrom sm tail (dm :+: parse) greedy
 
 export
-asDisjoinMatchesCore : (re : CoreRE) -> String -> Bool -> DisjointMatches (Shape re)
+partial
+asDisjoinMatchesCore : (re : CoreRE) -> {auto 0 consuming : IsConsuming re}
+                    -> String -> Bool -> DisjointMatches (Shape re)
 asDisjoinMatchesCore re str greedy
   = cast $ asDisjoinMatchesFrom {re} (thompson re) (unpack str) (Prefix [<]) greedy

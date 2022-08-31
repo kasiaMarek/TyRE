@@ -195,6 +195,6 @@ public export
 toRE : (str : String) -> {auto isJust : IsJust (rAux str)} -> RE
 toRE str {isJust} = fromJust (rAux str) @{isJust}
 
-export
+public export
 r : (str : String) -> {auto isJust : IsJust (rAux str)} -> TyRE (TypeRE $ toRE str {isJust})
 r str {isJust} = compile (toRE str {isJust})

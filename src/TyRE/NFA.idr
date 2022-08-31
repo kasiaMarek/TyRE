@@ -11,6 +11,8 @@ import TyRE.Extra
 import TyRE.Extra.Pred
 import TyRE.Extra.Reflects
 
+%default total
+
 ||| A non-deterministic automaton
 public export
 record NA where
@@ -218,6 +220,7 @@ parameters {auto sm : SM}
               c::cs => runFromPrefixGreedy cs (runMain c tds) res
 
   public export
+  partial
   runFromStream : (Stream Char) -> (tds : List $ Thread sm.State) -> Maybe (Evidence, Stream Char)
   runFromStream cs      []  = Nothing
   runFromStream (c::cs) tds = case (findR (\td => isNothing td.naState) tds).Holds of
@@ -225,6 +228,7 @@ parameters {auto sm : SM}
                                       Nothing   => runFromStream cs $ runMain c tds
 
   public export
+  partial
   runFromStreamGreedy : (Stream Char)
                       -> (tds : List $ Thread sm.State)
                       -> Maybe (Evidence, Stream Char)
@@ -248,10 +252,12 @@ parameters {auto sm : SM}
   runAutomatonPrefixGreedy word = runFromPrefixGreedy word initialise Nothing
 
   public export
+  partial
   runAutomatonStream : (Stream Char) -> Maybe (Evidence, Stream Char)
   runAutomatonStream stream = runFromStream stream initialise
 
   public export
+  partial
   runAutomatonStreamGreedy : (Stream Char) -> Maybe (Evidence, Stream Char)
   runAutomatonStreamGreedy stream = runFromStreamGreedy stream initialise Nothing
 

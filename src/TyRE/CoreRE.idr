@@ -62,3 +62,17 @@ showAux {re = (Alt re1 re2)} (Left x) = "Left " ++ showAux x
 showAux {re = (Alt re1 re2)} (Right x) = "Right " ++ showAux x
 showAux {re = Empty} () = "()"
 showAux {re = (Star re)} xs = show $ map (showAux {re}) xs
+
+public export
+isConsuming : (re : CoreRE) -> Bool
+isConsuming (CharPred x) = True
+isConsuming (Concat r1 r2) = (isConsuming r1) || (isConsuming r2)
+isConsuming (Group r) = isConsuming r
+isConsuming Empty = False
+isConsuming (Alt r1 r2) = (isConsuming r1) && (isConsuming r2)
+isConsuming (Star r) = False
+
+public export
+data IsConsuming : CoreRE -> Type where
+  ItIsConsuming : {re : CoreRE} -> {auto 0 prf : isConsuming re = True}
+                -> IsConsuming re
