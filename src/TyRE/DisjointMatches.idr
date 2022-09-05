@@ -95,3 +95,8 @@ export
 Show a => Show (DisjointMatchesSnoc a) where
   show (Prefix cs) = pack $ toList cs
   show (Snoc neck pt cs) = show neck ++ "~~" ++ show pt ++ "~~" ++ pack (toList cs)
+
+export
+length : DisjointMatches a -> Nat
+length (Suffix _)       = Z
+length (Cons _ _ tail)  = S (length tail)
