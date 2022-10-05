@@ -120,3 +120,8 @@ asDisjoinMatchesCore : (re : CoreRE) -> {auto 0 consuming : IsConsuming re}
                     -> String -> Bool -> DisjointMatches (Shape re)
 asDisjoinMatchesCore re str greedy
   = cast $ asDisjoinMatchesFrom {re} (thompson re) (unpack str) (Prefix [<]) greedy
+
+export
+parsePrefix : (re : CoreRE) -> String -> Maybe (Shape re, String)
+parsePrefix re cs = map (bimap id pack)
+                        (matchPrefixGreedy {re} (thompson re) (unpack cs))

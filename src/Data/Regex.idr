@@ -35,3 +35,8 @@ partial
 substitute : (tyre: TyRE a) -> {auto 0 consuming : IsConsuming tyre}
           -> (a -> String) -> String -> String
 substitute tyre f str = toString f (asDisjointMatches tyre str True)
+
+export
+parsePrefix : (tyre : TyRE a) -> String -> Maybe (a, String)
+parsePrefix tyre cs = map (bimap (extract tyre) id)
+                          (parsePrefix (compile tyre) cs)
