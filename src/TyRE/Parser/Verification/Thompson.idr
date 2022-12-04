@@ -1,4 +1,4 @@
-module TyRE.Verification.Thompson
+module TyRE.Parser.Verification.Thompson
 
 import Data.SnocList
 import Data.List.Elem
@@ -6,19 +6,19 @@ import Data.SortedSet
 import Syntax.PreorderReasoning
 
 import TyRE.CoreRE
-import TyRE.Thompson
-import TyRE.NFA
-import TyRE.Evidence
+import TyRE.Parser.Thompson
+import TyRE.Parser.NFA
+import TyRE.Parser.Evidence
 import TyRE.Extra
 
-import TyRE.Verification.AcceptingPath
-import TyRE.Verification.Routine
-import TyRE.Verification.Thompson.Predicate
-import TyRE.Verification.Thompson.Group
-import TyRE.Verification.Thompson.Concatenation
-import TyRE.Verification.Thompson.Alternation
-import TyRE.Verification.Thompson.Common
-import TyRE.Verification.Thompson.Star
+import TyRE.Parser.Verification.AcceptingPath
+import TyRE.Parser.Verification.Routine
+import TyRE.Parser.Verification.Thompson.Predicate
+import TyRE.Parser.Verification.Thompson.Group
+import TyRE.Parser.Verification.Thompson.Concatenation
+import TyRE.Parser.Verification.Thompson.Alternation
+import TyRE.Parser.Verification.Thompson.Common
+import TyRE.Parser.Verification.Thompson.Star
 
 thompsonRoutinePrf : (re : CoreRE)
                   -> {word : Word}

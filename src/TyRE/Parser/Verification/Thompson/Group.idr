@@ -1,20 +1,20 @@
-module TyRE.Verification.Thompson.Group
+module TyRE.Parser.Verification.Thompson.Group
 
 import Data.SnocList
 import Data.List.Elem
 import Data.List
 
 import TyRE.CoreRE
-import TyRE.Thompson
-import TyRE.Thompson.GroupThompson
-import TyRE.NFA
-import TyRE.Evidence
+import TyRE.Parser.Thompson
+import TyRE.GroupThompson
+import TyRE.Parser.NFA
+import TyRE.Parser.Evidence
 import TyRE.Extra
 import TyRE.Extra.Pred
 
-import TyRE.Verification.AcceptingPath
-import TyRE.Verification.Routine
-import TyRE.Verification.Thompson.Common
+import TyRE.Parser.Verification.AcceptingPath
+import TyRE.Parser.Verification.Routine
+import TyRE.Parser.Verification.Thompson.Common
 
 import Syntax.PreorderReasoning
 

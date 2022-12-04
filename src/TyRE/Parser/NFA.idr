@@ -1,4 +1,4 @@
-module TyRE.NFA
+module TyRE.Parser.NFA
 
 import Data.SnocList
 import Data.List
@@ -6,7 +6,7 @@ import Data.List.Elem
 import Data.Stream
 import Data.Maybe
 
-import TyRE.Evidence
+import TyRE.Parser.Evidence
 import TyRE.Extra
 import TyRE.Extra.Pred
 import TyRE.Extra.Reflects

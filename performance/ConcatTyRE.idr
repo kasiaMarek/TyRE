@@ -1,9 +1,9 @@
 import Data.Maybe
 
-import TyRE.API
+import TyRE.Parser.API
 import TyRE.CoreRE
-import TyRE.Thompson
-import TyRE.Evidence
+import TyRE.Parser.Thompson
+import TyRE.Parser.Evidence
 
 A : CoreRE
 A = CharPred (Pred (\c =>  c == 'a'))

@@ -1,4 +1,4 @@
-module TyRE.Verification.Thompson.Concatenation
+module TyRE.Parser.Verification.Thompson.Concatenation
 
 import Data.SnocList
 import Data.List
@@ -6,15 +6,15 @@ import Data.List.Elem
 import Syntax.PreorderReasoning
 
 import TyRE.CoreRE
-import TyRE.Thompson
-import TyRE.NFA
-import TyRE.Evidence
+import TyRE.Parser.Thompson
+import TyRE.Parser.NFA
+import TyRE.Parser.Evidence
 import TyRE.Extra
 import TyRE.Extra.Pred
 
-import TyRE.Verification.AcceptingPath
-import TyRE.Verification.Routine
-import TyRE.Verification.Thompson.Common
+import TyRE.Parser.Verification.AcceptingPath
+import TyRE.Parser.Verification.Routine
+import TyRE.Parser.Verification.Thompson.Common
 
 thompsonRoutinePrfConcatTail : (re1 : CoreRE)
                             -> (re2 : CoreRE)

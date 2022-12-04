@@ -1,5 +1,7 @@
 module TyRE.Codes
 
+import Data.SnocList
+
 %default total
 
 public export
@@ -35,7 +37,7 @@ Sem (PairC x y)   = (Sem x, Sem y)
 Sem StringC       = String
 Sem UnitC         = ()
 Sem (EitherC x y) = Either (Sem x) (Sem y)
-Sem (ListC x)     = List (Sem x)
+Sem (ListC x)     = SnocList (Sem x)
 Sem (MaybeC x)    = Maybe (Sem x)
 Sem BoolC         = Bool
 Sem NatC          = Nat

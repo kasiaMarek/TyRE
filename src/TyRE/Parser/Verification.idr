@@ -1,4 +1,4 @@
-module TyRE.Verification
+module TyRE.Parser.Verification
 
 import Data.List.Elem
 import Data.List
@@ -9,9 +9,9 @@ import Data.List.Quantifiers
 import TyRE.Extra
 import TyRE.Extra.Pred
 import TyRE.Extra.Reflects
-import TyRE.NFA
-import TyRE.Evidence
-import TyRE.Verification.AcceptingPath
+import TyRE.Parser.NFA
+import TyRE.Parser.Evidence
+import TyRE.Parser.Verification.AcceptingPath
 
 recordPathHelper  : {auto sm: SM} -> (c: Char) -> (td : Thread sm.State)
                   ->  (td': Thread sm.State 

@@ -1,11 +1,11 @@
-module TyRE.Verification.Routine
+module TyRE.Parser.Verification.Routine
 
 import Data.List
 import Data.SnocList
 
-import TyRE.NFA
-import TyRE.Evidence
-import TyRE.Verification.AcceptingPath
+import TyRE.Parser.NFA
+import TyRE.Parser.Evidence
+import TyRE.Parser.Verification.AcceptingPath
 import TyRE.Extra
 import TyRE.CoreRE
 import TyRE.Codes

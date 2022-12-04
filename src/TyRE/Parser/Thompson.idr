@@ -1,11 +1,11 @@
-module TyRE.Thompson
+module TyRE.Parser.Thompson
 
 import Data.List
 import Data.SortedSet
 
 import TyRE.CoreRE
-import TyRE.NFA
-import public TyRE.Thompson.GroupThompson
+import TyRE.Parser.NFA
+import public TyRE.GroupThompson
 
 %default total
 
@@ -19,6 +19,16 @@ Eq BaseState where
 public export
 mapStates : (s -> s') -> List (Maybe s, Routine) -> List (Maybe s', Routine)
 mapStates f states = map (bimap (map f) id) states
+
+public export
+mapRoutine : (Routine -> Routine) -> List (s, Routine) -> List (s, Routine)
+mapRoutine f xs = map (bimap id f) xs
+
+public export
+addEndRoutine : Routine -> List (Maybe state, Routine) -> List (Maybe state, Routine)
+addEndRoutine routine [] = []
+addEndRoutine routine ((Just x, r) :: xs) = (Just x, r) :: (addEndRoutine routine xs)
+addEndRoutine routine ((Nothing, r) :: xs) = (Nothing, r ++ routine) :: (addEndRoutine routine xs)
 
 public export
 addEndTransition  : List (Maybe state', Routine) 
@@ -40,6 +50,30 @@ public export
 smForPred : (f : Char -> Bool) -> SM
 smForPred f = MkSM BaseState [(Just StartState, [])] (nextPred f)
 
+-- functions for group
+public export
+addEmptyRoutine : List (Maybe Nat) -> List (Maybe Nat, Routine)
+addEmptyRoutine states = map (`MkPair` []) states
+
+public export
+groupTransform : List (Maybe Nat) -> List (Maybe Nat, Routine)
+groupTransform states = addEndRoutine [EmitString] (addEmptyRoutine states)
+
+public export
+smFromGroupSMNext : List (Nat, NextStates) -> Nat -> Char
+                  -> List (Maybe Nat, Routine)
+smFromGroupSMNext xs s c = groupTransform $
+  case (find (\stns => fst stns == s) xs) of
+    Nothing => []
+    (Just (_, (MkNextStates condition isSat notSat))) => 
+      (if (satisfies condition c) then isSat else notSat)
+
+public export
+smFromGroupSM : GroupSM -> SM
+smFromGroupSM grsm = 
+  MkSM  Nat 
+        (mapRoutine (Record::) (groupTransform grsm.initStates))
+        (smFromGroupSMNext grsm.statesWithNext)
 --- functions for Alternation
 public export
 startAlt : (sm1, sm2 : SM) -> List(Maybe (Either sm1.State sm2.State), Routine)
@@ -108,7 +142,7 @@ public export
 thompson : CoreRE -> SM
 thompson (CharPred cond) = smForPred (satisfies cond)
 thompson (Empty) = MkSM Unit [(Nothing, [EmitUnit])] (\_,_ => [])
-thompson (Group re) = groupThompson re
+thompson (Group re) = smFromGroupSM (groupSM re)
 thompson (Concat re1 re2) =
   let sm1 : SM := thompson re1
       sm2 : SM := thompson re2

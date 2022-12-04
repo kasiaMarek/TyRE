@@ -1,5 +1,5 @@
 import Data.Regex
-import TyRE.API
+import TyRE.Parser.API
 
 AorB : CoreRE
 AorB = CharPred (Pred (\c =>  (c == 'a' || c == 'b')))

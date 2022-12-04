@@ -1,7 +1,8 @@
-import TyRE.API
+import TyRE.Parser.API
 import TyRE.CoreRE
 import TyRE.Codes
-import TyRE.Thompson
+import TyRE.Parser.Thompson
+import Data.SnocList
 
 AorB : CoreRE
 AorB = CharPred (Pred (\c =>  (c == 'a' || c == 'b')))

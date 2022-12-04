@@ -1,11 +1,11 @@
-module TyRE.Verification.AcceptingPath
+module TyRE.Parser.Verification.AcceptingPath
 
 import Data.List.Elem
 import Data.List
 import Data.Vect
 
-import TyRE.NFA
-import TyRE.Evidence
+import TyRE.Parser.NFA
+import TyRE.Parser.Evidence
 import TyRE.Extra
 
 public export

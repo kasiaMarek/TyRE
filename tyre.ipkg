@@ -6,30 +6,30 @@ brief   = "A typed regex parser"
 sourcedir = "src"
 depends = contrib
 
-modules =   TyRE.API
-          , TyRE.CoreRE
+modules =   TyRE.CoreRE
           , TyRE.Codes
           , TyRE.Core
-          , TyRE.Evidence
           , TyRE.RE
           , TyRE.StringRE
-          , TyRE.Thompson
-          , TyRE.Thompson.GroupThompson
-          , TyRE.NFA
+          , TyRE.GroupThompson
+          , TyRE.Parser.API
+          , TyRE.Parser.Evidence
+          , TyRE.Parser.Thompson
+          , TyRE.Parser.NFA
           --- pretty printer for NFA
-          , TyRE.NFA.PrettyPrint
-          , TyRE.NFA.PrettyPrint.Interfaces
+          , TyRE.Parser.NFA.PrettyPrint
+          , TyRE.Parser.NFA.PrettyPrint.Interfaces
           --- verification bit
-          , TyRE.Verification
-          , TyRE.Verification.Thompson
-          , TyRE.Verification.Routine
-          , TyRE.Verification.AcceptingPath
-          , TyRE.Verification.Thompson.Common
-          , TyRE.Verification.Thompson.Predicate
-          , TyRE.Verification.Thompson.Group
-          , TyRE.Verification.Thompson.Alternation
-          , TyRE.Verification.Thompson.Concatenation
-          , TyRE.Verification.Thompson.Star
+          , TyRE.Parser.Verification
+          , TyRE.Parser.Verification.Thompson
+          , TyRE.Parser.Verification.Routine
+          , TyRE.Parser.Verification.AcceptingPath
+          , TyRE.Parser.Verification.Thompson.Common
+          , TyRE.Parser.Verification.Thompson.Predicate
+          , TyRE.Parser.Verification.Thompson.Group
+          , TyRE.Parser.Verification.Thompson.Alternation
+          , TyRE.Parser.Verification.Thompson.Concatenation
+          , TyRE.Parser.Verification.Thompson.Star
           --- additional more `generic` functions and structures
           , TyRE.Extra
           , TyRE.Extra.Pred
@@ -48,3 +48,5 @@ modules =   TyRE.API
           , Data.Regex.DateAndTime
           -- other
           , TyRE.DisjointMatches
+          -- typed parser
+          , TyRE.Parser2

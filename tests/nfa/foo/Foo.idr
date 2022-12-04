@@ -1,7 +1,7 @@
 import Data.Vect
 
-import TyRE.NFA
-import TyRE.Evidence
+import TyRE.Parser.NFA
+import TyRE.Parser.Evidence
 
 --Language accepting "foo"
 data CState = Empty | F | FO

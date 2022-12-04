@@ -1,9 +1,9 @@
-module TyRE.NFA.PrettyPrint.Interfaces
+module TyRE.Parser.NFA.PrettyPrint.Interfaces
 
 import Data.List
 
-import TyRE.NFA
-import TyRE.Thompson
+import TyRE.Parser.NFA
+import TyRE.Parser.Thompson
 
 public export
 interface Ordered ty where

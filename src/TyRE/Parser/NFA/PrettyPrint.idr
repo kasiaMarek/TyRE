@@ -1,10 +1,10 @@
-module TyRE.NFA.PrettyPrint
+module TyRE.Parser.NFA.PrettyPrint
 
 import Data.List
 import Data.SnocList
 
-import TyRE.NFA
-import public TyRE.NFA.PrettyPrint.Interfaces
+import TyRE.Parser.NFA
+import public TyRE.Parser.NFA.PrettyPrint.Interfaces
 
 transitionString : String -> String -> String -> String
 transitionString from label to =

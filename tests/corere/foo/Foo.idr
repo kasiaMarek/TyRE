@@ -1,7 +1,7 @@
-import TyRE.API
+import TyRE.Parser.API
 import TyRE.CoreRE
 import TyRE.Codes
-import TyRE.Thompson
+import TyRE.Parser.Thompson
 
 Exactly: Char -> CoreRE
 Exactly x = CharPred (Pred (\c =>  c == x))

@@ -1,4 +1,4 @@
-module TyRE.Evidence
+module TyRE.Parser.Evidence
 
 import Data.SnocList
 import Data.SnocList.Elem
@@ -76,7 +76,7 @@ data Encodes : Evidence -> SnocList (Either () Code) -> Type where
     -> (evs :< UnitMark) `Encodes` cs :< (Right UnitC)
   ARepetiton
     : (prf : evs `Encodes` cs)
-    -> (prf1: evss `Encodes` (replicate n (Right c)))
+    -> (prf1 : evss `Encodes` (replicate n (Right c)))
     -> {auto ford: ev' = evs :< BList ++ evss}
     -> (ev' :< EList) `Encodes` (cs :< (Right (ListC c)))
 
@@ -186,7 +186,7 @@ extractRepRec sx'@(sx :< BList          ) {n, c} prf fuel enough =
       eqPrf = case n of
                 0 => Refl
                 (S k) => case prf of {_ impossible}
-  in MkResult [] sx
+  in MkResult [<] sx
               (case (replace
                       {p=(\r => (sx :< BList) `Encodes` (cs :< (Left ()) ++ r))}
                         eqPrf prf) of
@@ -201,7 +201,7 @@ extractRepRecSucc ev {c} (S k) Refl prf (S fuel) enough ItIsSucc =
              |~ 1 + length res.rest
              <~ length ev ...(res.bound)
              <~ 1 + fuel  ...(enough)
-  in MkResult (res.result :: rest.result) rest.rest rest.restValid
+  in MkResult (rest.result :< res.result) rest.rest rest.restValid
      $ CalcWith {leq = LTE} $
      |~ 1 + (length rest.rest)
      <~ 1 + (1 + (length rest.rest)) ... (plusLteMonotoneLeft 1 _ _ $
@@ -263,7 +263,7 @@ extractResult (evs :< EList)
               (ARepetiton {ford, n} prf prf1) (S fuel) (LTESucc enough) =
   let res = extractRepRec evs
         (rewrite ford in (recontextualise (AnBegMark prf) prf1)) fuel enough
-  in MkResult (reverse res.result) res.rest res.restValid
+  in MkResult res.result res.rest res.restValid
   $ CalcWith {leq = LTE} $
     |~ 1 + length res.rest
     <~ length evs ...(res.bound)

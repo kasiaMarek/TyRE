@@ -22,7 +22,8 @@ corere = MkTestPool "core RE" [] Nothing
 stringTests : TestPool
 stringTests = MkTestPool "string syntax" [] Nothing
             [ "string-syntax/string",
-              "string-syntax/full"
+              "string-syntax/full",
+              "string-syntax/full2"
             ]
 
 tyre : TestPool

@@ -1,4 +1,4 @@
-module TyRE.Verification.Thompson.Alternation
+module TyRE.Parser.Verification.Thompson.Alternation
 
 import Data.SnocList
 import Data.List
@@ -7,15 +7,15 @@ import Syntax.PreorderReasoning
 import Data.List.Elem.Extra
 
 import TyRE.CoreRE
-import TyRE.Thompson
-import TyRE.NFA
-import TyRE.Evidence
+import TyRE.Parser.Thompson
+import TyRE.Parser.NFA
+import TyRE.Parser.Evidence
 import TyRE.Extra
 import TyRE.Extra.Pred
 
-import TyRE.Verification.AcceptingPath
-import TyRE.Verification.Routine
-import TyRE.Verification.Thompson.Common
+import TyRE.Parser.Verification.AcceptingPath
+import TyRE.Parser.Verification.Routine
+import TyRE.Parser.Verification.Thompson.Common
 
 thompsonRoutineFromPrfAltLeft : (re1 : CoreRE)
                               -> (re2 : CoreRE)

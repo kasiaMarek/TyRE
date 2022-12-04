@@ -3,6 +3,7 @@ module TyRE.Core
 import public Data.List
 import public Data.Either
 import public Data.SortedSet
+import Data.SnocList
 
 import TyRE.CoreRE
 
@@ -14,7 +15,7 @@ data TyRE : Type -> Type where
   (<*>)   : TyRE a -> TyRE b -> TyRE (a, b)
   Conv    : TyRE a -> (a -> b) -> TyRE b
   (<|>)   : TyRE a -> TyRE b -> TyRE (Either a b)
-  Rep     : TyRE a -> TyRE (List a)
+  Rep     : TyRE a -> TyRE (SnocList a)
 
 public export
 Functor TyRE where
@@ -29,7 +30,7 @@ compile (x <|> y)     = Alt (compile x) (compile y)
 compile (Rep re)      = Star (compile re)
 
 public export
-extract : (tyre: TyRE a) -> (Shape (compile tyre) -> a)
+extract : (tyre : TyRE a) -> (Shape (compile tyre) -> a)
 extract (Untyped r) x             = x
 extract (re1 <*> re2) (x, y)      = (extract re1 x, extract re2 y)
 extract (Conv re f) y             = f $ extract re y
@@ -83,11 +84,11 @@ match c = ignore $ oneOfList [c]
 
 public export
 rep0 : TyRE a -> TyRE (List a)
-rep0 tyre = Rep tyre
+rep0 tyre = cast `map` Rep tyre
 
 public export
 rep1 : TyRE a -> TyRE (List a)
-rep1 tyre = (\(e,l) => e::l) `map` (tyre <*> Rep tyre)
+rep1 tyre = (\(e,l) => e::l) `map` (tyre <*> rep0 tyre)
 
 public export
 option : TyRE a -> TyRE (Maybe a)

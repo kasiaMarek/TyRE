@@ -1,15 +1,15 @@
-module TyRE.API
+module TyRE.Parser.API
 
 import public TyRE.CoreRE
 import TyRE.Core
-import TyRE.NFA
-import TyRE.Thompson
-import TyRE.Evidence
+import TyRE.Parser.NFA
+import TyRE.Parser.Thompson
+import TyRE.Parser.Evidence
 import TyRE.DisjointMatches
 
-import TyRE.Verification
-import TyRE.Verification.AcceptingPath
-import TyRE.Verification.Thompson
+import TyRE.Parser.Verification
+import TyRE.Parser.Verification.AcceptingPath
+import TyRE.Parser.Verification.Thompson
 
 import Data.Stream
 

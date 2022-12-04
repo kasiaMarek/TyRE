@@ -1,7 +1,7 @@
 import Data.Vect
 
-import TyRE.NFA
-import TyRE.Evidence
+import TyRE.Parser.NFA
+import TyRE.Parser.Evidence
 
 b : NA
 b = MkNFA Nat [] (\s => \c => [])
