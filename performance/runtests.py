@@ -77,12 +77,12 @@ def plotresult(test, testresult):
     tyretimes = testresult["tyretimes"]
     combtimes = testresult["combtimes"]
     x = range(1, test[ITR]+1)
-    plt.plot(x, tyretimes["avg"], color='blue', label='TyRE')
+    plt.plot(x, tyretimes["avg"], color='blue', label='TyRE library')
     plt.fill_between(x,
         listOpByIndex(tyretimes["avg"], tyretimes["stdev"], subtract),
         listOpByIndex(tyretimes["avg"], tyretimes["stdev"], add),
         color='blue', alpha=0.2)
-    plt.plot(x, combtimes["avg"], color='orange', label='Idris 2 stdlib parser combinators')
+    plt.plot(x, combtimes["avg"], color='orange', label='Idris 2\'s stdlib parsers\' combinators library')
     plt.fill_between(x,
         listOpByIndex(combtimes["avg"], combtimes["stdev"], subtract),
         listOpByIndex(combtimes["avg"], combtimes["stdev"], add),

@@ -1,4 +1,4 @@
-import StringRE
+import TyRE.StringRE
 
 printParsed : String -> IO ()
 printParsed str = case (rAux str) of

@@ -1,14 +1,10 @@
 module Data.Regex
 
-import public StringRE
-import public DisjointMatches
-import API
+import public TyRE.StringRE
+import public TyRE.DisjointMatches
+import TyRE.API
 
-export
-getToken : TyRE a -> Stream Char -> Maybe (a, Stream Char)
-getToken tyre stm = 
-  map (\case (pres, stmTail) => (extract tyre pres, stmTail)) 
-      (getTokenCore (compile tyre) stm)
+%default total
 
 export
 parse : TyRE a -> String -> Maybe a
@@ -19,10 +15,28 @@ match : TyRE a -> String -> Bool
 match tyre str = isJust $ parse (ignore tyre) str
 
 export
-asDisjointMatches : TyRE a -> String -> DisjointMatches a
-asDisjointMatches tyre str = map (extract tyre) 
-                                (asDisjoinMatchesCore (compile tyre) str)
+partial
+getToken : TyRE a -> Stream Char -> (greedy : Bool) -> Maybe (a, Stream Char)
+getToken tyre stm greedy = 
+  map (\case (pres, stmTail) => (extract tyre pres, stmTail)) 
+      (getTokenCore (compile tyre) stm greedy)
 
 export
-substitute : TyRE a -> (a -> String) -> String -> String
-substitute tyre f str = toString f (asDisjointMatches tyre str)
+partial --we should be able to prove totality thanks to `consuming`
+asDisjointMatches : (tyre : TyRE a) -> {auto 0 consuming : IsConsuming tyre}
+                  -> String -> (greedy : Bool) -> DisjointMatches a
+asDisjointMatches tyre str greedy {consuming}
+  = map (extract tyre) 
+        (asDisjoinMatchesCore (compile tyre) str greedy
+                              {consuming = consumingImpl consuming})
+
+export
+partial
+substitute : (tyre: TyRE a) -> {auto 0 consuming : IsConsuming tyre}
+          -> (a -> String) -> String -> String
+substitute tyre f str = toString f (asDisjointMatches tyre str True)
+
+export
+parsePrefix : (tyre : TyRE a) -> String -> Maybe (a, String)
+parsePrefix tyre cs = map (bimap (extract tyre) id)
+                          (parsePrefix (compile tyre) cs)

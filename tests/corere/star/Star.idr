@@ -1,7 +1,7 @@
-import API
-import Core
-import Codes
-import Thompson
+import TyRE.API
+import TyRE.CoreRE
+import TyRE.Codes
+import TyRE.Thompson
 
 AorB : CoreRE
 AorB = CharPred (Pred (\c =>  (c == 'a' || c == 'b')))

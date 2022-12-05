@@ -1,6 +1,7 @@
-import NFA
 import Data.Vect
-import Evidence
+
+import TyRE.NFA
+import TyRE.Evidence
 
 --a. Automaton for language accepting words with even numbers.
 -- I assume words that cointain at least one even number

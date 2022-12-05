@@ -1,7 +1,7 @@
 module Data.Regex.DateAndTime
 
-import API
-import StringRE
+import TyRE.API
+import TyRE.StringRE
 
 public export
 record Date where
