@@ -91,7 +91,7 @@ min (MkGroupSM initStates statesWithNext max) =
     applyFilter (n, n1) xs = 
       case (find (== Just n1) xs) of
         Nothing => xs
-        (Just y) => (Just n) :: filter (\x => x == Just n || x == Just n1) xs
+        (Just y) => (Just n) :: filter (\x => not (x == Just n || x == Just n1)) xs
     squash : List (Nat, Nat) -> (List (Maybe Nat), List (Nat, NextStates)) -> (List (Maybe Nat), List (Nat, NextStates))
     squash [] x = x
     squash ((n, n1) :: xs) (init, ys) = 
