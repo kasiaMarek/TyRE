@@ -15,6 +15,7 @@ RESULTS_FILE = "results.txt"
 NAME = "name"
 ITR = "iterations"
 TYRE_FILE = "tyreFile"
+TYRE_FILE2 = "tyreFile2"
 COMB_FILE = "combFile"
 XLABEL = "xlabel"
 
@@ -69,12 +70,14 @@ def buildTimes(name, iterations):
 def runtest(test):
     result = {
         "tyretimes": buildTimes(test[TYRE_FILE], test[ITR]),
-        "combtimes": buildTimes(test[COMB_FILE], test[ITR])
+        "tyretimes2": buildTimes(test[TYRE_FILE2], test[ITR]),
+        "combtimes": buildTimes(test[COMB_FILE], test[ITR]),
         }
     return result
 
 def plotresult(test, testresult):
     tyretimes = testresult["tyretimes"]
+    tyretimes2 = testresult["tyretimes2"]
     combtimes = testresult["combtimes"]
     x = range(1, test[ITR]+1)
     plt.plot(x, tyretimes["avg"], color='blue', label='TyRE library')
@@ -82,6 +85,11 @@ def plotresult(test, testresult):
         listOpByIndex(tyretimes["avg"], tyretimes["stdev"], subtract),
         listOpByIndex(tyretimes["avg"], tyretimes["stdev"], add),
         color='blue', alpha=0.2)
+    plt.plot(x, tyretimes2["avg"], color='purple', label='TyRE library typed parser')
+    plt.fill_between(x,
+        listOpByIndex(tyretimes2["avg"], tyretimes2["stdev"], subtract),
+        listOpByIndex(tyretimes2["avg"], tyretimes2["stdev"], add),
+        color='purple', alpha=0.2)
     plt.plot(x, combtimes["avg"], color='orange', label='Idris 2\'s stdlib parsers\' combinators library')
     plt.fill_between(x,
         listOpByIndex(combtimes["avg"], combtimes["stdev"], subtract),
@@ -94,14 +102,18 @@ def plotresult(test, testresult):
     plt.clf()
 
 tests = [
-    {NAME : "star", ITR : 1000, TYRE_FILE: "StarTyRE",
-        COMB_FILE: "StarComb", XLABEL: "length of word"},
-    {NAME : "star2", ITR : 1000, TYRE_FILE: "StarTyRE2",
-        COMB_FILE: "StarComb2", XLABEL: "length of word"},
-    {NAME : "concat", ITR : 1000, TYRE_FILE: "ConcatTyRE",
-        COMB_FILE: "ConcatComb", XLABEL: "length of regex and word"} ,
-    {NAME : "alternation", ITR : 1000, TYRE_FILE: "AltTyRE",
-        COMB_FILE: "AltComb", XLABEL: "length of regex"}
+    {NAME : "star", ITR : 100,
+        TYRE_FILE: "StarTyRE11", TYRE_FILE2: "StarTyRE12", COMB_FILE: "StarComb",
+        XLABEL: "length of word"},
+    {NAME : "star2", ITR : 100,
+        TYRE_FILE: "StarTyRE21", TYRE_FILE2: "StarTyRE22", COMB_FILE: "StarComb2",
+        XLABEL: "length of word"},
+    {NAME : "concat", ITR : 100,
+        TYRE_FILE: "ConcatTyRE", TYRE_FILE2: "ConcatTyRE2", COMB_FILE: "ConcatComb",
+        XLABEL: "length of regex and word"} ,
+    {NAME : "alternation", ITR : 100,
+        TYRE_FILE: "AltTyRE", TYRE_FILE2: "AltTyRE2", COMB_FILE: "AltComb",
+        XLABEL: "length of regex"}
 ]
 
 def runall():
