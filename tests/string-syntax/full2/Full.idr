@@ -1,6 +1,6 @@
-import Data.Regex
+import Data.Regex2
 
 main : IO ()
-main = do putStrLn $ show $ parse2 (r "[0-9]!") "1"
-          putStrLn $ show $ parse2 (r "([aok][aok])!") "ok"
-          putStrLn $ show $ parse2 (r "[a-z]+") "a"
+main = do putStrLn $ show $ parse (r "[0-9]!") "1"
+          putStrLn $ show $ parse (r "([aok][aok])!") "ok"
+          putStrLn $ show $ parse (r "[a-z]+") "a"

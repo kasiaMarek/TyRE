@@ -3,17 +3,12 @@ module Data.Regex
 import public TyRE.StringRE
 import public TyRE.DisjointMatches
 import TyRE.Parser.API
-import TyRE.Parser2
 
 %default total
 
 export
 parse : TyRE a -> String -> Maybe a
 parse tyre str = map (extract tyre) $ run (compile tyre) str
-
-export
-parse2 : TyRE a -> String -> Maybe a
-parse2 tyre str = map (extract tyre) $ parse (compile tyre) (unpack str)
 
 export
 match : TyRE a -> String -> Bool

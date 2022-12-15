@@ -43,10 +43,13 @@ modules =   TyRE.CoreRE
           , TyRE.Text.Token
           -- main export
           , Data.Regex
+          , Data.Regex2
           -- examples
           , Data.Regex.CommonRegexes
           , Data.Regex.DateAndTime
           -- other
           , TyRE.DisjointMatches
           -- typed parser
+          , TyRE.Parser2.SM
+          , TyRE.Parser2.SMConstruction
           , TyRE.Parser2
