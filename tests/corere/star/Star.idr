@@ -1,7 +1,7 @@
-import TyRE.Parser.API
 import TyRE.CoreRE
 import TyRE.Codes
-import TyRE.Parser.Thompson
+import TyRE.Parser
+
 import Data.SnocList
 
 AorB : CoreRE
@@ -11,7 +11,7 @@ AOrBStar: CoreRE
 AOrBStar = Star AorB
 
 printResult : String -> IO ()
-printResult str = putStrLn $ show $ run AOrBStar str
+printResult str = putStrLn $ show $ parseFull AOrBStar (unpack str)
 
 main : IO ()
 main = do printResult "bab"

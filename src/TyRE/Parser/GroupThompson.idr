@@ -1,4 +1,4 @@
-module TyRE.GroupThompson
+module TyRE.Parser.GroupThompson
 
 import Data.List
 import Data.List1

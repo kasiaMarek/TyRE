@@ -11,25 +11,11 @@ modules =   TyRE.CoreRE
           , TyRE.Core
           , TyRE.RE
           , TyRE.StringRE
-          , TyRE.GroupThompson
-          , TyRE.Parser.API
-          , TyRE.Parser.Evidence
-          , TyRE.Parser.Thompson
-          , TyRE.Parser.NFA
-          --- pretty printer for NFA
-          , TyRE.Parser.NFA.PrettyPrint
-          , TyRE.Parser.NFA.PrettyPrint.Interfaces
-          --- verification bit
-          , TyRE.Parser.Verification
-          , TyRE.Parser.Verification.Thompson
-          , TyRE.Parser.Verification.Routine
-          , TyRE.Parser.Verification.AcceptingPath
-          , TyRE.Parser.Verification.Thompson.Common
-          , TyRE.Parser.Verification.Thompson.Predicate
-          , TyRE.Parser.Verification.Thompson.Group
-          , TyRE.Parser.Verification.Thompson.Alternation
-          , TyRE.Parser.Verification.Thompson.Concatenation
-          , TyRE.Parser.Verification.Thompson.Star
+          -- typed parser
+          , TyRE.Parser
+          , TyRE.Parser.SM
+          , TyRE.Parser.SMConstruction
+          , TyRE.Parser.GroupThompson
           --- additional more `generic` functions and structures
           , TyRE.Extra
           , TyRE.Extra.Pred
@@ -43,13 +29,8 @@ modules =   TyRE.CoreRE
           , TyRE.Text.Token
           -- main export
           , Data.Regex
-          , Data.Regex2
           -- examples
           , Data.Regex.CommonRegexes
           , Data.Regex.DateAndTime
           -- other
           , TyRE.DisjointMatches
-          -- typed parser
-          , TyRE.Parser2.SM
-          , TyRE.Parser2.SMConstruction
-          , TyRE.Parser2

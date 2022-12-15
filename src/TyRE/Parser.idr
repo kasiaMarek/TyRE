@@ -1,11 +1,11 @@
-module TyRE.Parser2
+module TyRE.Parser
 
 import Data.Maybe
 
 import TyRE.Codes
 import TyRE.CoreRE
-import TyRE.Parser2.SM
-import TyRE.Parser2.SMConstruction
+import TyRE.Parser.SM
+import TyRE.Parser.SMConstruction
 import TyRE.DisjointMatches
 
 %default total

@@ -1,6 +1,5 @@
 module Data.Regex.DateAndTime
 
-import TyRE.Parser.API
 import TyRE.StringRE
 
 public export

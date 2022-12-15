@@ -1,11 +1,11 @@
-module TyRE.Parser2.SMConstruction
+module TyRE.Parser.SMConstruction
 
 import Data.List
 
 import TyRE.Codes
 import TyRE.CoreRE
-import TyRE.Parser2.SM
-import TyRE.GroupThompson
+import TyRE.Parser.SM
+import TyRE.Parser.GroupThompson
 
 ||| Compile function creates a state machine from an untyped regex
 export
