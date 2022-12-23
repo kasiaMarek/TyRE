@@ -6,30 +6,16 @@ brief   = "A typed regex parser"
 sourcedir = "src"
 depends = contrib
 
-modules =   TyRE.API
-          , TyRE.CoreRE
+modules =   TyRE.CoreRE
           , TyRE.Codes
           , TyRE.Core
-          , TyRE.Evidence
           , TyRE.RE
           , TyRE.StringRE
-          , TyRE.Thompson
-          , TyRE.Thompson.GroupThompson
-          , TyRE.NFA
-          --- pretty printer for NFA
-          , TyRE.NFA.PrettyPrint
-          , TyRE.NFA.PrettyPrint.Interfaces
-          --- verification bit
-          , TyRE.Verification
-          , TyRE.Verification.Thompson
-          , TyRE.Verification.Routine
-          , TyRE.Verification.AcceptingPath
-          , TyRE.Verification.Thompson.Common
-          , TyRE.Verification.Thompson.Predicate
-          , TyRE.Verification.Thompson.Group
-          , TyRE.Verification.Thompson.Alternation
-          , TyRE.Verification.Thompson.Concatenation
-          , TyRE.Verification.Thompson.Star
+          -- typed parser
+          , TyRE.Parser
+          , TyRE.Parser.SM
+          , TyRE.Parser.SMConstruction
+          , TyRE.Parser.GroupThompson
           --- additional more `generic` functions and structures
           , TyRE.Extra
           , TyRE.Extra.Pred

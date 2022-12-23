@@ -11,11 +11,11 @@ export
 email : TyRE (String, String, String)
 email = 
     let firstPart : TyRE String
-        firstPart = pack `map` rep1 ((letter `or` digitChar) `or` oneOf "%+_.-")
+        firstPart = fastPack `map` rep1 ((letter `or` digitChar) `or` oneOf "%+_.-")
         secondPart : TyRE String
-        secondPart = (joinBy ".") `map` rep1 (pack `map` rep1 (letter `or` digitChar) <* match '.')
+        secondPart = (joinBy ".") `map` rep1 (fastPack `map` rep1 (letter `or` digitChar) <* match '.')
         domain : TyRE String
-        domain = pack `map` repFromTo 2 6 letter
+        domain = fastPack `map` repFromTo 2 6 letter
     in firstPart <*> (match '@' *> secondPart <*> domain)
 
 ---password validation
@@ -82,18 +82,18 @@ namespace UrlRegex
             protocol = r "((https?)!://(www)?)?"
 
             host : TyRE (String, String)
-            host =  (pack `map` rep1 (digitLetterOr "@:%_~#=.+-\\"))
+            host =  (fastPack `map` rep1 (digitLetterOr "@:%_~#=.+-\\"))
                     <* match '.' 
-                    <*> (pack `map` repFromTo 1 6 (digitLetterOr "()"))
+                    <*> (fastPack `map` repFromTo 1 6 (digitLetterOr "()"))
 
             path : TyRE (List String)
-            path = rep0 (match '/' *> (pack `map` rep1 (digitLetterOr "_-")))
+            path = rep0 (match '/' *> (fastPack `map` rep1 (digitLetterOr "_-")))
 
             query : TyRE (Maybe (List (String, String)))
             query = TyRE.Core.option $ match '?' 
-                        *> rep1 ((pack `map` rep1 (digitLetterOr "_-") 
+                        *> rep1 ((fastPack `map` rep1 (digitLetterOr "_-") 
                             <* match '=') 
-                        <*> (pack `map` rep1 (digitLetterOr "_-")))
+                        <*> (fastPack `map` rep1 (digitLetterOr "_-")))
 
             fragment : TyRE (Maybe String)
-            fragment = TyRE.Core.option $ match '#' *> (pack `map` rep1 (digitLetterOr "_-"))
+            fragment = TyRE.Core.option $ match '#' *> (fastPack `map` rep1 (digitLetterOr "_-"))

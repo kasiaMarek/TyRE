@@ -1,7 +1,7 @@
 module TyRE.CoreRE
 
 import Data.SortedSet
-import Data.List
+import Data.SnocList
 
 import public TyRE.Codes
 

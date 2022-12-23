@@ -1,5 +1,5 @@
 import Data.Regex
-import TyRE.API
+import TyRE.Parser
 
 AorB : CoreRE
 AorB = CharPred (Pred (\c =>  (c == 'a' || c == 'b')))
@@ -9,7 +9,7 @@ Ab : CoreRE
 Ab = Group (AorB `Concat` AorB) `Concat` AorB
 
 printResult : String -> IO ()
-printResult str = putStrLn $ show $ run Ab str
+printResult str = putStrLn $ show $ parseFull Ab (unpack str)
 
 main : IO ()
 main = do printResult "bab"

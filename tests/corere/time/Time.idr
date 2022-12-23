@@ -1,7 +1,6 @@
-import TyRE.API
 import TyRE.CoreRE
 import TyRE.Codes
-import TyRE.Thompson
+import TyRE.Parser
 
 Exactly: Char -> CoreRE
 Exactly x = CharPred (Pred (\c =>  c == x))
@@ -28,7 +27,7 @@ Time =
     )
 
 printResult : String -> IO ()
-printResult str = putStrLn $ show $ run Time str
+printResult str = putStrLn $ show $ parseFull Time (unpack str)
 
 main : IO ()
 main = do printResult "10:30"

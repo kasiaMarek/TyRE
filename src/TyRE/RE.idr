@@ -460,28 +460,28 @@ mutual
     compileKeep (Maybe re) | IgnoreC = ignore (option (compileKeep re))
 
   compileKeep (Rep0 re) with (SimplifyCode (CodeShapeREKeep re)) proof p
-    compileKeep (Rep0 re) | CharC = replace {p=(TyRE . List . Sem)} p (Rep (compileKeep re))
-    compileKeep (Rep0 re) | (PairC x y) = replace {p=(TyRE . List . Sem)} p (Rep (compileKeep re))
-    compileKeep (Rep0 re) | StringC = replace {p=(TyRE . List . Sem)} p (Rep (compileKeep re))
+    compileKeep (Rep0 re) | CharC = replace {p=(TyRE . SnocList . Sem)} p (Rep (compileKeep re))
+    compileKeep (Rep0 re) | (PairC x y) = replace {p=(TyRE . SnocList . Sem)} p (Rep (compileKeep re))
+    compileKeep (Rep0 re) | StringC = replace {p=(TyRE . SnocList . Sem)} p (Rep (compileKeep re))
     compileKeep (Rep0 re) | UnitC = length `map` Rep (compileKeep re)
-    compileKeep (Rep0 re) | (EitherC x y) = replace {p=(TyRE . List . Sem)} p (Rep (compileKeep re))
-    compileKeep (Rep0 re) | (ListC x) = replace {p=(TyRE . List . Sem)} p (Rep (compileKeep re))
-    compileKeep (Rep0 re) | (MaybeC x) = replace {p=(TyRE . List . Sem)} p (Rep (compileKeep re))
-    compileKeep (Rep0 re) | BoolC = replace {p=(TyRE . List . Sem)} p (Rep (compileKeep re))
-    compileKeep (Rep0 re) | NatC = replace {p=(TyRE . List . Sem)} p (Rep (compileKeep re))
+    compileKeep (Rep0 re) | (EitherC x y) = replace {p=(TyRE . SnocList . Sem)} p (Rep (compileKeep re))
+    compileKeep (Rep0 re) | (ListC x) = replace {p=(TyRE . SnocList . Sem)} p (Rep (compileKeep re))
+    compileKeep (Rep0 re) | (MaybeC x) = replace {p=(TyRE . SnocList . Sem)} p (Rep (compileKeep re))
+    compileKeep (Rep0 re) | BoolC = replace {p=(TyRE . SnocList . Sem)} p (Rep (compileKeep re))
+    compileKeep (Rep0 re) | NatC = replace {p=(TyRE . SnocList . Sem)} p (Rep (compileKeep re))
     compileKeep (Rep0 re) | IgnoreC = ignore (Rep (compileKeep re))
 
   compileKeep (Rep1 re) with (SimplifyCode (CodeShapeREKeep re)) proof p
     compileKeep (Rep1 re) | CharC = 
-      (rewrite p in (\(c,l) => c::l)) `map` cre <*> Rep cre where
+      (rewrite p in (\(c,l) => [< c] ++ l)) `map` cre <*> Rep cre where
         cre : TyRE $ TypeREKeep re
         cre = compileKeep re
     compileKeep (Rep1 re) | (PairC x y) =
-      (rewrite p in (\(c,l) => c::l)) `map` cre <*> Rep cre where
+      (rewrite p in (\(c,l) => [< c] ++ l)) `map` cre <*> Rep cre where
         cre : TyRE $ TypeREKeep re
         cre = compileKeep re
     compileKeep (Rep1 re) | StringC =
-      (rewrite p in (\(c,l) => c::l)) `map` cre <*> Rep cre where
+      (rewrite p in (\(c,l) => [< c] ++ l)) `map` cre <*> Rep cre where
         cre : TyRE $ TypeREKeep re
         cre = compileKeep re
     compileKeep (Rep1 re) | UnitC =
@@ -489,23 +489,23 @@ mutual
         cre : TyRE $ TypeREKeep re
         cre = compileKeep re
     compileKeep (Rep1 re) | (EitherC x y) =
-      (rewrite p in (\(c,l) => c::l)) `map` cre <*> Rep cre where
+      (rewrite p in (\(c,l) => [< c] ++ l)) `map` cre <*> Rep cre where
         cre : TyRE $ TypeREKeep re
         cre = compileKeep re
     compileKeep (Rep1 re) | (ListC x) =
-      (rewrite p in (\(c,l) => c::l)) `map` cre <*> Rep cre where
+      (rewrite p in (\(c,l) => [< c] ++ l)) `map` cre <*> Rep cre where
         cre : TyRE $ TypeREKeep re
         cre = compileKeep re
     compileKeep (Rep1 re) | (MaybeC x) =
-      (rewrite p in (\(c,l) => c::l)) `map` cre <*> Rep cre where
+      (rewrite p in (\(c,l) => [< c] ++ l)) `map` cre <*> Rep cre where
         cre : TyRE $ TypeREKeep re
         cre = compileKeep re
     compileKeep (Rep1 re) | BoolC =
-      (rewrite p in (\(c,l) => c::l)) `map` cre <*> Rep cre where
+      (rewrite p in (\(c,l) => [< c] ++ l)) `map` cre <*> Rep cre where
         cre : TyRE $ TypeREKeep re
         cre = compileKeep re
     compileKeep (Rep1 re) | NatC =
-      (rewrite p in (\(c,l) => c::l)) `map` cre <*> Rep cre where
+      (rewrite p in (\(c,l) => [< c] ++ l)) `map` cre <*> Rep cre where
         cre : TyRE $ TypeREKeep re
         cre = compileKeep re
     compileKeep (Rep1 re) | IgnoreC = ignore (rep1 (compileKeep re))
@@ -823,28 +823,28 @@ mutual
     compile (Maybe re) | IgnoreC = ignore (option (compile re))
 
   compile (Rep0 re) with (SimplifyCode (CodeShapeRE re)) proof p
-    compile (Rep0 re) | CharC = replace {p=(TyRE . List . Sem)} p (Rep (compile re))
-    compile (Rep0 re) | (PairC x y) = replace {p=(TyRE . List . Sem)} p (Rep (compile re))
-    compile (Rep0 re) | StringC = replace {p=(TyRE . List . Sem)} p (Rep (compile re))
+    compile (Rep0 re) | CharC = replace {p=(TyRE . SnocList . Sem)} p (Rep (compile re))
+    compile (Rep0 re) | (PairC x y) = replace {p=(TyRE . SnocList . Sem)} p (Rep (compile re))
+    compile (Rep0 re) | StringC = replace {p=(TyRE . SnocList . Sem)} p (Rep (compile re))
     compile (Rep0 re) | UnitC = length `map` Rep (compile re)
-    compile (Rep0 re) | (EitherC x y) = replace {p=(TyRE . List . Sem)} p (Rep (compile re))
-    compile (Rep0 re) | (ListC x) = replace {p=(TyRE . List . Sem)} p (Rep (compile re))
-    compile (Rep0 re) | (MaybeC x) = replace {p=(TyRE . List . Sem)} p (Rep (compile re))
-    compile (Rep0 re) | BoolC = replace {p=(TyRE . List . Sem)} p (Rep (compile re))
-    compile (Rep0 re) | NatC = replace {p=(TyRE . List . Sem)} p (Rep (compile re))
+    compile (Rep0 re) | (EitherC x y) = replace {p=(TyRE . SnocList . Sem)} p (Rep (compile re))
+    compile (Rep0 re) | (ListC x) = replace {p=(TyRE . SnocList . Sem)} p (Rep (compile re))
+    compile (Rep0 re) | (MaybeC x) = replace {p=(TyRE . SnocList . Sem)} p (Rep (compile re))
+    compile (Rep0 re) | BoolC = replace {p=(TyRE . SnocList . Sem)} p (Rep (compile re))
+    compile (Rep0 re) | NatC = replace {p=(TyRE . SnocList . Sem)} p (Rep (compile re))
     compile (Rep0 re) | IgnoreC = ignore (Rep (compile re))
 
   compile (Rep1 re) with (SimplifyCode (CodeShapeRE re)) proof p
     compile (Rep1 re) | CharC =
-      (rewrite p in (\(c,l) => c::l)) `map` cre <*> Rep cre where
+      (rewrite p in (\(c,l) => [< c] ++ l)) `map` cre <*> Rep cre where
         cre : TyRE $ TypeRE re
         cre = compile re
     compile (Rep1 re) | (PairC x y) =
-      (rewrite p in (\(c,l) => c::l)) `map` cre <*> Rep cre where
+      (rewrite p in (\(c,l) => [< c] ++ l)) `map` cre <*> Rep cre where
         cre : TyRE $ TypeRE re
         cre = compile re
     compile (Rep1 re) | StringC =
-      (rewrite p in (\(c,l) => c::l)) `map` cre <*> Rep cre where
+      (rewrite p in (\(c,l) => [< c] ++ l)) `map` cre <*> Rep cre where
         cre : TyRE $ TypeRE re
         cre = compile re
     compile (Rep1 re) | UnitC =
@@ -852,23 +852,23 @@ mutual
         cre : TyRE $ TypeRE re
         cre = compile re
     compile (Rep1 re) | (EitherC x y) =
-      (rewrite p in (\(c,l) => c::l)) `map` cre <*> Rep cre where
+      (rewrite p in (\(c,l) => [< c] ++ l)) `map` cre <*> Rep cre where
         cre : TyRE $ TypeRE re
         cre = compile re
     compile (Rep1 re) | (ListC x) =
-      (rewrite p in (\(c,l) => c::l)) `map` cre <*> Rep cre where
+      (rewrite p in (\(c,l) => [< c] ++ l)) `map` cre <*> Rep cre where
         cre : TyRE $ TypeRE re
         cre = compile re
     compile (Rep1 re) | (MaybeC x) =
-      (rewrite p in (\(c,l) => c::l)) `map` cre <*> Rep cre where
+      (rewrite p in (\(c,l) => [< c] ++ l)) `map` cre <*> Rep cre where
         cre : TyRE $ TypeRE re
         cre = compile re
     compile (Rep1 re) | BoolC =
-      (rewrite p in (\(c,l) => c::l)) `map` cre <*> Rep cre where
+      (rewrite p in (\(c,l) => [< c] ++ l)) `map` cre <*> Rep cre where
         cre : TyRE $ TypeRE re
         cre = compile re
     compile (Rep1 re) | NatC =
-      (rewrite p in (\(c,l) => c::l)) `map` cre <*> Rep cre where
+      (rewrite p in (\(c,l) => [< c] ++ l)) `map` cre <*> Rep cre where
         cre : TyRE $ TypeRE re
         cre = compile re
     compile (Rep1 re) | IgnoreC = ignore (rep1 (compile re))

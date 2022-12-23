@@ -1,3 +1,0 @@
-$1 --no-color --console-width 0 --no-banner -p tyre -p contrib --exec main Even.idr
-
-rm -rf build

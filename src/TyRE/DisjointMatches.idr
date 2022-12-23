@@ -78,23 +78,23 @@ Functor DisjointMatchesSnoc where
 
 export
 toString : (a -> String) -> DisjointMatches a -> String
-toString f (Suffix cs) = pack cs
-toString f (Cons cs parse tail) = (pack cs) ++ (f parse) ++ (toString f tail)
+toString f (Suffix cs) = fastPack cs
+toString f (Cons cs parse tail) = (fastPack cs) ++ (f parse) ++ (toString f tail)
 
 export
 toStringSnoc : (a -> String) -> DisjointMatchesSnoc a -> String
-toStringSnoc f (Prefix sc) = pack (cast sc)
-toStringSnoc f (Snoc neck parse sc) = (toStringSnoc f neck) ++ (f parse) ++ pack (cast sc)
+toStringSnoc f (Prefix sc) = fastPack (cast sc)
+toStringSnoc f (Snoc neck parse sc) = (toStringSnoc f neck) ++ (f parse) ++ fastPack (cast sc)
 
 export
 Show a => Show (DisjointMatches a) where
-  show (Suffix cs) = pack cs
-  show (Cons cs pt tail) = pack cs ++ "~~" ++ show pt ++ "~~" ++ show tail
+  show (Suffix cs) = fastPack cs
+  show (Cons cs pt tail) = fastPack cs ++ "~~" ++ show pt ++ "~~" ++ show tail
 
 export
 Show a => Show (DisjointMatchesSnoc a) where
-  show (Prefix cs) = pack $ toList cs
-  show (Snoc neck pt cs) = show neck ++ "~~" ++ show pt ++ "~~" ++ pack (toList cs)
+  show (Prefix cs) = fastPack $ toList cs
+  show (Snoc neck pt cs) = show neck ++ "~~" ++ show pt ++ "~~" ++ fastPack (toList cs)
 
 export
 length : DisjointMatches a -> Nat

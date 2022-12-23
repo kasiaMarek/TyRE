@@ -1,7 +1,6 @@
-import TyRE.API
+import TyRE.Parser
 import TyRE.CoreRE
 import TyRE.Codes
-import TyRE.Thompson
 
 Exactly: Char -> CoreRE
 Exactly x = CharPred (Pred (\c =>  c == x))
@@ -11,7 +10,7 @@ Foo: CoreRE
 Foo = Group (((Exactly 'f') `Concat` (Exactly 'o')) `Concat` (Exactly 'o'))
 
 printResult : String -> IO ()
-printResult str = putStrLn $ show $ run Foo str
+printResult str = putStrLn $ show $ parseFull Foo (unpack str)
 
 main : IO ()
 main = do printResult "foo"

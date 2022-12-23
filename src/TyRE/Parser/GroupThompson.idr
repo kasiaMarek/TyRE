@@ -1,11 +1,10 @@
-module TyRE.Thompson.GroupThompson
+module TyRE.Parser.GroupThompson
 
 import Data.List
 import Data.List1
 import Data.SortedSet
 
 import TyRE.CoreRE
-import TyRE.NFA
 
 %default total
 
@@ -23,16 +22,6 @@ record GroupSM where
   statesWithNext : List (Nat, NextStates)
   max : Nat
 
-public export
-mapRoutine : (Routine -> Routine) -> List (s, Routine) -> List (s, Routine)
-mapRoutine f xs = map (bimap id f) xs
-
-public export
-addEndRoutine : Routine -> List (Maybe state, Routine) -> List (Maybe state, Routine)
-addEndRoutine routine [] = []
-addEndRoutine routine ((Just x, r) :: xs) = (Just x, r) :: (addEndRoutine routine xs)
-addEndRoutine routine ((Nothing, r) :: xs) = (Nothing, r ++ routine) :: (addEndRoutine routine xs)
-
 filterNothing : List (Maybe Nat) -> List (Maybe Nat)
 filterNothing xs = filter (/= Nothing) xs
 
@@ -42,7 +31,8 @@ replaceEndInInit xs mks =
     Nothing => xs
     Just _ => mks ++ (filterNothing xs)
 
-replaceEndInNext : List (Nat, NextStates) -> List (Maybe Nat) -> List (Nat, NextStates)
+replaceEndInNext : List (Nat, NextStates) -> List (Maybe Nat)
+                -> List (Nat, NextStates)
 replaceEndInNext [] mks = []
 replaceEndInNext ((n, (MkNextStates condition isSat notSat)) :: xs) mks = 
   (n, (MkNextStates condition (replaceEndInInit isSat mks) (replaceEndInInit notSat mks))) :: (replaceEndInNext xs mks)
@@ -108,28 +98,5 @@ min (MkGroupSM initStates statesWithNext max) =
                                     (applyFilter (n, n1) y.notSat)) :: applyMap xs
 
 public export
-addEmptyRoutine : List (Maybe Nat) -> List (Maybe Nat, Routine)
-addEmptyRoutine states = map (`MkPair` []) states
-
-public export
-groupTransform : List (Maybe Nat) -> List (Maybe Nat, Routine)
-groupTransform states = addEndRoutine [EmitString] (addEmptyRoutine states)
-
-public export
-smFromGroupSMNext : List (Nat, NextStates) -> Nat -> Char -> List (Maybe Nat, Routine)
-smFromGroupSMNext xs s c = groupTransform $
-  case (find (\stns => fst stns == s) xs) of
-    Nothing => []
-    (Just (_, (MkNextStates condition isSat notSat))) => 
-      (if (satisfies condition c) then isSat else notSat)
-
-public export
-smFromGroupSM : GroupSM -> SM
-smFromGroupSM grsm = 
-  MkSM  Nat 
-        (mapRoutine (Record::) (groupTransform grsm.initStates))
-        (smFromGroupSMNext grsm.statesWithNext)
-
-public export
-groupThompson : CoreRE -> SM
-groupThompson re = smFromGroupSM (min (groupStates 0 re))
+groupSM : CoreRE -> GroupSM
+groupSM re = min (groupStates 0 re)
