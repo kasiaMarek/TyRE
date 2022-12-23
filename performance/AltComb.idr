@@ -28,7 +28,7 @@ run n = parse (rightGrammar n) (fst (lex tokenMap "a"))
 
 main : IO ()
 main =  do  str <- getLine
-            if all isDigit (unpack str)
+            if all isDigit (fastUnpack str)
               then
                 let n : Nat
                     n = (cast str)

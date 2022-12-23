@@ -19,7 +19,7 @@ printResult n = parseFull (createRE n) (createString n)
 
 main : IO ()
 main =  do  str <- getLine
-            if all isDigit (unpack str)
+            if all isDigit (fastUnpack str)
               then
                 let n : Nat
                     n = (cast str)

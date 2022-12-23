@@ -17,11 +17,11 @@ createString 0 = ['a']
 createString (S k) = 'a'::(createString k)
 
 printResult : (n: Nat) -> Maybe (Shape $ createRE n)
-printResult n = run (createRE n) (pack $ createString n)
+printResult n = run (createRE n) (fastPack $ createString n)
 
 main : IO ()
 main =  do  str <- getLine
-            if all isDigit (unpack str)
+            if all isDigit (fastUnpack str)
               then
                 let n : Nat
                     n = (cast str)

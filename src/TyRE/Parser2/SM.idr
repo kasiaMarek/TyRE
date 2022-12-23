@@ -107,7 +107,7 @@ execRoutineAux (EmitLeft x) c (MkThreadData (Snoc y z) col rec) =
 execRoutineAux (EmitRight x) c (MkThreadData (Snoc y z) col rec) =
   MkThreadData (Snoc y (Right z)) col rec
 execRoutineAux EmitString c (MkThreadData st col rec) =
-  MkThreadData (Snoc st (show col)) [<] False
+  MkThreadData (Snoc st (fastPack $ cast col)) [<] False
 execRoutineAux (Join r1 r2) (Left c) st =
   execRoutineAux r2 (Left c) (execRoutineAux r1 (Left c) st)
 execRoutineAux (Join r1 r2) (Right (InitJoin p1 p2)) st =
@@ -201,7 +201,9 @@ parameters {c : Code} {auto sm : SM c}
     runTillLastAccept cs Nothing [] = (Nothing, cs)
     runTillLastAccept cs (Just (tree, rest)) [] = (Just tree, rest)
     runTillLastAccept cs mr tds with (findR (\td => isNothing (td.state)) tds)
-      runTillLastAccept [] mr tds        | (Because Nothing p) = ?cneow
+      runTillLastAccept [] Nothing tds | (Because Nothing p) = (Nothing, [])
+      runTillLastAccept [] (Just (tree, tail)) tds
+                        | (Because Nothing p) = (Just tree, tail)
       runTillLastAccept (x :: xs) mr tds | (Because Nothing p) =
         runTillLastAccept xs mr (distinct $ tds >>= (execOnThread sm x))
       runTillLastAccept [] mr tds

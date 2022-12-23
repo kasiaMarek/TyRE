@@ -102,16 +102,16 @@ def plotresult(test, testresult):
     plt.clf()
 
 tests = [
-    {NAME : "star", ITR : 100,
+    {NAME : "star", ITR : 1000,
         TYRE_FILE: "StarTyRE11", TYRE_FILE2: "StarTyRE12", COMB_FILE: "StarComb",
         XLABEL: "length of word"},
-    {NAME : "star2", ITR : 100,
+    {NAME : "star2", ITR : 1000,
         TYRE_FILE: "StarTyRE21", TYRE_FILE2: "StarTyRE22", COMB_FILE: "StarComb2",
         XLABEL: "length of word"},
-    {NAME : "concat", ITR : 100,
+    {NAME : "concat", ITR : 1000,
         TYRE_FILE: "ConcatTyRE", TYRE_FILE2: "ConcatTyRE2", COMB_FILE: "ConcatComb",
         XLABEL: "length of regex and word"} ,
-    {NAME : "alternation", ITR : 100,
+    {NAME : "alternation", ITR : 1000,
         TYRE_FILE: "AltTyRE", TYRE_FILE2: "AltTyRE2", COMB_FILE: "AltComb",
         XLABEL: "length of regex"}
 ]

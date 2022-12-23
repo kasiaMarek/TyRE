@@ -11,7 +11,7 @@ leftRE (S k) = (\case {Left n => n; Right () => (S k)}) `map` (rightRE k <|> mat
 
 main : IO ()
 main =  do  str <- getLine
-            if all isDigit (unpack str)
+            if all isDigit (fastUnpack str)
               then
                 let n : Nat
                     n = (cast str)

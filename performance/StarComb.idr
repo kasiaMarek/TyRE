@@ -29,7 +29,7 @@ run n = parse grammar (fst (lex tokenMap (createString n)) ++ [MkToken 0 0 EndTo
 
 main : IO ()
 main =  do  str <- getLine
-            if all isDigit (unpack str)
+            if all isDigit (fastUnpack str)
               then
                 let n : Nat
                     n = (cast str)

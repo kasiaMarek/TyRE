@@ -35,11 +35,11 @@ resToStr (S k) =
 
 run : (n : Nat) -> Either (ParseError (TokenData AToken))
                       (gType n, List (TokenData AToken))
-run n = parse (getGrammar n) (fst (lex aTokenMap (pack $ createString n)))
+run n = parse (getGrammar n) (fst (lex aTokenMap (fastPack $ createString n)))
 
 main : IO ()
 main =  do  str <- getLine
-            if all isDigit (unpack str)
+            if all isDigit (fastUnpack str)
               then
                 let n : Nat
                     n = (cast str)
