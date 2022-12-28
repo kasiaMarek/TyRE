@@ -2,9 +2,6 @@ module TyRE.Parser.SM
 
 import Data.SnocList
 
-import TyRE.Codes
-import TyRE.CoreRE
-
 import Data.Maybe
 import Data.List
 import Data.List.Elem
@@ -17,112 +14,186 @@ import TyRE.Extra.Reflects
 --- definition of SM ---
 
 public export
-data Routine : SnocList Code -> SnocList Code -> Type where
-  RUnit : {x : Code} -> (Sem x) -> Routine [<] [< x]
-  Same : Routine cds cds
-  PushChar : Routine cds (cds :< CharC)
-  ReducePair : {x,y,z : Code} -> (Sem x -> Sem y -> Sem z)
-            -> Routine (cds :< x :< y) (cds :< z)
-  EmitLeft : (y : Code) -> Routine (cds :< x) (cds :< EitherC x y)
-  EmitRight : (y : Code) -> Routine (cds :< x) (cds :< EitherC y x)
-  Join : Routine cds cds' -> Routine cds' cds'' -> Routine cds cds''
-  Lift : Routine cds cds' -> Routine (pcds ++ cds) (pcds ++ cds')
-  EmitString : Routine cds (cds :< StringC)
-  Record : Routine cds cds
+data Instruction : SnocList Type -> SnocList Type -> Type where
+  ||| Pushes chosen symbol on the stack
+  Push : {0 x : Type} -> x -> Instruction tps (tps :< x)
+  ||| Pushes currently consumed character on the stack
+  PushChar : Instruction tps (tps :< Char)
+  ||| Reduces two last symbols from the stack accoring to the given funciton
+  ReducePair : {0 x,y,z : Type} -> (x -> y -> z)
+            -> Instruction (tps :< x :< y) (tps :< z)
+  ||| Maps the top element of stack
+  Transform : {0 x,y : Type} -> (x -> y) -> Instruction (tps :< x) (tps :< y)
+  ||| Pushes collected string on the stack
+  EmitString : Instruction tps (tps :< String)
+  ||| Raises record flag and starts collecting characters
+  Record : Instruction tps tps
 
 public export
-data IsInitRoutine : Routine c c' -> Type where
-  InitSame : IsInitRoutine Same
-  InitRecord : IsInitRoutine Record
-  InitRUnit : IsInitRoutine (RUnit elem)
-  InitReducePair : IsInitRoutine (ReducePair f)
-  InitEmitLeft : IsInitRoutine (EmitLeft y)
-  InitEmitRight : IsInitRoutine (EmitRight y)
-  InitJoin : IsInitRoutine r1 -> IsInitRoutine r2 -> IsInitRoutine (Join r1 r2)
-  InitLift : IsInitRoutine r -> IsInitRoutine (Lift r)
-  InitEmitString : IsInitRoutine EmitString
+liftInst : Instruction tps tps' -> Instruction (pcds ++ tps) (pcds ++ tps')
+liftInst (Push x) = Push x
+liftInst PushChar = PushChar
+liftInst (ReducePair f) = ReducePair f
+liftInst (Transform f) = Transform f
+liftInst EmitString = EmitString
+liftInst Record = Record
 
 public export
-mlookup : (s -> SnocList Code) -> Code -> Maybe s -> SnocList Code
-mlookup f c Nothing = [< c]
-mlookup f c (Just s) = f s
+data RoutineSnoc : SnocList Type -> SnocList Type -> Type where
+  ||| Identity
+  Lin : RoutineSnoc tps tps
+  ||| Sequences routines
+  (:<) : RoutineSnoc tps tps' -> Instruction tps' tps'' -> RoutineSnoc tps tps''
 
 public export
-InitStatesType : (c : Code) -> (s : Type) -> (s -> SnocList Code) -> Type
-InitStatesType c s lookup =
+data Routine : SnocList Type -> SnocList Type -> Type where
+  ||| Identity
+  Nil : Routine tps tps
+  ||| Sequences routines
+  (::) : Instruction tps tps' -> Routine tps' tps'' -> Routine tps tps''
+
+public export
+(++) : RoutineSnoc tps tps' -> RoutineSnoc tps' tps'' -> RoutineSnoc tps tps''
+(++) r [<] = r
+(++) r (x :< y) = (r ++ x) :< y
+
+public export
+lift : RoutineSnoc tps tps' -> RoutineSnoc (pcds ++ tps) (pcds ++ tps')
+lift [<] = [<]
+lift (x :< y) = (lift x) :< liftInst y
+
+reverseRec : RoutineSnoc ts ts' -> Routine ts' ts'' -> Routine ts ts''
+reverseRec [<] y = y
+reverseRec (x :< z) y = reverseRec x (z :: y)
+
+reverse : RoutineSnoc tps tps' -> Routine tps tps'
+reverse sx = reverseRec sx []
+
+
+namespace IsInit
+  public export
+  data IsInitInstruction : Instruction t t' -> Type where
+    InitRecord : IsInitInstruction Record
+    InitPush : IsInitInstruction (Push elem)
+    InitReducePair : IsInitInstruction (ReducePair f)
+    InitTransform : IsInitInstruction (Transform f)
+    InitEmitString : IsInitInstruction EmitString
+
+  public export
+  data IsInitRoutine : Routine t t' -> Type where
+    Nil  : IsInitRoutine []
+    (::) : IsInitInstruction x -> IsInitRoutine xs -> IsInitRoutine (x :: xs)
+
+  public export
+  data IsInitRoutineSnoc : RoutineSnoc t t' -> Type where
+    Lin  : IsInitRoutineSnoc [<]
+    (:<) : IsInitRoutineSnoc xs -> IsInitInstruction x
+        -> IsInitRoutineSnoc (xs :< x)
+
+  public export
+  (++) : IsInitRoutineSnoc xs -> IsInitRoutineSnoc xs'
+      -> IsInitRoutineSnoc (xs ++ xs')
+  (++) x [<] = x
+  (++) x (y :< z) = (x ++ y) :< z
+
+  reverseRec : IsInitRoutineSnoc sx -> IsInitRoutine xs
+            -> IsInitRoutine (reverseRec sx xs)
+  reverseRec [<] y = y
+  reverseRec (x :< z) y = reverseRec x (z :: y)
+
+  export
+  reverse : IsInitRoutineSnoc sx -> IsInitRoutine (reverse sx)
+  reverse sx = reverseRec sx []
+
+  liftInst : IsInitInstruction xs -> IsInitInstruction (liftInst xs)
+  liftInst InitRecord = InitRecord
+  liftInst InitPush = InitPush
+  liftInst InitReducePair = InitReducePair
+  liftInst InitTransform = InitTransform
+  liftInst InitEmitString = InitEmitString
+  
+  public export
+  lift : IsInitRoutineSnoc xs -> IsInitRoutineSnoc (lift xs)
+  lift [<] = [<]
+  lift (x :< y) = (lift x) :< (liftInst y)
+
+public export
+mlookup : (s -> SnocList Type) -> Type -> Maybe s -> SnocList Type
+mlookup f t Nothing = [< t]
+mlookup f t (Just s) = f s
+
+public export
+InitStatesType : (t : Type) -> (s : Type) -> (s -> SnocList Type) -> Type
+InitStatesType t s lookup =
   List (st : Maybe s
-        ** (r : Routine [<] (mlookup lookup c st)
-            ** IsInitRoutine r))
+        ** (r : RoutineSnoc [<] (mlookup lookup t st)
+            ** IsInitRoutineSnoc r))
 
 public export
-NextStatesType : (c : Code) -> (s : Type) -> (s -> SnocList Code) -> Type
-NextStatesType c s lookup = 
+NextStatesType : (t : Type) -> (s : Type) -> (s -> SnocList Type) -> Type
+NextStatesType t s lookup = 
     (st : s)
   -> Char
   -> List (st' : Maybe s
-            ** Routine (lookup st) (mlookup lookup c st'))
+            ** RoutineSnoc (lookup st) (mlookup lookup t st'))
 
 public export
-record SM (c : Code) where
+record SM (t : Type) where
   constructor MkSM
   0 s : Type
-  0 lookup : s -> SnocList Code
+  0 lookup : s -> SnocList Type
   {auto isEq : Eq s}
-  init : InitStatesType c s lookup
-  next : NextStatesType c s lookup
+  init : InitStatesType t s lookup
+  next : NextStatesType t s lookup
 
 --- execution of the SM ---
+namespace Stack
+  public export
+  data Stack : SnocList Type -> Type where
+    Lin : Stack [<]
+    Snoc : Stack tps -> {0 t : Type} -> t -> Stack (tps :< t)
 
-data Stack : SnocList Code -> Type where
-  Lin : Stack [<]
-  Snoc : Stack cds -> {0 c : Code} -> Sem c -> Stack (cds :< c)
-
-record ThreadData (code : SnocList Code) where
+record ThreadData (code : SnocList Type) where
   constructor MkThreadData
   stack : Stack code
   recorded : SnocList Char
   rec : Bool
 
-record Thread {c : Code} (sm : SM c) where
+record Thread {t : Type} (sm : SM t) where
   constructor MkThread
   state : Maybe sm.s 
-  tddata : ThreadData (mlookup sm.lookup c state)
+  tddata : ThreadData (mlookup sm.lookup t state)
 
-execRoutineAux : {0 scs, scs', p : SnocList Code}
+execInstructionAux : {0 scs, scs', p : SnocList Type}
+                  -> (r : Instruction scs scs')
+                  -> Either Char (IsInitInstruction r)
+                  -> ThreadData (p ++ scs)
+                  -> ThreadData (p ++ scs')
+execInstructionAux Record c (MkThreadData st col rec) =
+  MkThreadData st col True
+execInstructionAux (Push elem) c (MkThreadData st col rec) =
+  MkThreadData (Snoc st elem) col rec
+execInstructionAux PushChar (Left c) (MkThreadData st col rec) =
+  MkThreadData (Snoc st c) col rec
+execInstructionAux (ReducePair f) c (MkThreadData (Snoc (Snoc x z) y) col rec) =
+  MkThreadData (Snoc x (f z y)) col rec
+execInstructionAux (Transform f) c (MkThreadData (Snoc y z) col rec) =
+  MkThreadData (Snoc y (f z)) col rec
+execInstructionAux EmitString c (MkThreadData st col rec) =
+  MkThreadData (Snoc st (fastPack $ cast col)) [<] False
+
+execRoutineAux : {0 scs, scs', p : SnocList Type}
             -> (r : Routine scs scs')
             -> Either Char (IsInitRoutine r)
             -> ThreadData (p ++ scs)
             -> ThreadData (p ++ scs')
-execRoutineAux Same c st = st
-execRoutineAux Record c (MkThreadData st col rec) =
-  MkThreadData st col True
-execRoutineAux (RUnit elem) c (MkThreadData st col rec) =
-  MkThreadData (Snoc st elem) col rec
-execRoutineAux PushChar (Left c) (MkThreadData st col rec) =
-  MkThreadData (Snoc st c) col rec
-execRoutineAux (ReducePair f) c (MkThreadData (Snoc (Snoc x z) y) col rec) =
-  MkThreadData (Snoc x (f z y)) col rec
-execRoutineAux (EmitLeft x) c (MkThreadData (Snoc y z) col rec) =
-  MkThreadData (Snoc y (Left z)) col rec
-execRoutineAux (EmitRight x) c (MkThreadData (Snoc y z) col rec) =
-  MkThreadData (Snoc y (Right z)) col rec
-execRoutineAux EmitString c (MkThreadData st col rec) =
-  MkThreadData (Snoc st (fastPack $ cast col)) [<] False
-execRoutineAux (Join r1 r2) (Left c) st =
-  execRoutineAux r2 (Left c) (execRoutineAux r1 (Left c) st)
-execRoutineAux (Join r1 r2) (Right (InitJoin p1 p2)) st =
-  execRoutineAux r2 (Right p2) (execRoutineAux r1 (Right p1) st)
-execRoutineAux (Lift r) c st =
-  let charOrPrf :=
-        case c of
-          Left c => Left c
-          Right (InitLift p) => Right p 
-  in replace {p = (ThreadData)}
-          (sym $ appendAssociative _ _ _)
-          (execRoutineAux r charOrPrf (replace {p = (ThreadData)}
-                                       (appendAssociative _ _ _) st))
+execRoutineAux [] c st = st
+execRoutineAux (i :: r) (Left c) st =
+  execRoutineAux r (Left c) (execInstructionAux i (Left c) st)
+execRoutineAux (i :: r) (Right (ip :: ir)) st =
+  execRoutineAux r (Right ir) (execInstructionAux i (Right ip) st)
 
-execRoutine : {0 scs, scs' : SnocList Code}
+execRoutine : {0 scs, scs' : SnocList Type}
             -> (r : Routine scs scs')
             -> Either Char (IsInitRoutine r)
             -> ThreadData scs -> ThreadData scs'
@@ -138,13 +209,13 @@ execOnThread sm c (MkThread (Just st) info) =
           (MkThreadData stack recorded True) =>
             MkThreadData stack (recorded :< c) True
           info => info
-  in map (\case (ns ** rt) => MkThread ns (execRoutine rt (Left c) infoWithChar))
+  in map (\case (ns ** rt) => MkThread ns (execRoutine (reverse rt) (Left c) infoWithChar))
          (sm.next st c)
 
-getFromStack : Stack [< c] -> Sem c
+getFromStack : Stack [< t] -> t
 getFromStack (Snoc [<] r) = r
 
-parameters {c : Code} {auto sm : SM c}
+parameters {0 t : Type} {auto sm : SM t}
   ||| Distinct function for threads
   distinct : List (Thread sm) -> List (Thread sm)
   distinct tds = distinctRep tds [] where
@@ -161,13 +232,13 @@ parameters {c : Code} {auto sm : SM c}
     map (\case
             (st ** (rt ** p)) =>
               MkThread st
-                      (execRoutine rt (Right p) (MkThreadData [<] [<] False)))
+                      (execRoutine (reverse rt) (Right $ reverse p) (MkThreadData [<] [<] False)))
                       sm.init
 
   namespace StringRunners -- possible modes of running for list of characters
     ||| Run the state machine matching the whole string
     export
-    runTillStrEnd : List Char -> List (Thread sm) -> Maybe (Sem c)
+    runTillStrEnd : List Char -> List (Thread sm) -> Maybe t
     runTillStrEnd [] tds with (findR (\td => isNothing (td.state)) tds)
       runTillStrEnd [] tds | (Because Nothing p) = Nothing
       runTillStrEnd [] tds
@@ -181,7 +252,7 @@ parameters {c : Code} {auto sm : SM c}
     ||| Run the state machine looking for a first matching prefix (non-greedy)
     export
     runTillFirstAccept : List Char -> List (Thread sm)
-                      -> (Maybe (Sem c), List Char)
+                      -> (Maybe t, List Char)
     runTillFirstAccept cs [] = (Nothing, cs)
     runTillFirstAccept cs tds with (findR (\td => isNothing (td.state)) tds)
       runTillFirstAccept [] tds        | (Because Nothing p) = (Nothing, [])
@@ -195,9 +266,9 @@ parameters {c : Code} {auto sm : SM c}
         = absurdity {t = Void} (case prf of (y, z) impossible)
     ||| Run the state machine looking for the last matching prefix (greedy)
     export
-    runTillLastAccept : List Char -> Maybe (Sem c, List Char)
+    runTillLastAccept : List Char -> Maybe (t, List Char)
                       -> List (Thread sm)
-                      -> (Maybe (Sem c), List Char)
+                      -> (Maybe t, List Char)
     runTillLastAccept cs Nothing [] = (Nothing, cs)
     runTillLastAccept cs (Just (tree, rest)) [] = (Just tree, rest)
     runTillLastAccept cs mr tds with (findR (\td => isNothing (td.state)) tds)
@@ -224,7 +295,7 @@ parameters {c : Code} {auto sm : SM c}
     export
     partial
     runTillFirstAccept : Stream Char -> List (Thread sm)
-                      -> (Maybe (Sem c), Stream Char)
+                      -> (Maybe t, Stream Char)
     runTillFirstAccept cs [] = (Nothing, cs)
     runTillFirstAccept cs tds with (findR (\td => isNothing (td.state)) tds)
       runTillFirstAccept (x :: xs) tds | (Because Nothing p) =
@@ -238,9 +309,9 @@ parameters {c : Code} {auto sm : SM c}
     ||| Run the state machine looking for the last matching prefix (greedy)
     export
     partial
-    runTillLastAccept : Stream Char -> Maybe (Sem c, Stream Char)
+    runTillLastAccept : Stream Char -> Maybe (t, Stream Char)
                       -> List (Thread sm)
-                      -> (Maybe (Sem c), Stream Char)
+                      -> (Maybe t, Stream Char)
     runTillLastAccept cs Nothing [] = (Nothing, cs)
     runTillLastAccept cs (Just (tree, rest)) [] = (Just tree, rest)
     runTillLastAccept cs mr tds with (findR (\td => isNothing (td.state)) tds)

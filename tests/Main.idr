@@ -4,14 +4,6 @@ import Test.Golden
 
 %default covering
 
-corere : TestPool
-corere = MkTestPool "core RE" [] Nothing
-            [ "corere/time",
-              "corere/foo",
-              "corere/ab",
-              "corere/star"
-            ]
-
 stringTests : TestPool
 stringTests = MkTestPool "string syntax" [] Nothing
             [ "string-syntax/string",
@@ -34,4 +26,4 @@ disjointMatches = MkTestPool "disjointmatches" [] Nothing
                     ]
 
 main : IO ()
-main = runner [ corere, stringTests, tyre, disjointMatches]
+main = runner [ stringTests, tyre, disjointMatches]

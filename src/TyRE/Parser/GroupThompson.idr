@@ -4,7 +4,7 @@ import Data.List
 import Data.List1
 import Data.SortedSet
 
-import TyRE.CoreRE
+import TyRE.Core
 
 %default total
 
@@ -37,24 +37,25 @@ replaceEndInNext [] mks = []
 replaceEndInNext ((n, (MkNextStates condition isSat notSat)) :: xs) mks = 
   (n, (MkNextStates condition (replaceEndInInit isSat mks) (replaceEndInInit notSat mks))) :: (replaceEndInNext xs mks)
 
-groupStates : Nat -> CoreRE -> GroupSM
-groupStates n (CharPred cond) = 
+groupStates : Nat -> TyRE a -> GroupSM
+groupStates n (MatchChar cond) = 
   MkGroupSM [Just n] [(n, MkNextStates cond [Nothing] [])] (n+1)
 groupStates n (Group re) = groupStates n re
 groupStates n Empty =  MkGroupSM [Nothing] [] n
-groupStates n (Concat re1 re2) = 
+groupStates n (re1 <*> re2) = 
   let (MkGroupSM init1 sWN1 n1) := groupStates n re1
       (MkGroupSM init2 sWN2 n2) := groupStates n1 re2
   in MkGroupSM  (replaceEndInInit init1 init2)
                 ((replaceEndInNext sWN1 init2)  ++ sWN2)  
                 n2
-groupStates n (Alt re1 re2) =
+groupStates n (re1 <|> re2) =
   let (MkGroupSM init1 sWN1 n1) := groupStates n re1
       (MkGroupSM init2 sWN2 n2) := groupStates n1 re2
   in MkGroupSM (init1 ++ init2) (sWN1 ++ sWN2) n2
-groupStates n (Star re) = 
+groupStates n (Rep re) = 
   let (MkGroupSM init sWN n') := groupStates n re
   in MkGroupSM (Nothing :: init) (replaceEndInNext sWN (Nothing :: init)) n'
+groupStates n (Conv re f) = groupStates n re
 
 eq : List (Maybe Nat) -> List (Maybe Nat) -> Bool
 eq mks mjs = (Data.SortedSet.fromList mks) == (fromList mjs)
@@ -98,5 +99,5 @@ min (MkGroupSM initStates statesWithNext max) =
                                     (applyFilter (n, n1) y.notSat)) :: applyMap xs
 
 public export
-groupSM : CoreRE -> GroupSM
+groupSM : TyRE a -> GroupSM
 groupSM re = min (groupStates 0 re)

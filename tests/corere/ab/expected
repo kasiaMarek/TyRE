@@ -1,6 +1,0 @@
-Just ("ba", 'b')
-Just ("bb", 'a')
-Just ("aa", 'a')
-Nothing
-Nothing
-Nothing

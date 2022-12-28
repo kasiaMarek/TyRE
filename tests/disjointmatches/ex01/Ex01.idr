@@ -1,5 +1,4 @@
 import Data.Regex
-import TyRE.CoreRE
 import TyRE.Core
 
 re : TyRE (Maybe Nat)

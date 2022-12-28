@@ -1,23 +1,26 @@
 import Data.Maybe
 
-import TyRE.Parser.API
-import TyRE.CoreRE
-import TyRE.Parser.Thompson
-import TyRE.Parser.Evidence
+import TyRE.Core
+import TyRE.Parser
 
-A : CoreRE
-A = CharPred (Pred (\c =>  c == 'a'))
+shape : Nat -> Type
+shape 0 = Char
+shape (S k) = (Char, shape k)
 
-createRE : Nat -> CoreRE
-createRE 0 = A
-createRE (S k) = A `Concat` (createRE k)
+createRE : (n : Nat) -> TyRE (shape n)
+createRE 0 = oneOfCharsList ['a']
+createRE (S k) = (oneOfCharsList ['a']) <*> (createRE k)
 
 createString : Nat -> List Char
 createString 0 = ['a']
 createString (S k) = 'a'::(createString k)
 
-printResult : (n: Nat) -> Maybe (Shape $ createRE n)
-printResult n = run (createRE n) (pack $ createString n)
+printResult : (n: Nat) -> Maybe (shape n)
+printResult n = parseFull (createRE n) (createString n)
+
+showAux : {n : Nat} -> (shape n) -> String
+showAux {n = 0} c = show c
+showAux {n = (S k)} (x, y) = show (x, showAux y)
 
 main : IO ()
 main =  do  str <- getLine
