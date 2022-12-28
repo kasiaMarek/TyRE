@@ -2,47 +2,44 @@ module TyRE.Parser.SMConstruction
 
 import Data.List
 
-import TyRE.Codes
-import TyRE.CoreRE
+import TyRE.Core
 import TyRE.Parser.SM
 import TyRE.Parser.GroupThompson
 
 ||| Compile function creates a state machine from an untyped regex
 export
-compile : (r : CoreRE) -> SM (ShapeCode r)
+compile : {0 a : Type} -> (tyre : TyRE a) -> SM a
 --sm for empty language
 compile Empty =
-  let lookup : Void -> SnocList Code
+  let lookup : Void -> SnocList Type
       lookup _ impossible
-      init : InitStatesType UnitC Void lookup
-      init = [(Nothing ** (RUnit () ** InitRUnit))]
-      next : NextStatesType UnitC Void lookup
+      init : InitStatesType () Void lookup
+      init = [(Nothing ** (Push () ** InitPush))]
+      next : NextStatesType () Void lookup
       next _ _ = []
   in MkSM Void lookup init next
 --sm for predicate
-compile (CharPred f) =
-  let lookup : () -> SnocList Code
-      lookup () = [< UnitC]
-      init : InitStatesType CharC () lookup
-      init = [(Just () ** (RUnit () ** InitRUnit))]
-      next : NextStatesType CharC () lookup
+compile (MatchChar f) =
+  let lookup : () -> SnocList Type
+      lookup () = [< ()]
+      init : InitStatesType Char () lookup
+      init = [(Just () ** (Push () ** InitPush))]
+      next : NextStatesType Char () lookup
       next () c =
         if satisfies f c
         then [(Nothing ** Join PushChar (ReducePair (\_,c => c)))]
         else []
   in MkSM () lookup init next
 --sm for concatenation
-compile (x `Concat` y) =
+compile ((<*>) {a,b} x y) =
   let MkSM s1 l1 i1 n1 := compile x
       MkSM s2 l2 i2 n2 := compile y
       0 T : Type
       T = Either s1 s2
-      0 code : Code
-      code = PairC (ShapeCode x) (ShapeCode y)
-      0 lookup : T -> SnocList Code
+      0 lookup : T -> SnocList Type
       lookup (Left s)  = l1 s
-      lookup (Right s) = [< ShapeCode x] ++ l2 s
-      init : InitStatesType code T lookup
+      lookup (Right s) = [< a] ++ l2 s
+      init : InitStatesType (a, b) T lookup
       init =
         (i1 >>=
           (\case
@@ -58,7 +55,7 @@ compile (x `Concat` y) =
                       ** (p `InitJoin` (InitLift p2))))
               i2
             (Just st ** r) => [(Just (Left st) ** r)]))
-      next : NextStatesType code T lookup
+      next : NextStatesType (a,b) T lookup
       next (Left st) c =
         (n1 st c >>=
           (\case
@@ -79,63 +76,59 @@ compile (x `Concat` y) =
               (n2 st c)
   in MkSM T lookup init next
 -- sm for alternation
-compile (x `Alt` y) =
+compile ((<|>) {a,b} x y) =
   let MkSM s1 l1 i1 n1 := compile x
       MkSM s2 l2 i2 n2 := compile y
       0 T : Type
       T = Either s1 s2
-      0 code : Code
-      code = EitherC (ShapeCode x) (ShapeCode y)
-      0 lookup : T -> SnocList Code
+      0 lookup : T -> SnocList Type
       lookup (Left s)  = l1 s
       lookup (Right s) = l2 s
-      init : InitStatesType code T lookup
+      init : InitStatesType (Either a b) T lookup
       init = map  (\case
                       (Nothing ** (rt ** p)) =>
                         (Nothing
-                        ** (Join rt (EmitLeft (ShapeCode y))
-                        ** InitJoin p InitEmitLeft))
+                        ** (Join rt (Transform Left)
+                        ** InitJoin p InitTransform))
                       (Just st ** r) => (Just (Left st) ** r))
                   i1
            ++ map (\case
                       (Nothing ** (rt ** p)) =>
                         (Nothing
-                        ** (Join rt (EmitRight (ShapeCode x))
-                        ** InitJoin p InitEmitRight))
+                        ** (Join rt (Transform Right)
+                        ** InitJoin p InitTransform))
                       (Just st ** r) => (Just (Right st) ** r))
                   i2
-      next : NextStatesType code T lookup
+      next : NextStatesType (Either a b) T lookup
       next (Left s) c =
         map (\case
                 (Nothing ** rt) =>
-                  (Nothing ** Join rt (EmitLeft (ShapeCode y)))
+                  (Nothing ** Join rt (Transform Left))
                 (Just st ** rt) => (Just (Left st) ** rt))
             (n1 s c)
       next (Right s) c =
         map (\case
                 (Nothing ** rt) =>
-                  (Nothing ** Join rt (EmitRight (ShapeCode x)))
+                  (Nothing ** Join rt (Transform Right))
                 (Just st ** rt) => (Just (Right st) ** rt))
             (n2 s c)
   in MkSM T lookup init next
 -- sm for Kleene star
-compile (Star re) =
+compile (Rep {a} re) =
   let MkSM t lookupPrev initPrev nextPrev := compile re
       0 T : Type
       T = t
-      code : Code
-      code = ListC (ShapeCode re)
-      0 lookup : T -> SnocList Code
-      lookup s = [< ListC (ShapeCode re)] ++ lookupPrev s
-      init : InitStatesType code T lookup
-      init = (Nothing ** RUnit [<] ** InitRUnit)
+      0 lookup : T -> SnocList Type
+      lookup s = [< SnocList a] ++ lookupPrev s
+      init : InitStatesType (SnocList a) T lookup
+      init = (Nothing ** Push [<] ** InitPush)
            :: map (\case
-                    (Nothing ** r ** p) => (Nothing ** RUnit [<] ** InitRUnit)
+                    (Nothing ** r ** p) => (Nothing ** Push [<] ** InitPush)
                     (Just st ** r ** p) =>
-                      (Just st ** (RUnit Prelude.Basics.Lin `Join` Lift r)
-                              ** (InitRUnit `InitJoin` (InitLift p))))
+                      (Just st ** (Push Prelude.Basics.Lin `Join` Lift r)
+                              ** (InitPush `InitJoin` (InitLift p))))
                   initPrev
-      next : NextStatesType code T lookup
+      next : NextStatesType (SnocList a) T lookup
       next s c =
         (nextPrev s c) >>=
           \case
@@ -150,23 +143,23 @@ compile (Star re) =
             (Just st ** r) => [(Just st ** Lift r)]
   in MkSM T lookup init next
 -- sm for group made
-compile (Group r) = asSM (groupSM r) where
-  asSM : GroupSM -> SM StringC
+compile {a = String} (Group r) = asSM (groupSM r) where
+  asSM : GroupSM -> SM String
   asSM (MkGroupSM initStates statesWithNext max) =
-    let lookup : Nat -> SnocList Code
+    let lookup : Nat -> SnocList Type
         lookup _ = [<]
-        init : InitStatesType StringC Nat lookup
+        init : InitStatesType String Nat lookup
         init = map (\case
                       Just s => (Just s ** Record ** InitRecord)
                       Nothing => (Nothing ** EmitString ** InitEmitString))
                    initStates
-        next : NextStatesType StringC Nat lookup
+        next : NextStatesType String Nat lookup
         next s c with (find (\case (n, ns) => n == s) statesWithNext)
           next s c | Nothing = []
           next s c | (Just (_, (MkNextStates condition isSat notSat))) =
             let addRoutines : List (Maybe Nat)
                                       -> List (st' : Maybe Nat
-                                              ** Routine [<] (mlookup lookup StringC st'))
+                                              ** Routine [<] (mlookup lookup String st'))
                 addRoutines n =
                   map (\case
                         Nothing => (Nothing ** EmitString)
@@ -175,3 +168,17 @@ compile (Group r) = asSM (groupSM r) where
                         then addRoutines isSat
                         else addRoutines notSat
     in MkSM Nat lookup init next
+compile (Conv {a,b} re f) =
+  let MkSM t lookup initPrev nextPrev := compile re
+      init : InitStatesType b t lookup
+      init = map (\case
+                    (Nothing ** r ** p) => (Nothing ** Join r (Transform f)
+                                            ** InitJoin p InitTransform)
+                    (Just st ** rp) => (Just st ** rp))
+                 initPrev
+      next : NextStatesType b t lookup
+      next st c = map (\case
+                          (Nothing ** r) => (Nothing ** Join r (Transform f))
+                          (Just st ** r) => (Just st ** r))
+                      (nextPrev st c)
+  in MkSM t lookup init next

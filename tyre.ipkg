@@ -6,8 +6,7 @@ brief   = "A typed regex parser"
 sourcedir = "src"
 depends = contrib
 
-modules =   TyRE.CoreRE
-          , TyRE.Codes
+modules =   TyRE.Codes
           , TyRE.Core
           , TyRE.RE
           , TyRE.StringRE

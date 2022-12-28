@@ -6,46 +6,49 @@ import public Data.SortedSet
 import public Data.List1
 import Data.SnocList
 
-import TyRE.CoreRE
-
 infixr 6 <*>, <*, *>
+
+public export 
+data CharCond =
+      OneOf (SortedSet Char)
+    | Range (Char, Char)
+    | Pred (Char -> Bool)
+
+public export
+Eq CharCond where
+  (==) (OneOf x) (OneOf y) = x == y
+  (==) (OneOf x) _ = False
+  (==) (Range x) (Range y) = x == y
+  (==) (Range x) _ = False
+  (==) (Pred _) _ = False
+
+public export
+satisfies : CharCond -> Char -> Bool
+satisfies (OneOf xs) c = contains c xs
+satisfies (Range (x, y)) c = x <= c && c <= y
+satisfies (Pred f) c = f c
 
 public export
 data TyRE : Type -> Type where
-  Untyped : (r : CoreRE) -> TyRE (Shape r)
-  (<*>)   : TyRE a -> TyRE b -> TyRE (a, b)
-  Conv    : TyRE a -> (a -> b) -> TyRE b
-  (<|>)   : TyRE a -> TyRE b -> TyRE (Either a b)
-  Rep     : TyRE a -> TyRE (SnocList a)
+  Empty     : TyRE ()
+  MatchChar : CharCond -> TyRE Char
+  Group     : TyRE a -> TyRE String
+  (<*>)     : {0 a,b : Type} -> TyRE a -> TyRE b -> TyRE (a, b)
+  Conv      : {0 a,b : Type} -> TyRE a -> (a -> b) -> TyRE b
+  (<|>)     : {0 a,b : Type} -> TyRE a -> TyRE b -> TyRE (Either a b)
+  Rep       : {0 a   : Type} -> TyRE a -> TyRE (SnocList a)
 
 public export
 Functor TyRE where
   map f tyre = Conv tyre f
 
 public export
-compile : (TyRE a) -> CoreRE
-compile (Untyped r)   = r
-compile (x <*> y)     = Concat (compile x) (compile y)
-compile (Conv x f)    = compile x
-compile (x <|> y)     = Alt (compile x) (compile y)
-compile (Rep re)      = Star (compile re)
-
-public export
-extract : (tyre : TyRE a) -> (Shape (compile tyre) -> a)
-extract (Untyped r) x             = x
-extract (re1 <*> re2) (x, y)      = (extract re1 x, extract re2 y)
-extract (Conv re f) y             = f $ extract re y
-extract (re1 <|> re2)  (Left x)   = Left $ extract re1 x
-extract (re1 <|> re2)  (Right x)  = Right $ extract re2 x
-extract (Rep re) xs               = map (extract re) xs
-
-public export
 predicate : (Char -> Bool) -> TyRE Char
-predicate f = Untyped (CharPred (Pred f))
+predicate f = MatchChar (Pred f)
 
 public export
 empty : TyRE ()
-empty = Untyped Empty
+empty = Empty
 
 public export
 any : TyRE Char
@@ -53,7 +56,7 @@ any = predicate (\_ => True)
 
 public export
 group : TyRE a -> TyRE String
-group tyre = Untyped (Group (compile tyre))
+group tyre = Group tyre
 
 public export
 ignore : TyRE a -> TyRE ()
@@ -61,7 +64,7 @@ ignore tyre = (\_ => ()) `map` (group tyre)
 
 public export
 range : Char -> Char -> TyRE Char
-range x y = Untyped (CharPred (Range (x,y)))
+range x y = MatchChar (Range (x,y))
 
 public export
 digit : TyRE Integer
@@ -73,7 +76,7 @@ digitChar = range '0' '9'
 
 public export
 oneOfCharsList : List Char -> TyRE Char
-oneOfCharsList xs = Untyped (CharPred (OneOf (fromList xs)))
+oneOfCharsList xs = MatchChar (OneOf (fromList xs))
 
 public export
 oneOfChars : String -> TyRE Char
@@ -155,11 +158,13 @@ repTimes (S (S k)) re = re <*> repTimes (S k) re
 
 public export
 isConsuming : (re : TyRE a) -> Bool
-isConsuming (Untyped r) = isConsuming r
 isConsuming (r1 <*> r2) = isConsuming r1 || isConsuming r2
 isConsuming (Conv r f) = isConsuming r
 isConsuming (r1 <|> r2) = isConsuming r1 && isConsuming r2
 isConsuming (Rep r1) = False
+isConsuming Empty = False
+isConsuming (MatchChar _) = True
+isConsuming (Group r) = isConsuming r
 
 public export
 data IsConsuming : TyRE a -> Type where
@@ -172,24 +177,3 @@ leftBranchTrue Refl = Refl
 rightBranchTrue : {a : Bool} -> (b = True) -> (a || b = True)
 rightBranchTrue {a = False} Refl = Refl
 rightBranchTrue {a = True} Refl = Refl
-
-consumingImplAux : (tyre : TyRE a) -> (isConsuming tyre = True)
-                -> (isConsuming (compile tyre) = True)
-consumingImplAux (Untyped r) prf = prf
-consumingImplAux (r1 <*> r2) prf with (isConsuming r1) proof p
-  consumingImplAux (r1 <*> r2) prf | False
-    = rightBranchTrue (consumingImplAux r2 prf)
-  consumingImplAux (r1 <*> r2) prf | True
-    = leftBranchTrue (consumingImplAux r1 p)
-consumingImplAux (Conv r _) prf = consumingImplAux r prf
-consumingImplAux (r1 <|> r2) prf with (isConsuming r1) proof p1 
-                                    | (isConsuming r2) proof p2
-  consumingImplAux (r1 <|> r2) prf | True | False impossible
-  consumingImplAux (r1 <|> r2) prf | True | True
-    = rewrite consumingImplAux r1 p1 in rewrite consumingImplAux r2 p2 in Refl
-consumingImplAux (Rep r) prf impossible
-
-export
-consumingImpl : IsConsuming tyre -> IsConsuming (compile tyre)
-consumingImpl (ItIsConsuming {re} {prf})
-  = ItIsConsuming {prf = consumingImplAux re prf}
