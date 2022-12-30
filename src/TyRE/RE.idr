@@ -163,7 +163,7 @@ mutual
   public export
   compileKeep                  : (re : RE) -> TyRE $ TypeREKeep re
   compileKeep (Exactly x)      = match x
-  compileKeep (OneOf xs)       = oneOfList xs
+  compileKeep (OneOf xs)       = oneOfCharsList xs
   compileKeep (To x y)         = range x y
   compileKeep Any              = any
   compileKeep (Group re)       = group (compileKeep re)
@@ -526,7 +526,7 @@ mutual
   public export
   compile                  : (re : RE) -> TyRE $ TypeRE re
   compile (Exactly x)      = match x
-  compile (OneOf xs)       = ignore (oneOfList xs)
+  compile (OneOf xs)       = ignore (oneOfCharsList xs)
   compile (To x y)         = ignore (range x y)
   compile Any              = ignore any
   compile (Group re)       = Untyped $ Group $ compile $ compile re

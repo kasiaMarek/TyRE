@@ -3,11 +3,12 @@ module TyRE.Core
 import public Data.List
 import public Data.Either
 import public Data.SortedSet
+import public Data.List1
 import Data.SnocList
 
 import TyRE.CoreRE
 
-infixr 6 <*>
+infixr 6 <*>, <*, *>
 
 public export
 data TyRE : Type -> Type where
@@ -71,16 +72,16 @@ digitChar : TyRE Char
 digitChar = range '0' '9'
 
 public export
-oneOfList : List Char -> TyRE Char
-oneOfList xs = Untyped (CharPred (OneOf (fromList xs)))
+oneOfCharsList : List Char -> TyRE Char
+oneOfCharsList xs = Untyped (CharPred (OneOf (fromList xs)))
 
 public export
-oneOf : String -> TyRE Char
-oneOf xs = oneOfList (unpack xs)
+oneOfChars : String -> TyRE Char
+oneOfChars xs = oneOfCharsList (unpack xs)
 
 public export
 match : Char -> TyRE ()
-match c = ignore $ oneOfList [c]
+match c = ignore $ oneOfCharsList [c]
 
 public export
 rep0 : TyRE a -> TyRE (List a)
@@ -89,6 +90,10 @@ rep0 tyre = cast `map` Rep tyre
 public export
 rep1 : TyRE a -> TyRE (List a)
 rep1 tyre = (\(e,l) => e::l) `map` (tyre <*> rep0 tyre)
+
+public export
+rep1l1 : TyRE a -> TyRE (List1 a)
+rep1l1 tyre = (\(e,l) => e:::l) `map` (tyre <*> rep0 tyre)
 
 public export
 option : TyRE a -> TyRE (Maybe a)
@@ -105,6 +110,11 @@ public export
 public export
 or : TyRE a -> TyRE a -> TyRE a
 or t1 t2 = fromEither `map` (t1 <|> t2)
+
+public export
+oneOf : List1 (TyRE a) -> TyRE a
+oneOf (head ::: []) = head
+oneOf (head ::: (x :: xs)) = oneOf $ (head `or` x) ::: xs
 
 public export
 letter : TyRE Char
