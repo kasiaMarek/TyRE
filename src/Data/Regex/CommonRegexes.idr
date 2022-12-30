@@ -11,7 +11,7 @@ export
 email : TyRE (String, String, String)
 email = 
     let firstPart : TyRE String
-        firstPart = fastPack `map` rep1 ((letter `or` digitChar) `or` oneOf "%+_.-")
+        firstPart = fastPack `map` rep1 ((letter `or` digitChar) `or` oneOfChars "%+_.-")
         secondPart : TyRE String
         secondPart = (joinBy ".") `map` rep1 (fastPack `map` rep1 (letter `or` digitChar) <* match '.')
         domain : TyRE String
@@ -76,7 +76,7 @@ namespace UrlRegex
           `map` 
           (protocol <*> (host <*> (path <*> (query <*> fragment)))) where
             digitLetterOr : String -> TyRE Char
-            digitLetterOr str = (digitChar `or` letter) `or` oneOf str
+            digitLetterOr str = (digitChar `or` letter) `or` oneOfChars str
             
             protocol : TyRE (Maybe Bool)
             protocol = r "((https?)!://(www)?)?"
