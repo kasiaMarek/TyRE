@@ -1,6 +1,6 @@
-import Text.Lexer
-import public Text.Parser.Core
-import public Text.Parser
+import TyRE.Text.Lexer
+import public TyRE.Text.Parser.Core
+import public TyRE.Text.Parser
 
 data AToken = AChar
 

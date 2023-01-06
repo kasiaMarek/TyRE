@@ -8,8 +8,8 @@ shape 0 = Char
 shape (S k) = (Char, shape k)
 
 createRE : (n : Nat) -> TyRE (shape n)
-createRE 0 = oneOfList ['a']
-createRE (S k) = (oneOfList ['a']) <*> (createRE k)
+createRE 0 = oneOfCharsList ['a']
+createRE (S k) = (oneOfCharsList ['a']) <*> (createRE k)
 
 createString : Nat -> List Char
 createString 0 = ['a']
