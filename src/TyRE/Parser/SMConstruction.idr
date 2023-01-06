@@ -21,13 +21,13 @@ compile Empty =
 --sm for predicate
 compile (MatchChar f) =
   let lookup : () -> SnocList Type
-      lookup () = [< ()]
+      lookup () = [<]
       init : InitStatesType Char () lookup
-      init = [(Just () ** (Push () ** InitPush))]
+      init = [(Just () ** (Same ** InitSame))]
       next : NextStatesType Char () lookup
       next () c =
         if satisfies f c
-        then [(Nothing ** Join PushChar (ReducePair (\_,c => c)))]
+        then [(Nothing ** PushChar)]
         else []
   in MkSM () lookup init next
 --sm for concatenation
