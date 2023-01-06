@@ -14,20 +14,20 @@ compile Empty =
   let lookup : Void -> SnocList Type
       lookup _ impossible
       init : InitStatesType () Void lookup
-      init = [(Nothing ** (Push () ** InitPush))]
+      init = [(Nothing ** ([Push ()] ** [InitPush]))]
       next : NextStatesType () Void lookup
       next _ _ = []
   in MkSM Void lookup init next
 --sm for predicate
 compile (MatchChar f) =
   let lookup : () -> SnocList Type
-      lookup () = [<]
+      lookup () = [< ]
       init : InitStatesType Char () lookup
-      init = [(Just () ** (Same ** InitSame))]
+      init = [(Just () ** ([] ** []))]
       next : NextStatesType Char () lookup
       next () c =
         if satisfies f c
-        then [(Nothing ** PushChar)]
+        then [(Nothing ** [PushChar])]
         else []
   in MkSM () lookup init next
 --sm for concatenation
@@ -47,12 +47,12 @@ compile ((<*>) {a,b} x y) =
               map (\case
                     (Nothing ** r2 ** p2) =>
                       (Nothing
-                      ** ((r `Join` (Lift r2)) `Join` (ReducePair MkPair))
-                      ** ((p `InitJoin` (InitLift p2)) `InitJoin` InitReducePair))
+                      ** (r ++ lift r2 ++ [ReducePair MkPair])
+                      ** (p ++ lift p2 ++ [InitReducePair]))
                     (Just st ** r2 ** p2) =>
                       (Just (Right st)
-                      ** (r `Join` (Lift r2))
-                      ** (p `InitJoin` (InitLift p2))))
+                      ** (r ++ lift r2)
+                      ** (p ++ lift p2)))
               i2
             (Just st ** r) => [(Just (Left st) ** r)]))
       next : NextStatesType (a,b) T lookup
@@ -63,16 +63,16 @@ compile ((<*>) {a,b} x y) =
               map (\case
                     (Nothing ** r2 ** _) =>
                       (Nothing
-                      ** ((r `Join` (Lift r2)) `Join` ReducePair MkPair))
+                      ** (r ++ lift r2 ++ [ReducePair MkPair]))
                     (Just s2 ** r2 ** _) =>
                       (Just (Right s2)
-                      ** (r `Join` (Lift r2))))
+                      ** (r ++ lift r2)))
                   i2
             (Just st ** r) => [(Just (Left st) ** r)]))
       next (Right st) c =
         map (\case
-                (Nothing ** r) => (Nothing ** (Lift r `Join` ReducePair MkPair))
-                (Just st ** r) => (Just (Right st) ** Lift r))
+                (Nothing ** r) => (Nothing ** (lift r ++ [ReducePair MkPair]))
+                (Just st ** r) => (Just (Right st) ** lift r))
               (n2 st c)
   in MkSM T lookup init next
 -- sm for alternation
@@ -88,28 +88,28 @@ compile ((<|>) {a,b} x y) =
       init = map  (\case
                       (Nothing ** (rt ** p)) =>
                         (Nothing
-                        ** (Join rt (Transform Left)
-                        ** InitJoin p InitTransform))
+                        ** (rt ++ [Transform Left])
+                        ** (p ++ [InitTransform]))
                       (Just st ** r) => (Just (Left st) ** r))
                   i1
            ++ map (\case
                       (Nothing ** (rt ** p)) =>
                         (Nothing
-                        ** (Join rt (Transform Right)
-                        ** InitJoin p InitTransform))
+                        ** (rt ++ [Transform Right]
+                        ** (p ++ [InitTransform])))
                       (Just st ** r) => (Just (Right st) ** r))
                   i2
       next : NextStatesType (Either a b) T lookup
       next (Left s) c =
         map (\case
                 (Nothing ** rt) =>
-                  (Nothing ** Join rt (Transform Left))
+                  (Nothing ** rt ++ [Transform Left])
                 (Just st ** rt) => (Just (Left st) ** rt))
             (n1 s c)
       next (Right s) c =
         map (\case
                 (Nothing ** rt) =>
-                  (Nothing ** Join rt (Transform Right))
+                  (Nothing ** rt ++ [Transform Right])
                 (Just st ** rt) => (Just (Right st) ** rt))
             (n2 s c)
   in MkSM T lookup init next
@@ -121,26 +121,26 @@ compile (Rep {a} re) =
       0 lookup : T -> SnocList Type
       lookup s = [< SnocList a] ++ lookupPrev s
       init : InitStatesType (SnocList a) T lookup
-      init = (Nothing ** Push [<] ** InitPush)
+      init = (Nothing ** [Push [<]] ** [InitPush])
            :: map (\case
-                    (Nothing ** r ** p) => (Nothing ** Push [<] ** InitPush)
+                    (Nothing ** r ** p) => (Nothing ** [Push [<]] ** [InitPush])
                     (Just st ** r ** p) =>
-                      (Just st ** (Push Prelude.Basics.Lin `Join` Lift r)
-                              ** (InitPush `InitJoin` (InitLift p))))
+                      (Just st ** (Push Prelude.Basics.Lin :: lift r)
+                              ** (InitPush :: (lift p))))
                   initPrev
       next : NextStatesType (SnocList a) T lookup
       next s c =
         (nextPrev s c) >>=
           \case
             (Nothing ** r) =>
-                (Nothing ** (Lift r `Join` ReducePair (:<)))
+                (Nothing ** lift r ++ [ReducePair (:<)])
               :: map (\case
                         (Nothing ** r2 ** _) =>
-                          (Nothing ** (Lift r `Join` ReducePair (:<)))
+                          (Nothing ** lift r ++ [ReducePair (:<)])
                         (Just st ** r2 ** _) =>
-                          (Just st ** ((Lift r `Join` ReducePair (:<)) `Join` Lift r2)))
+                          (Just st ** lift r ++ [ReducePair (:<)] ++ lift r2))
                       initPrev
-            (Just st ** r) => [(Just st ** Lift r)]
+            (Just st ** r) => [(Just st ** lift r)]
   in MkSM T lookup init next
 -- sm for group made
 compile {a = String} (Group r) = asSM (groupSM r) where
@@ -150,8 +150,8 @@ compile {a = String} (Group r) = asSM (groupSM r) where
         lookup _ = [<]
         init : InitStatesType String Nat lookup
         init = map (\case
-                      Just s => (Just s ** Record ** InitRecord)
-                      Nothing => (Nothing ** EmitString ** InitEmitString))
+                      Just s => (Just s ** [Record] ** [InitRecord])
+                      Nothing => (Nothing ** [EmitString] ** [InitEmitString]))
                    initStates
         next : NextStatesType String Nat lookup
         next s c with (find (\case (n, ns) => n == s) statesWithNext)
@@ -162,8 +162,8 @@ compile {a = String} (Group r) = asSM (groupSM r) where
                                               ** Routine [<] (mlookup lookup String st'))
                 addRoutines n =
                   map (\case
-                        Nothing => (Nothing ** EmitString)
-                        Just s => (Just s ** Same)) n
+                        Nothing => (Nothing ** [EmitString])
+                        Just s => (Just s ** [])) n
                 in if satisfies condition c
                         then addRoutines isSat
                         else addRoutines notSat
@@ -172,13 +172,13 @@ compile (Conv {a,b} re f) =
   let MkSM t lookup initPrev nextPrev := compile re
       init : InitStatesType b t lookup
       init = map (\case
-                    (Nothing ** r ** p) => (Nothing ** Join r (Transform f)
-                                            ** InitJoin p InitTransform)
+                    (Nothing ** r ** p) => (Nothing ** r ++ [Transform f]
+                                            ** p ++ [InitTransform])
                     (Just st ** rp) => (Just st ** rp))
                  initPrev
       next : NextStatesType b t lookup
       next st c = map (\case
-                          (Nothing ** r) => (Nothing ** Join r (Transform f))
+                          (Nothing ** r) => (Nothing ** r ++ [Transform f])
                           (Just st ** r) => (Just st ** r))
                       (nextPrev st c)
   in MkSM t lookup init next
