@@ -3,7 +3,7 @@ module TyRE.RE
 import Data.List
 import Data.Maybe
 
-import TyRE.CoreRE
+import TyRE.Codes
 import TyRE.Core
 
 public export
@@ -440,23 +440,23 @@ mutual
       compileKeep (Alt re1 re2) | IgnoreC | NatC = eitherToMaybeR `map` altTyREKeep re1 re2 p1 p2
       compileKeep (Alt re1 re2) | IgnoreC | IgnoreC = ignore (compileKeep re1 <|> compileKeep re2)
   compileKeep (Maybe re) with (SimplifyCode (CodeShapeREKeep re)) proof p
-    compileKeep (Maybe re) | CharC = (rewrite p in eitherToMaybeL) `map` compileKeep re <|> Untyped Empty
-    compileKeep (Maybe re) | (PairC x y) = (rewrite p in eitherToMaybeL) `map` compileKeep re <|> Untyped Empty
-    compileKeep (Maybe re) | StringC = (rewrite p in eitherToMaybeL) `map` compileKeep re <|> Untyped Empty
+    compileKeep (Maybe re) | CharC = (rewrite p in eitherToMaybeL) `map` compileKeep re <|> Empty
+    compileKeep (Maybe re) | (PairC x y) = (rewrite p in eitherToMaybeL) `map` compileKeep re <|> Empty
+    compileKeep (Maybe re) | StringC = (rewrite p in eitherToMaybeL) `map` compileKeep re <|> Empty
     compileKeep (Maybe re) | UnitC =
       let f : Either () () -> Bool
           f (Left _) = True
           f (Right _) = False
-      in (rewrite p in f) `map` compileKeep re <|> Untyped Empty
-    compileKeep (Maybe re) | (EitherC x y) = (rewrite p in eitherToMaybeL) `map` compileKeep re <|> Untyped Empty
+      in (rewrite p in f) `map` compileKeep re <|> Empty
+    compileKeep (Maybe re) | (EitherC x y) = (rewrite p in eitherToMaybeL) `map` compileKeep re <|> Empty
     compileKeep (Maybe re) | (MaybeC x) =
       let f : Either (Maybe (Sem x)) () -> (Maybe (Sem x))
           f (Left ms) = ms
           f (Right _) = Nothing
-      in (rewrite p in f) `map` compileKeep re <|> Untyped Empty
-    compileKeep (Maybe re) | BoolC = (rewrite p in eitherToMaybeL) `map` compileKeep re <|> Untyped Empty
-    compileKeep (Maybe re) | (ListC z) = (rewrite p in eitherToMaybeL) `map` compileKeep re <|> Untyped Empty
-    compileKeep (Maybe re) | NatC = (rewrite p in eitherToMaybeL) `map` compileKeep re <|> Untyped Empty
+      in (rewrite p in f) `map` compileKeep re <|> Empty
+    compileKeep (Maybe re) | BoolC = (rewrite p in eitherToMaybeL) `map` compileKeep re <|> Empty
+    compileKeep (Maybe re) | (ListC z) = (rewrite p in eitherToMaybeL) `map` compileKeep re <|> Empty
+    compileKeep (Maybe re) | NatC = (rewrite p in eitherToMaybeL) `map` compileKeep re <|> Empty
     compileKeep (Maybe re) | IgnoreC = ignore (option (compileKeep re))
 
   compileKeep (Rep0 re) with (SimplifyCode (CodeShapeREKeep re)) proof p
@@ -529,7 +529,7 @@ mutual
   compile (OneOf xs)       = ignore (oneOfCharsList xs)
   compile (To x y)         = ignore (range x y)
   compile Any              = ignore any
-  compile (Group re)       = Untyped $ Group $ compile $ compile re
+  compile (Group re)       = Group $ compile re
   compile (Concat re1 re2) with (SimplifyCode (CodeShapeRE re1), SimplifyCode (CodeShapeRE re2)) proof p
     compile (Concat re1 re2) | (CharC, CharC) = concatTyRE re1 re2
     compile (Concat re1 re2) | (CharC, (PairC x y)) = concatTyRE re1 re2
@@ -803,23 +803,23 @@ mutual
       compile (Alt re1 re2) | IgnoreC | NatC = eitherToMaybeR `map` altTyRE re1 re2 p1 p2
       compile (Alt re1 re2) | IgnoreC | IgnoreC = ignore (compile re1 <|> compile re2)
   compile (Maybe re) with (SimplifyCode (CodeShapeRE re)) proof p
-    compile (Maybe re) | CharC = (rewrite p in eitherToMaybeL) `map` compile re <|> Untyped Empty
-    compile (Maybe re) | (PairC x y) = (rewrite p in eitherToMaybeL) `map` compile re <|> Untyped Empty
-    compile (Maybe re) | StringC = (rewrite p in eitherToMaybeL) `map` compile re <|> Untyped Empty
+    compile (Maybe re) | CharC = (rewrite p in eitherToMaybeL) `map` compile re <|> Empty
+    compile (Maybe re) | (PairC x y) = (rewrite p in eitherToMaybeL) `map` compile re <|> Empty
+    compile (Maybe re) | StringC = (rewrite p in eitherToMaybeL) `map` compile re <|> Empty
     compile (Maybe re) | UnitC =
       let f : Either () () -> Bool
           f (Left _) = True
           f (Right _) = False
-      in (rewrite p in f) `map` compile re <|> Untyped Empty
-    compile (Maybe re) | (EitherC x y) = (rewrite p in eitherToMaybeL) `map` compile re <|> Untyped Empty
+      in (rewrite p in f) `map` compile re <|> Empty
+    compile (Maybe re) | (EitherC x y) = (rewrite p in eitherToMaybeL) `map` compile re <|> Empty
     compile (Maybe re) | (MaybeC x) =
       let f : Either (Maybe (Sem x)) () -> (Maybe (Sem x))
           f (Left ms) = ms
           f (Right _) = Nothing
-      in (rewrite p in f) `map` compile re <|> Untyped Empty
-    compile (Maybe re) | BoolC = (rewrite p in eitherToMaybeL) `map` compile re <|> Untyped Empty
-    compile (Maybe re) | (ListC z) = (rewrite p in eitherToMaybeL) `map` compile re <|> Untyped Empty
-    compile (Maybe re) | NatC = (rewrite p in eitherToMaybeL) `map` compile re <|> Untyped Empty
+      in (rewrite p in f) `map` compile re <|> Empty
+    compile (Maybe re) | BoolC = (rewrite p in eitherToMaybeL) `map` compile re <|> Empty
+    compile (Maybe re) | (ListC z) = (rewrite p in eitherToMaybeL) `map` compile re <|> Empty
+    compile (Maybe re) | NatC = (rewrite p in eitherToMaybeL) `map` compile re <|> Empty
     compile (Maybe re) | IgnoreC = ignore (option (compile re))
 
   compile (Rep0 re) with (SimplifyCode (CodeShapeRE re)) proof p

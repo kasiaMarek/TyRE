@@ -2,7 +2,7 @@ module TyRE.StringRE
 
 import public Data.Maybe
 
-import public TyRE.CoreRE
+import public TyRE.Codes
 import public TyRE.Core
 import public TyRE.RE
 import public TyRE.Text.Lexer

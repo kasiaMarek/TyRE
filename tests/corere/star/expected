@@ -1,5 +1,0 @@
-Just [< 'b', 'a', 'b']
-Just [< 'b', 'b', 'a']
-Just [< 'a', 'a', 'a']
-Nothing
-Just [< 'a', 'a', 'a', 'a']
