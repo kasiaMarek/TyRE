@@ -20,7 +20,7 @@ printResult n = parseFull (createRE n) (createString n)
 
 showAux : {n : Nat} -> (shape n) -> String
 showAux {n = 0} c = show c
-showAux {n = (S k)} (x, y) = show (x, showAux y)
+showAux {n = (S k)} (x, y) = "(" ++ show x ++ "," ++ showAux y ++ ")"
 
 main : IO ()
 main =  do  str <- getLine

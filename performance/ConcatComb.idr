@@ -1,6 +1,6 @@
-import TyRE.Text.Lexer
-import public TyRE.Text.Parser.Core
-import public TyRE.Text.Parser
+import Text.Lexer
+import Text.Parser.Core
+import Text.Parser
 
 data AToken = AChar
 
@@ -8,7 +8,7 @@ aTokenMap : TokenMap AToken
 aTokenMap = [(is 'a', \x => AChar)]
 
 Rule : Type -> Type
-Rule ty = Grammar (TokenData AToken) True ty
+Rule ty = Grammar () AToken True ty
 
 gType : Nat -> Type
 gType 0 = Char
@@ -33,9 +33,9 @@ resToStr (S k) =
   let _ := resToStr k
   in showEither
 
-run : (n : Nat) -> Either (ParseError (TokenData AToken))
-                      (gType n, List (TokenData AToken))
-run n = parse (getGrammar n) (fst (lex aTokenMap (pack $ createString n)))
+run : (n : Nat) -> Either (List1 (ParsingError AToken))
+                      (gType n, List (WithBounds AToken))
+run n = parse (getGrammar n) (fst (lex aTokenMap (fastPack $ createString n)))
 
 main : IO ()
 main =  do  str <- getLine
@@ -47,4 +47,4 @@ main =  do  str <- getLine
                 in case run n of
                     Right (res, _) => putStrLn (show res)
                     Left _ => putStrLn "Error"
-              else putStrLn "Input is not a number"
+              else putStrLn "Input needs to be a number"
