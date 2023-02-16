@@ -156,17 +156,12 @@ compile {a = String} (Group r) = asSM (groupSM r) where
         next : NextStatesType String Nat lookup
         next s c with (find (\case (n, ns) => n == s) statesWithNext)
           next s c | Nothing = []
-          next s c | (Just (_, (MkNextStates condition isSat notSat))) =
-            let addRoutines : List (Maybe Nat)
-                                      -> List (st' : Maybe Nat
-                                              ** RoutineSnoc [<] (mlookup lookup String st'))
-                addRoutines n =
-                  map (\case
+          next s c | (Just (_, (MkNextStates condition isSat))) =
+            if satisfies condition c
+            then map (\case
                         Nothing => (Nothing ** [< EmitString])
-                        Just s => (Just s ** [<])) n
-                in if satisfies condition c
-                        then addRoutines isSat
-                        else addRoutines notSat
+                        Just s => (Just s ** [<])) isSat
+            else []
     in MkSM Nat lookup init next
 compile (Conv {a,b} re f) =
   let MkSM t lookup initPrev nextPrev := compile re
