@@ -14,37 +14,108 @@ import TyRE.Extra.Reflects
 --- definition of SM ---
 
 public export
-data Routine : SnocList Type -> SnocList Type -> Type where
-  ||| Identity
-  Same : Routine tps tps
+data Instruction : SnocList Type -> SnocList Type -> Type where
   ||| Pushes chosen symbol on the stack
-  Push : {0 x : Type} -> x -> Routine [<] [< x]
+  Push : {0 x : Type} -> x -> Instruction tps (tps :< x)
   ||| Pushes currently consumed character on the stack
-  PushChar : Routine tps (tps :< Char)
+  PushChar : Instruction tps (tps :< Char)
   ||| Reduces two last symbols from the stack accoring to the given funciton
   ReducePair : {0 x,y,z : Type} -> (x -> y -> z)
-            -> Routine (tps :< x :< y) (tps :< z)
+            -> Instruction (tps :< x :< y) (tps :< z)
   ||| Maps the top element of stack
-  Transform : {0 x,y : Type} -> (x -> y) -> Routine (tps :< x) (tps :< y)
+  Transform : {0 x,y : Type} -> (x -> y) -> Instruction (tps :< x) (tps :< y)
   ||| Pushes collected string on the stack
-  EmitString : Routine tps (tps :< String)
+  EmitString : Instruction tps (tps :< String)
   ||| Raises record flag and starts collecting characters
-  Record : Routine tps tps
-  ||| Sequences routines
-  Join : Routine tps tps' -> Routine tps' tps'' -> Routine tps tps''
-  ||| Lifts Routine type
-  Lift : Routine tps tps' -> Routine (pcds ++ tps) (pcds ++ tps')
+  Record : Instruction tps tps
 
 public export
-data IsInitRoutine : Routine t t' -> Type where
-  InitSame : IsInitRoutine Same
-  InitRecord : IsInitRoutine Record
-  InitPush : IsInitRoutine (Push elem)
-  InitReducePair : IsInitRoutine (ReducePair f)
-  InitTransform : IsInitRoutine (Transform f)
-  InitJoin : IsInitRoutine r1 -> IsInitRoutine r2 -> IsInitRoutine (Join r1 r2)
-  InitLift : IsInitRoutine r -> IsInitRoutine (Lift r)
-  InitEmitString : IsInitRoutine EmitString
+liftInst : Instruction tps tps' -> Instruction (pcds ++ tps) (pcds ++ tps')
+liftInst (Push x) = Push x
+liftInst PushChar = PushChar
+liftInst (ReducePair f) = ReducePair f
+liftInst (Transform f) = Transform f
+liftInst EmitString = EmitString
+liftInst Record = Record
+
+public export
+data RoutineSnoc : SnocList Type -> SnocList Type -> Type where
+  ||| Identity
+  Lin : RoutineSnoc tps tps
+  ||| Sequences routines
+  (:<) : RoutineSnoc tps tps' -> Instruction tps' tps'' -> RoutineSnoc tps tps''
+
+public export
+data Routine : SnocList Type -> SnocList Type -> Type where
+  ||| Identity
+  Nil : Routine tps tps
+  ||| Sequences routines
+  (::) : Instruction tps tps' -> Routine tps' tps'' -> Routine tps tps''
+
+public export
+(++) : RoutineSnoc tps tps' -> RoutineSnoc tps' tps'' -> RoutineSnoc tps tps''
+(++) r [<] = r
+(++) r (x :< y) = (r ++ x) :< y
+
+public export
+lift : RoutineSnoc tps tps' -> RoutineSnoc (pcds ++ tps) (pcds ++ tps')
+lift [<] = [<]
+lift (x :< y) = (lift x) :< liftInst y
+
+reverseRec : RoutineSnoc ts ts' -> Routine ts' ts'' -> Routine ts ts''
+reverseRec [<] y = y
+reverseRec (x :< z) y = reverseRec x (z :: y)
+
+reverse : RoutineSnoc tps tps' -> Routine tps tps'
+reverse sx = reverseRec sx []
+
+
+namespace IsInit
+  public export
+  data IsInitInstruction : Instruction t t' -> Type where
+    InitRecord : IsInitInstruction Record
+    InitPush : IsInitInstruction (Push elem)
+    InitReducePair : IsInitInstruction (ReducePair f)
+    InitTransform : IsInitInstruction (Transform f)
+    InitEmitString : IsInitInstruction EmitString
+
+  public export
+  data IsInitRoutine : Routine t t' -> Type where
+    Nil  : IsInitRoutine []
+    (::) : IsInitInstruction x -> IsInitRoutine xs -> IsInitRoutine (x :: xs)
+
+  public export
+  data IsInitRoutineSnoc : RoutineSnoc t t' -> Type where
+    Lin  : IsInitRoutineSnoc [<]
+    (:<) : IsInitRoutineSnoc xs -> IsInitInstruction x
+        -> IsInitRoutineSnoc (xs :< x)
+
+  public export
+  (++) : IsInitRoutineSnoc xs -> IsInitRoutineSnoc xs'
+      -> IsInitRoutineSnoc (xs ++ xs')
+  (++) x [<] = x
+  (++) x (y :< z) = (x ++ y) :< z
+
+  reverseRec : IsInitRoutineSnoc sx -> IsInitRoutine xs
+            -> IsInitRoutine (reverseRec sx xs)
+  reverseRec [<] y = y
+  reverseRec (x :< z) y = reverseRec x (z :: y)
+
+  export
+  reverse : IsInitRoutineSnoc sx -> IsInitRoutine (reverse sx)
+  reverse sx = reverseRec sx []
+
+  liftInst : IsInitInstruction xs -> IsInitInstruction (liftInst xs)
+  liftInst InitRecord = InitRecord
+  liftInst InitPush = InitPush
+  liftInst InitReducePair = InitReducePair
+  liftInst InitTransform = InitTransform
+  liftInst InitEmitString = InitEmitString
+  
+  public export
+  lift : IsInitRoutineSnoc xs -> IsInitRoutineSnoc (lift xs)
+  lift [<] = [<]
+  lift (x :< y) = (lift x) :< (liftInst y)
 
 public export
 mlookup : (s -> SnocList Type) -> Type -> Maybe s -> SnocList Type
@@ -55,8 +126,8 @@ public export
 InitStatesType : (t : Type) -> (s : Type) -> (s -> SnocList Type) -> Type
 InitStatesType t s lookup =
   List (st : Maybe s
-        ** (r : Routine [<] (mlookup lookup t st)
-            ** IsInitRoutine r))
+        ** (r : RoutineSnoc [<] (mlookup lookup t st)
+            ** IsInitRoutineSnoc r))
 
 public export
 NextStatesType : (t : Type) -> (s : Type) -> (s -> SnocList Type) -> Type
@@ -64,7 +135,7 @@ NextStatesType t s lookup =
     (st : s)
   -> Char
   -> List (st' : Maybe s
-            ** Routine (lookup st) (mlookup lookup t st'))
+            ** RoutineSnoc (lookup st) (mlookup lookup t st'))
 
 public export
 record SM (t : Type) where
@@ -76,10 +147,11 @@ record SM (t : Type) where
   next : NextStatesType t s lookup
 
 --- execution of the SM ---
-
-data Stack : SnocList Type -> Type where
-  Lin : Stack [<]
-  Snoc : Stack tps -> {0 t : Type} -> t -> Stack (tps :< t)
+namespace Stack
+  public export
+  data Stack : SnocList Type -> Type where
+    Lin : Stack [<]
+    Snoc : Stack tps -> {0 t : Type} -> t -> Stack (tps :< t)
 
 record ThreadData (code : SnocList Type) where
   constructor MkThreadData
@@ -92,37 +164,34 @@ record Thread {t : Type} (sm : SM t) where
   state : Maybe sm.s 
   tddata : ThreadData (mlookup sm.lookup t state)
 
+execInstructionAux : {0 scs, scs', p : SnocList Type}
+                  -> (r : Instruction scs scs')
+                  -> Either Char (IsInitInstruction r)
+                  -> ThreadData (p ++ scs)
+                  -> ThreadData (p ++ scs')
+execInstructionAux Record c (MkThreadData st col rec) =
+  MkThreadData st col True
+execInstructionAux (Push elem) c (MkThreadData st col rec) =
+  MkThreadData (Snoc st elem) col rec
+execInstructionAux PushChar (Left c) (MkThreadData st col rec) =
+  MkThreadData (Snoc st c) col rec
+execInstructionAux (ReducePair f) c (MkThreadData (Snoc (Snoc x z) y) col rec) =
+  MkThreadData (Snoc x (f z y)) col rec
+execInstructionAux (Transform f) c (MkThreadData (Snoc y z) col rec) =
+  MkThreadData (Snoc y (f z)) col rec
+execInstructionAux EmitString c (MkThreadData st col rec) =
+  MkThreadData (Snoc st (fastPack $ cast col)) [<] False
+
 execRoutineAux : {0 scs, scs', p : SnocList Type}
             -> (r : Routine scs scs')
             -> Either Char (IsInitRoutine r)
             -> ThreadData (p ++ scs)
             -> ThreadData (p ++ scs')
-execRoutineAux Same c st = st
-execRoutineAux Record c (MkThreadData st col rec) =
-  MkThreadData st col True
-execRoutineAux (Push elem) c (MkThreadData st col rec) =
-  MkThreadData (Snoc st elem) col rec
-execRoutineAux PushChar (Left c) (MkThreadData st col rec) =
-  MkThreadData (Snoc st c) col rec
-execRoutineAux (ReducePair f) c (MkThreadData (Snoc (Snoc x z) y) col rec) =
-  MkThreadData (Snoc x (f z y)) col rec
-execRoutineAux (Transform f) c (MkThreadData (Snoc y z) col rec) =
-  MkThreadData (Snoc y (f z)) col rec
-execRoutineAux EmitString c (MkThreadData st col rec) =
-  MkThreadData (Snoc st (fastPack $ cast col)) [<] False
-execRoutineAux (Join r1 r2) (Left c) st =
-  execRoutineAux r2 (Left c) (execRoutineAux r1 (Left c) st)
-execRoutineAux (Join r1 r2) (Right (InitJoin p1 p2)) st =
-  execRoutineAux r2 (Right p2) (execRoutineAux r1 (Right p1) st)
-execRoutineAux (Lift r) c st =
-  let charOrPrf :=
-        case c of
-          Left c => Left c
-          Right (InitLift p) => Right p 
-  in replace {p = (ThreadData)}
-          (sym $ appendAssociative _ _ _)
-          (execRoutineAux r charOrPrf (replace {p = (ThreadData)}
-                                       (appendAssociative _ _ _) st))
+execRoutineAux [] c st = st
+execRoutineAux (i :: r) (Left c) st =
+  execRoutineAux r (Left c) (execInstructionAux i (Left c) st)
+execRoutineAux (i :: r) (Right (ip :: ir)) st =
+  execRoutineAux r (Right ir) (execInstructionAux i (Right ip) st)
 
 execRoutine : {0 scs, scs' : SnocList Type}
             -> (r : Routine scs scs')
@@ -140,7 +209,7 @@ execOnThread sm c (MkThread (Just st) info) =
           (MkThreadData stack recorded True) =>
             MkThreadData stack (recorded :< c) True
           info => info
-  in map (\case (ns ** rt) => MkThread ns (execRoutine rt (Left c) infoWithChar))
+  in map (\case (ns ** rt) => MkThread ns (execRoutine (reverse rt) (Left c) infoWithChar))
          (sm.next st c)
 
 getFromStack : Stack [< t] -> t
@@ -163,7 +232,7 @@ parameters {0 t : Type} {auto sm : SM t}
     map (\case
             (st ** (rt ** p)) =>
               MkThread st
-                      (execRoutine rt (Right p) (MkThreadData [<] [<] False)))
+                      (execRoutine (reverse rt) (Right $ reverse p) (MkThreadData [<] [<] False)))
                       sm.init
 
   namespace StringRunners -- possible modes of running for list of characters

@@ -13,7 +13,6 @@ record NextStates where
   constructor MkNextStates
   condition : CharCond
   isSat : List (Maybe Nat)
-  notSat : List (Maybe Nat)
 
 public export
 record GroupSM where
@@ -34,12 +33,12 @@ replaceEndInInit xs mks =
 replaceEndInNext : List (Nat, NextStates) -> List (Maybe Nat)
                 -> List (Nat, NextStates)
 replaceEndInNext [] mks = []
-replaceEndInNext ((n, (MkNextStates condition isSat notSat)) :: xs) mks = 
-  (n, (MkNextStates condition (replaceEndInInit isSat mks) (replaceEndInInit notSat mks))) :: (replaceEndInNext xs mks)
+replaceEndInNext ((n, (MkNextStates condition isSat)) :: xs) mks = 
+  (n, (MkNextStates condition (replaceEndInInit isSat mks))) :: (replaceEndInNext xs mks)
 
 groupStates : Nat -> TyRE a -> GroupSM
 groupStates n (MatchChar cond) = 
-  MkGroupSM [Just n] [(n, MkNextStates cond [Nothing] [])] (n+1)
+  MkGroupSM [Just n] [(n, MkNextStates cond [Nothing])] (n+1)
 groupStates n (Group re) = groupStates n re
 groupStates n Empty =  MkGroupSM [Nothing] [] n
 groupStates n (re1 <*> re2) = 
@@ -72,9 +71,9 @@ min (MkGroupSM initStates statesWithNext max) =
     group : List (Nat, NextStates) -> List (List1 (Nat, NextStates))
     group xs = groupBy stateEq xs where
       stateEq : (Nat, NextStates) -> (Nat, NextStates) -> Bool
-      stateEq (_, (MkNextStates cond  isSat   notSat  )) 
-              (_, (MkNextStates cond' isSat'  notSat' )) =
-                cond == cond' && (eq isSat isSat') && (eq notSat notSat')
+      stateEq (_, (MkNextStates cond  isSat )) 
+              (_, (MkNextStates cond' isSat')) =
+                cond == cond' && (eq isSat isSat')
     getMappings : List (List1 (Nat, NextStates)) -> List (Nat, Nat)
     getMappings [] = []
     getMappings (((nh, _) ::: xs) :: ys) = (map (\case (x, _) => (nh, x)) xs) ++ getMappings ys
@@ -95,8 +94,7 @@ min (MkGroupSM initStates statesWithNext max) =
               if (n' == n1) then applyMap xs
               else  ( n'
                     , MkNextStates  y.condition 
-                                    (applyFilter (n, n1) y.isSat) 
-                                    (applyFilter (n, n1) y.notSat)) :: applyMap xs
+                                    (applyFilter (n, n1) y.isSat)) :: applyMap xs
 
 public export
 groupSM : TyRE a -> GroupSM
