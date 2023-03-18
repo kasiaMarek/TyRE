@@ -4,7 +4,6 @@ import Data.SnocList
 import Data.List
 
 infix 6 :+:,.+.
-infix 7 :<,::
 
 ||| A data structure to represent succesful (disjoint) matches in a string.
 ||| A string is written here as alternatating sequence of substring and matches.
@@ -35,10 +34,30 @@ data DisjointMatches : Type -> Type where
   Suffix : List Char -> DisjointMatches a
   Cons : List Char -> a -> DisjointMatches a -> DisjointMatches a
 
+public export
+DisjointMatchesExplicit : Type -> Type
+DisjointMatchesExplicit a = (List (List Char, a), List Char)
+
+public export
+Cast (DisjointMatches a) (DisjointMatchesExplicit a) where
+  cast (Suffix cs) = ([], cs)
+  cast (Cons cs x ps) =
+    let (dsx, cs) = cast {to = DisjointMatchesExplicit a} ps
+    in ((cs,x) :: dsx, cs)
+
+public export
+curryCast : List (List Char, a) -> List Char -> DisjointMatches a
+curryCast [] cs = Suffix cs
+curryCast ((ds, x) :: dsx) cs = Cons ds x $ curryCast dsx cs
+
+public export
+Cast (DisjointMatchesExplicit a) (DisjointMatches a) where
+  cast = uncurry curryCast
+
 export
-(::) : DisjointMatches a -> Char -> DisjointMatches a
-(::) (Suffix cs) c = Suffix (c :: cs)
-(::) (Cons cs parse tail) c = Cons (c :: cs) parse tail
+(::) : Char -> DisjointMatches a -> DisjointMatches a
+(::) c (Suffix cs) = Suffix (c :: cs)
+(::) c (Cons cs parse tail) = Cons (c :: cs) parse tail
 
 export
 (.+.) : a -> DisjointMatches a -> DisjointMatches a
