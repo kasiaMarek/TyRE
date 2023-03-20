@@ -1,6 +1,7 @@
 module TyRE.Parser.SMConstruction
 
 import Data.List
+import Data.DPair
 
 import TyRE.Core
 import TyRE.Parser.SM
@@ -14,7 +15,7 @@ compile Empty =
   let lookup : Void -> SnocList Type
       lookup _ impossible
       init : InitStatesType () Void lookup
-      init = [(Nothing ** ([< Push ()] ** [< InitPush]))]
+      init = [(Nothing ** [< Push ()] `Element` [< InitPush])]
       next : NextStatesType () Void lookup
       next _ _ = []
   in MkSM Void lookup init next
@@ -23,7 +24,7 @@ compile (MatchChar f) =
   let lookup : () -> SnocList Type
       lookup () = [< ]
       init : InitStatesType Char () lookup
-      init = [(Just () ** ([<] ** [<]))]
+      init = [(Just () ** [<] `Element` [<])]
       next : NextStatesType Char () lookup
       next () c =
         if satisfies f c
@@ -43,16 +44,16 @@ compile ((<*>) {a,b} x y) =
       init =
         (i1 >>=
           (\case
-            (Nothing ** r ** p) =>
+            (Nothing ** r `Element` p) =>
               map (\case
-                    (Nothing ** r2 ** p2) =>
+                    (Nothing ** r2 `Element` p2) =>
                       (Nothing
-                      ** r ++ lift r2 :< ReducePair MkPair
-                      ** p ++ lift p2 :< InitReducePair)
-                    (Just st ** r2 ** p2) =>
+                      ** r ++ lift r2 :< ReducePair MkPair `Element`
+                         p ++ lift p2 :< InitReducePair)
+                    (Just st ** r2 `Element` p2) =>
                       (Just (Right st)
-                      ** (r ++ lift r2)
-                      ** (p ++ lift p2)))
+                      ** (r ++ lift r2) `Element`
+                         (p ++ lift p2)))
               i2
             (Just st ** r) => [(Just (Left st) ** r)]))
       next : NextStatesType (a,b) T lookup
@@ -61,10 +62,10 @@ compile ((<*>) {a,b} x y) =
           (\case
             (Nothing ** r) =>
               map (\case
-                    (Nothing ** r2 ** _) =>
+                    (Nothing ** r2 `Element` _) =>
                       (Nothing
                       ** r ++ lift r2 :< ReducePair MkPair)
-                    (Just s2 ** r2 ** _) =>
+                    (Just s2 ** r2 `Element` _) =>
                       (Just (Right s2)
                       ** r ++ lift r2))
                   i2
@@ -86,17 +87,17 @@ compile ((<|>) {a,b} x y) =
       lookup (Right s) = l2 s
       init : InitStatesType (Either a b) T lookup
       init = map  (\case
-                      (Nothing ** (rt ** p)) =>
+                      (Nothing ** rt `Element` p) =>
                         (Nothing
-                        ** rt :< Transform Left
-                        ** p :< InitTransform)
+                        ** rt :< Transform Left `Element`
+                           p :< InitTransform)
                       (Just st ** r) => (Just (Left st) ** r))
                   i1
            ++ map (\case
-                      (Nothing ** (rt ** p)) =>
+                      (Nothing ** rt `Element` p) =>
                         (Nothing
-                        ** rt :< (Transform Right)
-                        ** p :< InitTransform)
+                        ** rt :< (Transform Right) `Element`
+                           p :< InitTransform)
                       (Just st ** r) => (Just (Right st) ** r))
                   i2
       next : NextStatesType (Either a b) T lookup
@@ -121,12 +122,13 @@ compile (Rep {a} re) =
       0 lookup : T -> SnocList Type
       lookup s = [< SnocList a] ++ lookupPrev s
       init : InitStatesType (SnocList a) T lookup
-      init = (Nothing ** [< Push [<]] ** [< InitPush])
+      init = (Nothing ** [< Push [<]] `Element` [< InitPush])
            :: map (\case
-                    (Nothing ** r ** p) => (Nothing ** [< Push [<]] ** [< InitPush])
-                    (Just st ** r ** p) =>
+                    (Nothing ** r `Element` p) =>
+                      (Nothing ** [< Push [<]] `Element` [< InitPush])
+                    (Just st ** r `Element` p) =>
                       (Just st ** ([< Push Prelude.Basics.Lin] ++ lift r)
-                              ** ([< InitPush] ++ lift p)))
+                        `Element` ([< InitPush] ++ lift p)))
                   initPrev
       next : NextStatesType (SnocList a) T lookup
       next s c =
@@ -135,9 +137,9 @@ compile (Rep {a} re) =
             (Nothing ** r) =>
                 (Nothing ** lift r :< ReducePair (:<))
               :: map (\case
-                        (Nothing ** r2 ** _) =>
+                        (Nothing ** r2 `Element` _) =>
                           (Nothing ** lift r :< ReducePair (:<))
-                        (Just st ** r2 ** _) =>
+                        (Just st ** r2 `Element` _) =>
                           (Just st ** lift r :< ReducePair (:<) ++ lift r2))
                       initPrev
             (Just st ** r) => [(Just st ** lift r)]
@@ -150,8 +152,9 @@ compile {a = String} (Group r) = asSM (groupSM r) where
         lookup _ = [<]
         init : InitStatesType String Nat lookup
         init = map (\case
-                      Just s => (Just s ** [< Record] ** [< InitRecord])
-                      Nothing => (Nothing ** [< EmitString] ** [< InitEmitString]))
+                      Just s => (Just s ** [< Record] `Element` [< InitRecord])
+                      Nothing => (Nothing ** [< EmitString] `Element`
+                                             [< InitEmitString]))
                    initStates
         next : NextStatesType String Nat lookup
         next s c with (find (\case (n, ns) => n == s) statesWithNext)
@@ -167,8 +170,9 @@ compile (Conv {a,b} re f) =
   let MkSM t lookup initPrev nextPrev := compile re
       init : InitStatesType b t lookup
       init = map (\case
-                    (Nothing ** r ** p) => (Nothing ** r :< Transform f
-                                            ** p :< InitTransform)
+                    (Nothing ** r `Element` p) =>
+                      (Nothing ** r :< Transform f `Element`
+                                       p :< InitTransform)
                     (Just st ** rp) => (Just st ** rp))
                  initPrev
       next : NextStatesType b t lookup
