@@ -70,6 +70,11 @@ reverseRec (x :< z) y = reverseRec x (z :: y)
 reverse : RoutineSnoc tps tps' -> Routine tps tps'
 reverse sx = reverseRec sx []
 
+||| Like Data.Either, but argument to `Right` variant is erased
+public export
+data EitherErased : Type -> Type -> Type where
+  Left : a -> EitherErased a b
+  Right : (0 y : b) -> EitherErased a b
 
 namespace IsInit
   public export
@@ -98,19 +103,6 @@ namespace IsInit
   public export
   tail : IsInitRoutine (x :: xs) -> IsInitRoutine xs
   tail (_ :: prfs) = prfs
-
-  namespace Instruction
-    public export
-    data CurrentChar : (r : Instruction t t') -> Type where
-      Left : Char -> CurrentChar r
-      Right : (0 p : IsInitInstruction r) -> CurrentChar r
-
-  namespace Routine
-    public export
-    data CurrentChar : (r : Routine t t') -> Type where
-      Left : Char -> CurrentChar r
-      Right : (0 p : IsInitRoutine r) -> CurrentChar r
-
 
   public export
   data IsInitRoutineSnoc : RoutineSnoc t t' -> Type where
@@ -194,7 +186,7 @@ record Thread {t : Type} (sm : SM t) where
 
 execInstructionAux : {0 scs, scs', p : SnocList Type}
                   -> (r : Instruction scs scs')
-                  -> CurrentChar r
+                  -> EitherErased Char (IsInitInstruction r)
                   -> ThreadData (p ++ scs)
                   -> ThreadData (p ++ scs')
 execInstructionAux Record c (MkThreadData st col rec) =
@@ -212,7 +204,7 @@ execInstructionAux EmitString c (MkThreadData st col rec) =
 
 execRoutineAux : {0 scs, scs', p : SnocList Type}
             -> (r : Routine scs scs')
-            -> CurrentChar r
+            -> EitherErased Char (IsInitRoutine r)
             -> ThreadData (p ++ scs)
             -> ThreadData (p ++ scs')
 execRoutineAux [] c st = st
@@ -223,7 +215,7 @@ execRoutineAux (i :: r) (Right ipir) st =
 
 execRoutine : {0 scs, scs' : SnocList Type}
             -> (r : Routine scs scs')
-            -> CurrentChar r
+            -> EitherErased Char (IsInitRoutine r)
             -> ThreadData scs -> ThreadData scs'
 execRoutine r c st =
   rewrite (sym $ appendLinLeftNeutral scs') in
