@@ -6,6 +6,7 @@ import Data.Maybe
 import Data.List
 import Data.List.Elem
 import Data.Void
+import Data.DPair
 
 import TyRE.Extra.Reflects
 
@@ -74,7 +75,7 @@ namespace IsInit
   public export
   data IsInitInstruction : Instruction t t' -> Type where
     InitRecord : IsInitInstruction Record
-    InitPush : IsInitInstruction (Push elem)
+    InitPush : forall elem. IsInitInstruction (Push elem)
     InitReducePair : IsInitInstruction (ReducePair f)
     InitTransform : IsInitInstruction (Transform f)
     InitEmitString : IsInitInstruction EmitString
@@ -83,6 +84,33 @@ namespace IsInit
   data IsInitRoutine : Routine t t' -> Type where
     Nil  : IsInitRoutine []
     (::) : IsInitInstruction x -> IsInitRoutine xs -> IsInitRoutine (x :: xs)
+
+  -- We need explicit projections due to Idris bugs involving irrefutable
+  -- arguments at quantity zero, e.g.:
+  --   https://github.com/idris-lang/Idris2/issues/2513
+  -- Since these pend the new-core rewrite, we use explicit projections to
+  -- work around these issues.
+
+  public export
+  head : IsInitRoutine (x :: xs) -> IsInitInstruction x
+  head (prf :: _) = prf
+
+  public export
+  tail : IsInitRoutine (x :: xs) -> IsInitRoutine xs
+  tail (_ :: prfs) = prfs
+
+  namespace Instruction
+    public export
+    data CurrentChar : (r : Instruction t t') -> Type where
+      Left : Char -> CurrentChar r
+      Right : (0 p : IsInitInstruction r) -> CurrentChar r
+
+  namespace Routine
+    public export
+    data CurrentChar : (r : Routine t t') -> Type where
+      Left : Char -> CurrentChar r
+      Right : (0 p : IsInitRoutine r) -> CurrentChar r
+
 
   public export
   data IsInitRoutineSnoc : RoutineSnoc t t' -> Type where
@@ -111,7 +139,7 @@ namespace IsInit
   liftInst InitReducePair = InitReducePair
   liftInst InitTransform = InitTransform
   liftInst InitEmitString = InitEmitString
-  
+
   public export
   lift : IsInitRoutineSnoc xs -> IsInitRoutineSnoc (lift xs)
   lift [<] = [<]
@@ -126,12 +154,12 @@ public export
 InitStatesType : (t : Type) -> (s : Type) -> (s -> SnocList Type) -> Type
 InitStatesType t s lookup =
   List (st : Maybe s
-        ** (r : RoutineSnoc [<] (mlookup lookup t st)
-            ** IsInitRoutineSnoc r))
+        ** Subset (RoutineSnoc [<] (mlookup lookup t st))
+                  IsInitRoutineSnoc)
 
 public export
 NextStatesType : (t : Type) -> (s : Type) -> (s -> SnocList Type) -> Type
-NextStatesType t s lookup = 
+NextStatesType t s lookup =
     (st : s)
   -> Char
   -> List (st' : Maybe s
@@ -161,12 +189,12 @@ record ThreadData (code : SnocList Type) where
 
 record Thread {t : Type} (sm : SM t) where
   constructor MkThread
-  state : Maybe sm.s 
+  state : Maybe sm.s
   tddata : ThreadData (mlookup sm.lookup t state)
 
 execInstructionAux : {0 scs, scs', p : SnocList Type}
                   -> (r : Instruction scs scs')
-                  -> Either Char (IsInitInstruction r)
+                  -> CurrentChar r
                   -> ThreadData (p ++ scs)
                   -> ThreadData (p ++ scs')
 execInstructionAux Record c (MkThreadData st col rec) =
@@ -184,18 +212,18 @@ execInstructionAux EmitString c (MkThreadData st col rec) =
 
 execRoutineAux : {0 scs, scs', p : SnocList Type}
             -> (r : Routine scs scs')
-            -> Either Char (IsInitRoutine r)
+            -> CurrentChar r
             -> ThreadData (p ++ scs)
             -> ThreadData (p ++ scs')
 execRoutineAux [] c st = st
 execRoutineAux (i :: r) (Left c) st =
   execRoutineAux r (Left c) (execInstructionAux i (Left c) st)
-execRoutineAux (i :: r) (Right (ip :: ir)) st =
-  execRoutineAux r (Right ir) (execInstructionAux i (Right ip) st)
+execRoutineAux (i :: r) (Right ipir) st =
+  execRoutineAux r (Right $ tail ipir) (execInstructionAux i (Right $ head ipir) st)
 
 execRoutine : {0 scs, scs' : SnocList Type}
             -> (r : Routine scs scs')
-            -> Either Char (IsInitRoutine r)
+            -> CurrentChar r
             -> ThreadData scs -> ThreadData scs'
 execRoutine r c st =
   rewrite (sym $ appendLinLeftNeutral scs') in
@@ -230,7 +258,7 @@ parameters {0 t : Type} {auto sm : SM t}
   init : List (Thread sm)
   init =
     map (\case
-            (st ** (rt ** p)) =>
+            (st ** (rt `Element` p)) =>
               MkThread st
                       (execRoutine (reverse rt) (Right $ reverse p) (MkThreadData [<] [<] False)))
                       sm.init
