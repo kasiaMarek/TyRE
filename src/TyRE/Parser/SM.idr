@@ -171,7 +171,7 @@ namespace Stack
   public export
   data Stack : SnocList Type -> Type where
     Lin : Stack [<]
-    Snoc : Stack tps -> {0 t : Type} -> t -> Stack (tps :< t)
+    (:<) : Stack tps -> {0 t : Type} -> t -> Stack (tps :< t)
 
 record ThreadData (code : SnocList Type) where
   constructor MkThreadData
@@ -192,15 +192,15 @@ execInstructionAux : {0 scs, scs', p : SnocList Type}
 execInstructionAux Record c (MkThreadData st col rec) =
   MkThreadData st col True
 execInstructionAux (Push elem) c (MkThreadData st col rec) =
-  MkThreadData (Snoc st elem) col rec
+  MkThreadData (st :< elem) col rec
 execInstructionAux PushChar (Left c) (MkThreadData st col rec) =
-  MkThreadData (Snoc st c) col rec
-execInstructionAux (ReducePair f) c (MkThreadData (Snoc (Snoc x z) y) col rec) =
-  MkThreadData (Snoc x (f z y)) col rec
-execInstructionAux (Transform f) c (MkThreadData (Snoc y z) col rec) =
-  MkThreadData (Snoc y (f z)) col rec
+  MkThreadData (st :< c) col rec
+execInstructionAux (ReducePair f) c (MkThreadData (x :< z :< y) col rec) =
+  MkThreadData (x :< (f z y)) col rec
+execInstructionAux (Transform f) c (MkThreadData (y :< z) col rec) =
+  MkThreadData (y :< (f z)) col rec
 execInstructionAux EmitString c (MkThreadData st col rec) =
-  MkThreadData (Snoc st (fastPack $ cast col)) [<] False
+  MkThreadData (st :< (fastPack $ cast col)) [<] False
 
 execRoutineAux : {0 scs, scs', p : SnocList Type}
             -> (r : Routine scs scs')
@@ -233,7 +233,7 @@ execOnThread sm c (MkThread (Just st) info) =
          (sm.next st c)
 
 getFromStack : Stack [< t] -> t
-getFromStack (Snoc [<] r) = r
+getFromStack ([< r]) = r
 
 parameters {0 t : Type} {auto sm : SM t}
   ||| Distinct function for threads
