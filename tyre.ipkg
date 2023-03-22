@@ -15,6 +15,8 @@ modules =   TyRE.Codes
           , TyRE.Parser.SM
           , TyRE.Parser.SMConstruction
           , TyRE.Parser.GroupThompson
+          --- pretty printer
+          , TyRE.Parser.PrettyPrinter
           --- additional more `generic` functions and structures
           , TyRE.Extra
           , TyRE.Extra.Pred
