@@ -12,7 +12,7 @@ SAMPLES = 5
 PATH_TO_CHARTS = "charts/"
 RESULTS_FILE = "results.txt"
 
-ITARATIONS = 12
+ITARATIONS = 1000
 
 def add(x, y):
     return x + y
@@ -27,30 +27,28 @@ def listOpByIndex(l1, l2, f):
         diff.append(f(e1, e2))
     return diff
 
-def exec(name, i, isGroup):
+def exec(name, i):
     ssh = subprocess.Popen(["./build/exec/" + name],
                             stdin=subprocess.PIPE,
                             universal_newlines=True,
                             stdout=subprocess.PIPE)
     start = time.time()
-    group = "no_group"
-    if isGroup:
-      group = "group"
-    out = ssh.communicate(input=group + "\n" + str(i))[0]
+    out = ssh.communicate(input=str(i))[0]
     end = time.time()
     return (end - start)
 
-def measuretime(name, iterations, isGroup):
+def measuretime(name, iterations):
     os.system(IDRIS2 + " -p tyre -p contrib " + name + ".idr -o " + name.lower())
-    times = [exec(name.lower(), 0, isGroup)]
+    exec(name.lower(), 0)
+    times = [exec(name.lower(), 0)]
     for i in range(iterations):
-        times.append(exec(name.lower(), i, isGroup))
+        times.append(exec(name.lower(), i))
     return times
 
-def buildTimes(name, isGroup, iterations):
+def buildTimes(name, iterations):
     timesMatrix = []
     for i in range(SAMPLES):
-        times = measuretime(name, iterations, isGroup)
+        times = measuretime(name, iterations)
         timesMatrix.append(times)
     avg = []
     stddev = []
@@ -64,10 +62,10 @@ def buildTimes(name, isGroup, iterations):
 
 def runtest():
   return {
-    "balanced": buildTimes("AltBalanced", False, ITARATIONS),
-    "unbalanced": buildTimes("AltUnbalanced", False, ITARATIONS),
-    "balancedGroup": buildTimes("AltBalanced", True, ITARATIONS),
-    "unbalancedGroup": buildTimes("AltUnbalanced", True, ITARATIONS),
+    "balanced": buildTimes("AltBalanced", ITARATIONS),
+    "unbalanced": buildTimes("AltUnbalanced", ITARATIONS),
+    "balancedGroup": buildTimes("AltBalancedGroup", ITARATIONS),
+    "unbalancedGroup": buildTimes("AltUnbalancedGroup", ITARATIONS),
   }
 
 def plotresult(testresult):
@@ -75,7 +73,7 @@ def plotresult(testresult):
     unbalanced = testresult["unbalanced"]
     balancedGroup = testresult["balancedGroup"]
     unbalancedGroup = testresult["unbalancedGroup"]
-    x = [2 ** y for y in range(ITARATIONS)]
+    x = range(ITARATIONS)
     plt.plot(x, balanced["avg"], color='blue', label='balanced')
     plt.fill_between(x,
         listOpByIndex(balanced["avg"], balanced["stdev"], subtract),
