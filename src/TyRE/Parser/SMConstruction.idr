@@ -15,7 +15,7 @@ compile Empty =
       lookup _ impossible
       init : InitStatesType () Void lookup
       init = [(Nothing ** ([< Push ()] ** [< InitPush]))]
-      next : NextStatesType () Void lookup
+      next : TransitionRelation () Void lookup
       next _ _ = []
   in MkSM Void lookup init next
 --sm for predicate
@@ -24,7 +24,7 @@ compile (MatchChar f) =
       lookup () = [< ]
       init : InitStatesType Char () lookup
       init = [(Just () ** ([<] ** [<]))]
-      next : NextStatesType Char () lookup
+      next : TransitionRelation Char () lookup
       next () c =
         if satisfies f c
         then [(Nothing ** [< PushChar])]
@@ -55,7 +55,7 @@ compile ((<*>) {a,b} x y) =
                       ** (p ++ lift p2)))
               i2
             (Just st ** r) => [(Just (Left st) ** r)]))
-      next : NextStatesType (a,b) T lookup
+      next : TransitionRelation (a,b) T lookup
       next (Left st) c =
         (n1 st c >>=
           (\case
@@ -99,7 +99,7 @@ compile ((<|>) {a,b} x y) =
                         ** p :< InitTransform)
                       (Just st ** r) => (Just (Right st) ** r))
                   i2
-      next : NextStatesType (Either a b) T lookup
+      next : TransitionRelation (Either a b) T lookup
       next (Left s) c =
         map (\case
                 (Nothing ** rt) =>
@@ -128,7 +128,7 @@ compile (Rep {a} re) =
                       (Just st ** ([< Push Prelude.Basics.Lin] ++ lift r)
                               ** ([< InitPush] ++ lift p)))
                   initPrev
-      next : NextStatesType (SnocList a) T lookup
+      next : TransitionRelation (SnocList a) T lookup
       next s c =
         (nextPrev s c) >>=
           \case
@@ -153,7 +153,7 @@ compile {a = String} (Group r) = asSM (groupSM r) where
                       Just s => (Just s ** [< Record] ** [< InitRecord])
                       Nothing => (Nothing ** [< EmitString] ** [< InitEmitString]))
                    initStates
-        next : NextStatesType String Nat lookup
+        next : TransitionRelation String Nat lookup
         next s c with (find (\case (n, ns) => n == s) statesWithNext)
           next s c | Nothing = []
           next s c | (Just (_, (MkNextStates condition isSat))) =
@@ -171,7 +171,7 @@ compile (Conv {a,b} re f) =
                                             ** p :< InitTransform)
                     (Just st ** rp) => (Just st ** rp))
                  initPrev
-      next : NextStatesType b t lookup
+      next : TransitionRelation b t lookup
       next st c = map (\case
                           (Nothing ** r) => (Nothing ** r :< Transform f)
                           (Just st ** r) => (Just st ** r))

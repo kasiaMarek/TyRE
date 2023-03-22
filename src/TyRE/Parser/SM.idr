@@ -111,7 +111,7 @@ namespace IsInit
   liftInst InitReducePair = InitReducePair
   liftInst InitTransform = InitTransform
   liftInst InitEmitString = InitEmitString
-  
+
   public export
   lift : IsInitRoutineSnoc xs -> IsInitRoutineSnoc (lift xs)
   lift [<] = [<]
@@ -130,12 +130,12 @@ InitStatesType t s lookup =
             ** IsInitRoutineSnoc r))
 
 public export
-NextStatesType : (t : Type) -> (s : Type) -> (s -> SnocList Type) -> Type
-NextStatesType t s lookup = 
-    (st : s)
+TransitionRelation : (shape : Type) -> (state : Type) -> (stateShape : state -> SnocList Type) -> Type
+TransitionRelation shape state stateShape =
+    (st : state)
   -> Char
-  -> List (st' : Maybe s
-            ** RoutineSnoc (lookup st) (mlookup lookup t st'))
+  -> List (st' : Maybe state
+            ** RoutineSnoc (stateShape st) (mlookup stateShape shape st'))
 
 public export
 record SM (t : Type) where
@@ -144,7 +144,7 @@ record SM (t : Type) where
   0 lookup : s -> SnocList Type
   {auto isEq : Eq s}
   init : InitStatesType t s lookup
-  next : NextStatesType t s lookup
+  next : TransitionRelation t s lookup
 
 --- execution of the SM ---
 namespace Stack
@@ -161,7 +161,7 @@ record ThreadData (code : SnocList Type) where
 
 record Thread {t : Type} (sm : SM t) where
   constructor MkThread
-  state : Maybe sm.s 
+  state : Maybe sm.s
   tddata : ThreadData (mlookup sm.lookup t state)
 
 execInstructionAux : {0 scs, scs', p : SnocList Type}
