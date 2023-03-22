@@ -143,19 +143,19 @@ mlookup f t Nothing = [< t]
 mlookup f t (Just s) = f s
 
 public export
-InitStatesType : (t : Type) -> (s : Type) -> (s -> SnocList Type) -> Type
-InitStatesType t s lookup =
-  List (st : Maybe s
-        ** Subset (RoutineSnoc [<] (mlookup lookup t st))
+InitStatesType : (shape : Type) -> (state : Type) -> (stateShape : state -> SnocList Type) -> Type
+InitStatesType shape state stateShape =
+  List (st : Maybe state
+        ** Subset (RoutineSnoc [<] (mlookup stateShape shape st))
                   IsInitRoutineSnoc)
 
 public export
-NextStatesType : (t : Type) -> (s : Type) -> (s -> SnocList Type) -> Type
-NextStatesType t s lookup =
-    (st : s)
+TransitionRelation : (shape : Type) -> (state : Type) -> (stateShape : state -> SnocList Type) -> Type
+TransitionRelation shape state stateShape =
+    (st : state)
   -> Char
-  -> List (st' : Maybe s
-            ** RoutineSnoc (lookup st) (mlookup lookup t st'))
+  -> List (st' : Maybe state
+            ** RoutineSnoc (stateShape st) (mlookup stateShape shape st'))
 
 public export
 record SM (t : Type) where
@@ -164,7 +164,7 @@ record SM (t : Type) where
   0 lookup : s -> SnocList Type
   {auto isEq : Eq s}
   init : InitStatesType t s lookup
-  next : NextStatesType t s lookup
+  next : TransitionRelation t s lookup
 
 --- execution of the SM ---
 namespace Stack
