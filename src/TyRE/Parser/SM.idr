@@ -143,10 +143,10 @@ mlookup f t Nothing = [< t]
 mlookup f t (Just s) = f s
 
 public export
-InitStatesType : (t : Type) -> (s : Type) -> (s -> SnocList Type) -> Type
-InitStatesType t s lookup =
-  List (st : Maybe s
-        ** Subset (RoutineSnoc [<] (mlookup lookup t st))
+InitStatesType : (shape : Type) -> (state : Type) -> (stateShape : state -> SnocList Type) -> Type
+InitStatesType shape state stateShape =
+  List (st : Maybe state
+        ** Subset (RoutineSnoc [<] (mlookup stateShape shape st))
                   IsInitRoutineSnoc)
 
 public export
