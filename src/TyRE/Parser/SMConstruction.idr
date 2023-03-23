@@ -25,9 +25,10 @@ compile (MatchChar f) =
       lookup () = [< ]
       init : InitStatesType Char () lookup
       init = [(Just () ** [<] `Element` [<])]
+      match : Char -> Bool := satisfies f
       next : TransitionRelation Char () lookup
       next () c =
-        if satisfies f c
+        if match c
         then [(Nothing ** [< PushChar])]
         else []
   in MkSM () lookup init next

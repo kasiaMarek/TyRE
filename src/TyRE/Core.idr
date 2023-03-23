@@ -8,7 +8,7 @@ import Data.SnocList
 
 infixr 6 <*>, <*, *>
 
-public export 
+public export
 data CharCond =
       OneOf (SortedSet Char)
     | Range (Char, Char)
@@ -24,9 +24,9 @@ Eq CharCond where
 
 public export
 satisfies : CharCond -> Char -> Bool
-satisfies (OneOf xs) c = contains c xs
-satisfies (Range (x, y)) c = x <= c && c <= y
-satisfies (Pred f) c = f c
+satisfies (OneOf xs) = \c => contains c xs
+satisfies (Range (x, y)) = \c => x <= c && c <= y
+satisfies (Pred f) = \c => f c
 
 public export
 data TyRE : Type -> Type where
@@ -131,7 +131,7 @@ repFrom (S k) re = (\(e,l) => e::l) `map` (re <*> repFrom k re)
 public export
 repTo : Nat -> TyRE a -> TyRE (List a)
 repTo 0 re = const [] `map` empty
-repTo (S k) re = 
+repTo (S k) re =
   optionalAdd `map` (option re <*> repTo k re) where
     optionalAdd : (Maybe a, List a) -> List a
     optionalAdd (Nothing, xs) = xs
