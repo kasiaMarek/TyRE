@@ -38,13 +38,20 @@ asDisjointMatches re cs greedy =
         then runFromInit (runTillLastAccept cs Nothing)
         else runFromInit (runTillFirstAccept cs)
       matchesRec : List Char -> DisjointMatchesSnoc a
-                -> DisjointMatchesSnoc a 
+                -> DisjointMatchesSnoc a
       matchesRec [] dm = dm
       matchesRec (x :: xs) dm with (parseFunction (x :: xs))
         matchesRec (x :: xs) dm | (Nothing, _) = matchesRec xs (dm :< x)
         matchesRec (x :: xs) dm | ((Just tree), tail) =
           matchesRec tail (dm :+: tree)
   in cast (matchesRec cs (Prefix [<]))
+
+export
+partial --we should be able to prove totality thanks to `consuming`
+disjointMatches : (re : TyRE a) -> {auto 0 consuming : IsConsuming re}
+                  -> List Char -> (greedy : Bool)
+                  -> (List (List Char, a), List Char)
+disjointMatches re str greedy = cast $ asDisjointMatches re str greedy
 
 export
 partial
