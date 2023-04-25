@@ -1,35 +1,26 @@
 import Data.Regex
-import Data.Nat
+import Data.Either
 
-altREType : Nat -> Type
-altREType 0 = ()
-altREType (S k) = Either () (altREType k)
+typ : Nat -> Type
+typ 0 = ()
+typ (S k) = Either () (typ k)
 
-altRE : (n : Nat) -> TyRE (altREType n)
-altRE 0 = match 'a'
-altRE (S k) = match 'a' <|> altRE k
+rightRE : (n : Nat) -> TyRE (typ n)
+rightRE 0 = match 'a'
+rightRE (S k) = (match 'a' <|> rightRE k)
 
-getRE : Bool -> (n : Nat) -> TyRE (Either String (altREType n))
-getRE True n = Left `map` group (altRE n)
-getRE False n = Right `map` (altRE n)
-
-toStr : (n : Nat) -> (altREType n) -> String
-toStr 0 () = show ()
-toStr (S k) (Left rest) = "Left ()"
-toStr (S k) (Right rest) = "Right " ++ (toStr k rest)
+toNat : {n : Nat} -> typ n -> Nat
+toNat {n = 0} () = 1
+toNat {n = (S j)} (Left x) = j + 1
+toNat {n = (S j)} (Right x) = toNat x
 
 main : IO ()
-main =  do  isGroup <- getLine
-            str <- getLine
+main =  do  str <- getLine
             if all isDigit (unpack str)
               then
                 let n : Nat
                     n = (cast str)
-                    n' := power 2 n
-                    re : TyRE (Either String (altREType n'))
-                    re = getRE (isGroup == "group") n'
-                in case parse re "a" of
-                    Just (Right res) => putStrLn (toStr n' res)
-                    Just (Left res) => putStrLn res
+                in case parse (rightRE n) "a" of
+                    Just res => putStrLn $ show $ toNat $ res
                     Nothing => putStrLn "Error"
-              else putStrLn "Second input should be a number"
+              else putStrLn "Input should be two numbers"

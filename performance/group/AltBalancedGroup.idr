@@ -40,7 +40,7 @@ main =  do  str <- getLine
               then
                 let n : Nat
                     n = (cast str)
-                in case parse (balanced n) "a" of
-                    Just res => putStrLn $ (\_ => "yey") $ res
+                in case parse (ignore (balanced n)) "a" of
+                    Just res => putStrLn $ show $ res
                     Nothing => putStrLn "Error"
               else putStrLn "Input should be a number"
