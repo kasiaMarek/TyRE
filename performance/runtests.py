@@ -7,9 +7,12 @@ import time
 import matplotlib.pyplot as plt
 import statistics
 
+VERBOSE = True
 IDRIS2 = "idris2"
 SAMPLES = 5
 PATH_TO_CHARTS = "charts/"
+ITERATIONS = 1000
+YLIM = 0.2
 
 NAME = "name"
 ITR = "iterations"
@@ -77,11 +80,23 @@ def buildTimes(name, iterations):
 
 # Build results for both libraries.
 def runtest(test):
+    if VERBOSE:
+      print(f"Running test {test[NAME]}... ", end='')
+      sys.stdout.flush()
     result = {
         "tyretimes": buildTimes(test[TYRE_FILE], test[ITR]),
         "combtimes": buildTimes(test[COMB_FILE], test[ITR])
         }
+    if VERBOSE:
+      print("done.")
     return result
+
+# Find maximum average and standard deviation of a result
+def maxval(testresult):
+    vals = [x + y
+              for (x,y) in
+                zip(testresult["avg"],testresult["stdev"])]
+    return max(vals)
 
 # A function that plots the results
 def plotresult(test, testresult):
@@ -89,14 +104,14 @@ def plotresult(test, testresult):
     combtimes = testresult["combtimes"]
     x = range(1, test[ITR]+1)
     #plot average line for tyre
-    plt.plot(x, tyretimes["avg"], color='blue', label='TyRE library')
+    plt.plot(x, tyretimes["avg"], color='blue', label='TyRE')
     #plot stddev for tyre
     plt.fill_between(x,
         listOpByIndex(tyretimes["avg"], tyretimes["stdev"], subtract),
         listOpByIndex(tyretimes["avg"], tyretimes["stdev"], add),
         color='blue', alpha=0.2)
     #plot average line for parsers combinators library
-    plt.plot(x, combtimes["avg"], color='orange', label='Idris 2\'s stdlib parsers\' combinators library')
+    plt.plot(x, combtimes["avg"], color='orange', label='parser combinators')
     #plot stddev for parsers combinators library
     plt.fill_between(x,
         listOpByIndex(combtimes["avg"], combtimes["stdev"], subtract),
@@ -106,6 +121,13 @@ def plotresult(test, testresult):
     plt.ylabel('time in seconds')
     plt.xlabel(test[XLABEL])
     plt.legend(loc="upper left")
+    #GetCurrentAxes
+    ax = plt.gca()
+    ax.set_ylim([0.0, YLIM])
+    maxy = max([maxval(result)
+                  for result in [tyretimes, combtimes]])
+    if VERBOSE and maxy > YLIM:
+        print(f"Out-of-frame points for test {test[NAME]}")
     #save the figure
     plt.savefig(PATH_TO_CHARTS + test[NAME] + ".png")
     plt.clf()
@@ -118,13 +140,13 @@ def plotresult(test, testresult):
 #   for both we execute the `main` function and pass `n` to it
 # XLABEL: Will be printed below the chart.
 tests = [
-    {NAME : "star", ITR : 1000, TYRE_FILE: "StarTyRE",
+    {NAME : "star", ITR : ITERATIONS, TYRE_FILE: "StarTyRE",
         COMB_FILE: "StarComb", XLABEL: "length of word"},
-    {NAME : "star2", ITR : 1000, TYRE_FILE: "StarTyRE2",
+    {NAME : "star2", ITR : ITERATIONS, TYRE_FILE: "StarTyRE2",
         COMB_FILE: "StarComb2", XLABEL: "length of word"},
-    {NAME : "concat", ITR : 1000, TYRE_FILE: "ConcatTyRE",
+    {NAME : "concat", ITR : ITERATIONS, TYRE_FILE: "ConcatTyRE",
         COMB_FILE: "ConcatComb", XLABEL: "length of regex and word"} ,
-    {NAME : "alternation", ITR : 1000, TYRE_FILE: "AltTyRE",
+    {NAME : "alternation", ITR : ITERATIONS, TYRE_FILE: "AltTyRE",
         COMB_FILE: "AltComb", XLABEL: "length of regex"}
 ]
 
@@ -142,10 +164,15 @@ def setSamples(n):
     global SAMPLES
     SAMPLES = int(n)
 
+def setVerbose(b):
+    global VERBOSE
+    VERBOSE = not ("False" == b)
+
 # Possibile flags to be passed for execution.
 commands = {
     "--idris2" : setIdris,
     "--samples" : setSamples,
+    "--verbose" : setVerbose,
 }
 
 # Change global params according to the passed flags.

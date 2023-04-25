@@ -20,6 +20,7 @@ To run the tests run the following command in the chosen test directory:
 You may also wish to use one of the following flags when running the command:
   1. `--samples=${NUM_OF_SAMPLES}`
   2. `--idris2=${PATH_TO_IDRIS2}`
+  3. `--verbose=[True|False]`
 
 The created chart/s will be saved in `charts` directory.
 
@@ -35,6 +36,7 @@ All test are executed for n from 0 to 1000, each is sampled 5 times (this can be
       - parsee: "$a$"
       - tyre file: `AltTyRE.idr`
       - parsers combinations std lib file: `AltComb.idr`
+      the `./group` sub-directory evaluates the effect of grouping and re-balancing this regex in TyRE.
   3. Simple Kleene star:
       - regex: "$a*$"
       - parsee: "$a^n$"
