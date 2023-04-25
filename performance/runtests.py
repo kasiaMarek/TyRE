@@ -110,7 +110,7 @@ def plotresult(test, testresult):
     plt.savefig(PATH_TO_CHARTS + test[NAME] + ".png")
     plt.clf()
 
-# List of all the tests to be runned, each ditectory has the following keys:
+# List of all the tests to be run, each directory has the following keys:
 # NAME: output file with chart will be ${NAME}.png.
 # ITR: we execute the test for n from 0 to ITR
 # TYRE_FILE: name of the tyre program to be runned
