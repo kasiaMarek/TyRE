@@ -77,7 +77,8 @@ def runtest():
     for (i,j) in [("AltBalanced", "balanced"),
                   ("AltUnbalanced","unbalanced"),
                   ("AltBalancedGroup", "balancedGroup"),
-                  ("AltUnbalancedGroup", "unbalancedGroup")
+                  ("AltUnbalancedGroup", "unbalancedGroup"),
+                  ("AltComb", "combinators")
                  ]:
         if VERBOSE:
             print(f"Running test {j}... ", end='')
@@ -100,24 +101,31 @@ def plotresult(testresult):
     unbalanced = testresult["unbalanced"]
     balancedGroup = testresult["balancedGroup"]
     unbalancedGroup = testresult["unbalancedGroup"]
+    combinators = testresult["combinators"]
     x = range(ITERATIONS)
     # plot the chart
-    plt.plot(x, unbalanced["avg"], color='blue', label='unbalanced')
+    plt.plot(x, combinators["avg"], color='orange',
+                label='parser combinators')
+    plt.fill_between(x,
+        listOpByIndex(combinators["avg"], combinators["stdev"], subtract),
+        listOpByIndex(combinators["avg"], combinators["stdev"], add),
+        color='orange', alpha=0.2)
+    plt.plot(x, unbalanced["avg"], color='blue', label='TyRE unbalanced')
     plt.fill_between(x,
         listOpByIndex(unbalanced["avg"], unbalanced["stdev"], subtract),
         listOpByIndex(unbalanced["avg"], unbalanced["stdev"], add),
         color='blue', alpha=0.3)
-    plt.plot(x, balanced["avg"], color='orange', label='balanced')
+    plt.plot(x, balanced["avg"], color='magenta', label='TyRE balanced')
     plt.fill_between(x,
         listOpByIndex(balanced["avg"], balanced["stdev"], subtract),
         listOpByIndex(balanced["avg"], balanced["stdev"], add),
-        color='orange', alpha=0.2)
-    plt.plot(x, unbalancedGroup["avg"], color='red', label='unbalanced group')
+        color='magenta', alpha=0.2)
+    plt.plot(x, unbalancedGroup["avg"], color='red', label='TyRE unbalanced group')
     plt.fill_between(x,
         listOpByIndex(unbalancedGroup["avg"], unbalancedGroup["stdev"], subtract),
         listOpByIndex(unbalancedGroup["avg"], unbalancedGroup["stdev"], add),
         color='red', alpha=0.2)
-    plt.plot(x, balancedGroup["avg"], color='green', label='balanced group')
+    plt.plot(x, balancedGroup["avg"], color='green', label='TyRE balanced group')
     plt.fill_between(x,
         listOpByIndex(balancedGroup["avg"], balancedGroup["stdev"], subtract),
         listOpByIndex(balancedGroup["avg"], balancedGroup["stdev"], add),
@@ -130,7 +138,7 @@ def plotresult(testresult):
     ax = plt.gca()
     ax.set_ylim([0.0, YLIM])
     maxy = max([maxval(result)
-                  for result in [unbalanced, balanced, unbalancedGroup, balancedGroup]])
+                  for result in [combinators,unbalanced, balanced, unbalancedGroup, balancedGroup]])
     if VERBOSE and maxy > YLIM:
         print(f"Out-of-frame points for test {test[NAME]}")
     #save the figure
